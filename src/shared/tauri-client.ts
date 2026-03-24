@@ -81,6 +81,14 @@ export async function actionOpenPath(path: string): Promise<void> {
   await invoke("actions_open_path", { path });
 }
 
+export async function actionOpenParent(path: string): Promise<void> {
+  await invoke("actions_open_parent", { path });
+}
+
+export async function actionRevealPath(path: string): Promise<void> {
+  await invoke("actions_reveal_path", { path });
+}
+
 export async function actionCopyToClipboard(text: string): Promise<void> {
   await invoke("actions_copy_to_clipboard", { text });
 }

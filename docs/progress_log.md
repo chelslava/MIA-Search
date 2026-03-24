@@ -41,6 +41,11 @@
   - toast-уведомления;
   - skeleton-состояние результатов;
   - чипы активных фильтров и `Reset all`.
+- Блок действий над результатами:
+  - open file/folder;
+  - open parent directory;
+  - reveal in file manager;
+  - copy full path / copy name.
 
 ### Проверки
 - `cargo check` (в `src-tauri`) проходит успешно.
@@ -51,4 +56,4 @@
 - В sandbox `vite build` периодически падает с `spawn EPERM`; elevated-run решает проблему.
 
 ### Следующий шаг
-- Перейти к стабилизации `F-01..F-03` и покрытию тестами `H-01/H-02`.
+- Перейти к тестовому блоку `H-01/H-02` (unit + integration для core search).

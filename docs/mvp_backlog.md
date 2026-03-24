@@ -34,10 +34,10 @@
 - [x] Toast/skeleton/hotkeys/command palette
 
 5. Действия над результатами
-- [ ] Open
-- [ ] Open parent
-- [ ] Reveal in file manager
-- [ ] Copy full path / copy name
+- [x] Open
+- [x] Open parent
+- [x] Reveal in file manager
+- [x] Copy full path / copy name
 
 6. Базовое хранение данных
 - [x] Настройки (минимальный набор)

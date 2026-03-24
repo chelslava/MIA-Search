@@ -56,6 +56,7 @@ fn main() {
       history::history_list,
       history::history_clear,
       actions::actions_open_path,
+      actions::actions_open_parent,
       actions::actions_reveal_path,
       actions::actions_copy_to_clipboard
     ])

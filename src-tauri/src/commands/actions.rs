@@ -1,5 +1,6 @@
 use crate::{commands::history::record_opened_path_if_enabled, platform, AppState};
 use serde::{Deserialize, Serialize};
+use std::path::Path;
 use tauri::State;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -43,6 +44,33 @@ pub fn actions_reveal_path(_state: State<'_, AppState>, path: String) -> Result<
     Err(error) => Ok(ActionResponse {
       action: "reveal_path".to_string(),
       target: path,
+      success: false,
+      message: Some(error),
+    }),
+  }
+}
+
+#[tauri::command]
+pub fn actions_open_parent(state: State<'_, AppState>, path: String) -> Result<ActionResponse, String> {
+  let parent = Path::new(&path)
+    .parent()
+    .and_then(|value| value.to_str())
+    .ok_or_else(|| format!("failed to resolve parent for path: {path}"))?
+    .to_string();
+
+  match platform::open_path::open_path(&parent) {
+    Ok(()) => {
+      record_opened_path_if_enabled(&state, parent.clone())?;
+      Ok(ActionResponse {
+        action: "open_parent".to_string(),
+        target: parent,
+        success: true,
+        message: None,
+      })
+    }
+    Err(error) => Ok(ActionResponse {
+      action: "open_parent".to_string(),
+      target: parent,
       success: false,
       message: Some(error),
     }),

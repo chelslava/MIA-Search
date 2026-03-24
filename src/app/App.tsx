@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   actionCopyToClipboard,
   actionOpenPath,
+  actionOpenParent,
+  actionRevealPath,
   cancelSearch,
   favoritesAdd,
   favoritesList,
@@ -132,6 +134,13 @@ export function App() {
         label: "Copy selected path",
         run: () => {
           if (selectedResult) void handleCopyPath(selectedResult.full_path);
+        }
+      },
+      {
+        id: "reveal",
+        label: "Reveal selected in file manager",
+        run: () => {
+          if (selectedResult) void handleRevealPath(selectedResult.full_path);
         }
       },
       {
@@ -413,6 +422,43 @@ export function App() {
       pushToast("Path copied", "success");
     } catch {
       pushToast("Copy failed", "error");
+    }
+  }
+
+  async function handleCopyName(name: string): Promise<void> {
+    if (!tauriRuntimeAvailable) {
+      return;
+    }
+    try {
+      await actionCopyToClipboard(name);
+      pushToast("Name copied", "success");
+    } catch {
+      pushToast("Copy name failed", "error");
+    }
+  }
+
+  async function handleOpenParent(path: string): Promise<void> {
+    if (!tauriRuntimeAvailable) {
+      return;
+    }
+    try {
+      await actionOpenParent(path);
+      pushToast("Parent opened", "success");
+      await refreshPersistenceData();
+    } catch {
+      pushToast("Open parent failed", "error");
+    }
+  }
+
+  async function handleRevealPath(path: string): Promise<void> {
+    if (!tauriRuntimeAvailable) {
+      return;
+    }
+    try {
+      await actionRevealPath(path);
+      pushToast("Revealed in file manager", "success");
+    } catch {
+      pushToast("Reveal failed", "error");
     }
   }
 
@@ -859,6 +905,16 @@ export function App() {
                   >
                     Copy path
                   </button>
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void handleRevealPath(item.full_path);
+                    }}
+                  >
+                    Reveal
+                  </button>
                 </div>
               </article>
             ))}
@@ -916,6 +972,33 @@ export function App() {
                 }}
               >
                 Remove favorite
+              </button>
+              <button
+                type="button"
+                className="button-secondary"
+                onClick={() => {
+                  void handleOpenParent(selectedResult.full_path);
+                }}
+              >
+                Open parent
+              </button>
+              <button
+                type="button"
+                className="button-secondary"
+                onClick={() => {
+                  void handleRevealPath(selectedResult.full_path);
+                }}
+              >
+                Reveal
+              </button>
+              <button
+                type="button"
+                className="button-secondary"
+                onClick={() => {
+                  void handleCopyName(selectedResult.name || "");
+                }}
+              >
+                Copy name
               </button>
             </div>
           ) : null}
