@@ -97,6 +97,12 @@ dt {
   outline: none;
 }
 
+.compact-input {
+  margin-top: 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+
 .search-input:focus {
   border-color: #38bdf8;
   box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.16);
@@ -171,6 +177,20 @@ dt {
   color: #dbe7fb;
 }
 
+.option-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+  color: #dbe7fb;
+}
+
+.option-grid label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
 .mini-input {
   width: 110px;
   border: 1px solid rgba(148, 163, 184, 0.25);
@@ -219,6 +239,12 @@ dt {
   border-radius: 18px;
   background: rgba(2, 6, 23, 0.38);
   border: 1px solid rgba(148, 163, 184, 0.14);
+  cursor: pointer;
+}
+
+.result-selected {
+  border-color: rgba(56, 189, 248, 0.55);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.22);
 }
 
 .result-card h3,
@@ -262,6 +288,10 @@ dt {
   color: #f8fafc;
 }
 
+.status-title {
+  margin-top: 16px;
+}
+
 @media (max-width: 900px) {
   .hero,
   .grid-layout {
@@ -270,5 +300,9 @@ dt {
 
   .app-shell {
     padding: 20px;
+  }
+
+  .option-grid {
+    grid-template-columns: 1fr;
   }
 }

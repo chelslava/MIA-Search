@@ -21,12 +21,19 @@
     - invoke: `search_start`, `search_cancel`;
     - listen: `search:batch`, `search:done`, `search:cancelled`, `search:error`;
   - UI-секции для `D-01` и `D-02`: search controls, roots panel, потоковый список результатов и статус.
+  - UI-фильтры: extension list, size filter, date filters.
+  - Мультирасширение в backend: N запусков + merge + dedupe.
+  - Переключаемые режимы сортировки: relevance / name / size / modified / type.
+  - Правая панель метаданных выбранного результата (`D-04`).
+  - Статус-область с elapsed временем (`D-05`).
 
 ### Проверки
 - `cargo check` (в `src-tauri`) проходит успешно.
+- `npm run check` проходит успешно.
+- `npm run build` проходит успешно (в sandbox запуск требуется с elevated permissions из-за `spawn EPERM`).
 
 ### Ограничения окружения
-- `npm` отсутствует в текущем окружении, поэтому frontend-сборка пока не проверена командно.
+- В sandbox `vite build` периодически падает с `spawn EPERM`; elevated-run решает проблему.
 
 ### Следующий шаг
-- Реализовать расширенные фильтры (`C-01`, `C-02`) и базовую правую панель метаданных (`D-04`).
+- Реализовать полноценный этап метаданных (`C-05`) и перейти к persistence-блоку (`E-01`..`E-04`).

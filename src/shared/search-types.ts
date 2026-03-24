@@ -5,6 +5,7 @@ export type SortMode = "Relevance" | "Name" | "Size" | "Modified" | "Type";
 export type SizeComparison = "Smaller" | "Equal" | "Greater";
 
 export type DateComparison = "Before" | "After";
+export type DateField = "Created" | "Modified";
 
 export interface SizeFilter {
   comparison: SizeComparison;
@@ -12,6 +13,7 @@ export interface SizeFilter {
 }
 
 export interface DateFilter {
+  field: DateField;
   comparison: DateComparison;
   value: string;
 }

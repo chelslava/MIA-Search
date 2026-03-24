@@ -1,11 +1,13 @@
 use crate::core::metadata_service::MetadataService;
 use crate::core::models::{
-  CommandStatus, DateComparison, EntryKind, SearchRequest, SearchResultItem, SearchSessionSnapshot,
+  CommandStatus, DateComparison, EntryKind, SearchRequest, SearchResultItem, SearchSessionSnapshot, SortMode,
   SizeComparison,
 };
+use crate::core::ranking::sort_results;
 use chrono::{DateTime, Utc};
 use rust_search::{similarity_sort, FileSize, FilterExt, SearchBuilder};
 use std::path::Path;
+use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::SystemTime;
@@ -124,21 +126,63 @@ impl SearchService {
       .first()
       .cloned()
       .unwrap_or_else(|| ".".to_string());
-    let builder = build_builder(request, &root);
-
     let query = request.query.trim().to_string();
     let mut limit_reached = false;
     let mut total_results = 0usize;
+    let mut seen_paths = HashSet::new();
+    let mut all_items = Vec::new();
 
-    let mut paths: Vec<String> = builder.build().collect();
-    if query.is_empty() {
-      paths.sort();
+    let extensions: Vec<String> = request
+      .extensions
+      .iter()
+      .map(|ext| ext.trim().trim_start_matches('.').to_string())
+      .filter(|ext| !ext.is_empty())
+      .collect();
+
+    let search_batches: Vec<Vec<String>> = if extensions.is_empty() {
+      vec![collect_paths(build_builder(request, &root, None), &query)]
     } else {
-      similarity_sort(&mut paths, &query);
+      extensions
+        .iter()
+        .map(|ext| collect_paths(build_builder(request, &root, Some(ext.as_str())), &query))
+        .collect()
+    };
+
+    for paths in search_batches {
+      for path in paths {
+        if cancel_flag.load(Ordering::Relaxed) {
+          on_limit(limit_reached);
+          return Ok(SearchStreamSummary {
+            total_results,
+            limit_reached,
+            cancelled: true,
+          });
+        }
+
+        if !seen_paths.insert(path.clone()) {
+          continue;
+        }
+
+        let source_root = resolve_source_root(&request.roots, &path).unwrap_or_else(|| root.clone());
+        all_items.push(MetadataService::enrich_path(&path, source_root));
+        total_results = total_results.saturating_add(1);
+
+        if let Some(limit) = request.options.limit {
+          if total_results >= limit {
+            limit_reached = true;
+            break;
+          }
+        }
+      }
+      if limit_reached {
+        break;
+      }
     }
 
+    apply_sorting(&mut all_items, &request.options.sort_mode, &query);
+
     let mut batch = Vec::with_capacity(BATCH_SIZE);
-    for path in paths {
+    for item in all_items {
       if cancel_flag.load(Ordering::Relaxed) {
         on_limit(limit_reached);
         return Ok(SearchStreamSummary {
@@ -147,11 +191,7 @@ impl SearchService {
           cancelled: true,
         });
       }
-
-      let source_root = resolve_source_root(&request.roots, &path).unwrap_or_else(|| root.clone());
-      batch.push(MetadataService::enrich_path(&path, source_root));
-      total_results = total_results.saturating_add(1);
-
+      batch.push(item);
       if batch.len() >= BATCH_SIZE {
         on_batch(std::mem::take(&mut batch));
       }
@@ -161,9 +201,6 @@ impl SearchService {
       on_batch(batch);
     }
 
-    if let Some(limit) = request.options.limit {
-      limit_reached = total_results >= limit && total_results > 0;
-    }
     on_limit(limit_reached);
 
     Ok(SearchStreamSummary {
@@ -174,7 +211,50 @@ impl SearchService {
   }
 }
 
-fn build_builder(request: &SearchRequest, default_root: &str) -> SearchBuilder {
+fn collect_paths(builder: SearchBuilder, query: &str) -> Vec<String> {
+  let mut paths: Vec<String> = builder.build().collect();
+  if query.is_empty() {
+    paths.sort();
+  } else {
+    similarity_sort(&mut paths, query);
+  }
+  paths
+}
+
+fn apply_sorting(items: &mut [SearchResultItem], mode: &SortMode, query: &str) {
+  match mode {
+    SortMode::Relevance => {
+      if query.is_empty() {
+        items.sort_by(|left, right| left.name.cmp(&right.name));
+      } else {
+        for item in items.iter_mut() {
+          item.score = score_relevance(&item.name, query);
+        }
+        sort_results(items, mode);
+      }
+    }
+    _ => sort_results(items, mode),
+  }
+}
+
+fn score_relevance(name: &str, query: &str) -> Option<f64> {
+  if query.is_empty() {
+    return None;
+  }
+  let lower_name = name.to_lowercase();
+  let lower_query = query.to_lowercase();
+  if lower_name == lower_query {
+    Some(1.0)
+  } else if lower_name.starts_with(&lower_query) {
+    Some(0.85)
+  } else if lower_name.contains(&lower_query) {
+    Some(0.6)
+  } else {
+    Some(0.2)
+  }
+}
+
+fn build_builder(request: &SearchRequest, default_root: &str, ext_override: Option<&str>) -> SearchBuilder {
   let mut builder = SearchBuilder::default().location(default_root);
 
   if request.roots.len() > 1 {
@@ -189,7 +269,9 @@ fn build_builder(request: &SearchRequest, default_root: &str) -> SearchBuilder {
     builder = builder.search_input(query);
   }
 
-  if let Some(ext) = request.extensions.first().filter(|value| !value.trim().is_empty()) {
+  if let Some(ext) = ext_override.filter(|value| !value.trim().is_empty()) {
+    builder = builder.ext(ext.trim());
+  } else if let Some(ext) = request.extensions.first().filter(|value| !value.trim().is_empty()) {
     builder = builder.ext(ext.trim());
   }
 

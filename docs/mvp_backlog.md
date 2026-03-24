@@ -18,17 +18,17 @@
 - [x] Отмена поиска (ручная + для live mode)
 
 3. Фильтры и сортировка
-- [ ] Фильтр по расширению (single)
-- [ ] Мультирасширение на уровне приложения (merge + dedupe)
-- [ ] Фильтры размера (>, <, =)
-- [ ] Фильтры дат (created/modified before/after)
-- [ ] Сортировки: relevance (`similarity_sort`), name, size, modified, type
+- [x] Фильтр по расширению (single)
+- [x] Мультирасширение на уровне приложения (merge + dedupe)
+- [x] Фильтры размера (>, <, =)
+- [x] Фильтры дат (created/modified before/after)
+- [x] Сортировки: relevance (`similarity_sort`), name, size, modified, type
 
 4. UI MVP
 - [x] Строка поиска + search/clear
 - [x] Панель корневых путей
 - [x] Список результатов (минимум table/list)
-- [ ] Базовая правая панель метаданных
+- [x] Базовая правая панель метаданных
 - [x] Статус-бар: count/status/time/limit reached
 
 5. Действия над результатами
