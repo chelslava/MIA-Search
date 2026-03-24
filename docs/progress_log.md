@@ -1,0 +1,32 @@
+# Progress Log
+
+## 2026-03-24
+
+### Выполнено
+- Инициализирован git-репозиторий в `d:/Repo/MIA-Search`.
+- Создана структура проекта по ТЗ (`src-tauri`, `src`, `public`, `docs`).
+- Поднят минимальный frontend-скелет (`React + TypeScript`) с базовым `App`.
+- Поднят backend-скелет Tauri с модулями `commands/core/storage/platform`.
+- Подключён `rust_search = 2.1.0` и реализован `SearchService::execute(...)`.
+- Реализованы:
+  - multi-root (`location` + `more_locations`);
+  - strict / ignore_case / hidden;
+  - depth / limit;
+  - files / dirs / mixed через `custom_filter`;
+  - ответ `search_start` с подтверждением запуска и `search_id`.
+  - потоковая выдача через события Tauri: `search:batch`, `search:done`, `search:cancelled`, `search:error`;
+  - отмена текущего поиска при `search_cancel`;
+  - авто-отмена предыдущего поиска при новом `search_start`.
+  - frontend-интеграция с Tauri commands/events:
+    - invoke: `search_start`, `search_cancel`;
+    - listen: `search:batch`, `search:done`, `search:cancelled`, `search:error`;
+  - UI-секции для `D-01` и `D-02`: search controls, roots panel, потоковый список результатов и статус.
+
+### Проверки
+- `cargo check` (в `src-tauri`) проходит успешно.
+
+### Ограничения окружения
+- `npm` отсутствует в текущем окружении, поэтому frontend-сборка пока не проверена командно.
+
+### Следующий шаг
+- Реализовать расширенные фильтры (`C-01`, `C-02`) и базовую правую панель метаданных (`D-04`).

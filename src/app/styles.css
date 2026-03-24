@@ -1,0 +1,274 @@
+:root {
+  color-scheme: dark;
+  font-family:
+    Inter, "Segoe UI", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 32%),
+    radial-gradient(circle at top right, rgba(16, 185, 129, 0.16), transparent 30%),
+    linear-gradient(180deg, #08111f 0%, #0f172a 48%, #111827 100%);
+  color: #e5eefb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 32px;
+}
+
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.9fr);
+  gap: 24px;
+  align-items: end;
+  margin-bottom: 24px;
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.24em;
+  font-size: 12px;
+  color: #7dd3fc;
+}
+
+h1 {
+  margin: 0;
+  max-width: 12ch;
+  font-size: clamp(2.2rem, 4vw, 4.8rem);
+  line-height: 0.98;
+}
+
+.subcopy {
+  margin: 16px 0 0;
+  max-width: 60ch;
+  color: #b6c4da;
+  line-height: 1.6;
+}
+
+.search-card,
+.panel {
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  background: rgba(15, 23, 42, 0.72);
+  backdrop-filter: blur(16px);
+  border-radius: 24px;
+  box-shadow: 0 22px 60px rgba(2, 6, 23, 0.28);
+}
+
+.search-card {
+  padding: 20px;
+}
+
+.search-label,
+.panel-title,
+dt {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #93c5fd;
+}
+
+.search-input {
+  width: 100%;
+  margin-top: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.92);
+  color: #f8fafc;
+  border-radius: 16px;
+  padding: 16px 18px;
+  outline: none;
+}
+
+.search-input:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 4px rgba(56, 189, 248, 0.16);
+}
+
+.search-actions,
+.panel-header,
+.chip-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.search-actions {
+  margin-top: 16px;
+}
+
+.button-primary,
+.button-secondary {
+  border: 0;
+  border-radius: 14px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition:
+    transform 120ms ease,
+    background 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.button-primary {
+  background: linear-gradient(135deg, #38bdf8, #22c55e);
+  color: #04111f;
+  font-weight: 700;
+}
+
+.button-secondary {
+  background: rgba(148, 163, 184, 0.12);
+  color: #e5eefb;
+}
+
+.button-primary:hover,
+.button-secondary:hover {
+  transform: translateY(-1px);
+}
+
+.grid-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+.panel {
+  padding: 20px;
+  min-height: 180px;
+}
+
+.panel-results {
+  grid-column: 1 / -1;
+}
+
+.panel-copy {
+  margin: 8px 0 0;
+  color: #b6c4da;
+}
+
+.option-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  color: #dbe7fb;
+}
+
+.mini-input {
+  width: 110px;
+  border: 1px solid rgba(148, 163, 184, 0.25);
+  background: rgba(15, 23, 42, 0.92);
+  color: #f8fafc;
+  border-radius: 12px;
+  padding: 8px 10px;
+}
+
+.root-adder {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+}
+
+.chip {
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  padding: 8px 12px;
+  border-radius: 999px;
+  color: #cbd5e1;
+}
+
+.chip-active {
+  background: rgba(56, 189, 248, 0.14);
+  border-color: rgba(56, 189, 248, 0.28);
+  color: #7dd3fc;
+}
+
+.root-list {
+  margin: 16px 0 0;
+  padding-left: 20px;
+  color: #e2e8f0;
+  line-height: 1.9;
+}
+
+.results-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.result-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(2, 6, 23, 0.38);
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+.result-card h3,
+.result-card p,
+.result-meta dd {
+  margin: 0;
+}
+
+.result-card h3 {
+  font-size: 1.05rem;
+}
+
+.result-card p {
+  color: #94a3b8;
+  margin-top: 4px;
+  word-break: break-word;
+}
+
+.result-meta,
+.status-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.result-meta {
+  margin: 0;
+}
+
+.result-meta div,
+.status-grid div {
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.72);
+}
+
+.result-meta dd,
+.status-grid dd {
+  margin-top: 6px;
+  font-size: 1rem;
+  color: #f8fafc;
+}
+
+@media (max-width: 900px) {
+  .hero,
+  .grid-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .app-shell {
+    padding: 20px;
+  }
+}
