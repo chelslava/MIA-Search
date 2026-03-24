@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  actionCopyToClipboard,
+  actionOpenPath,
   cancelSearch,
   favoritesAdd,
   favoritesList,
@@ -23,6 +25,8 @@ import type {
   SearchResultItem,
   SortMode
 } from "../shared/search-types";
+import { CommandPalette, type CommandPaletteAction } from "../widgets/CommandPalette";
+import { ToastHost, type ToastItem } from "../widgets/ToastHost";
 import "./styles.css";
 
 type RootItem = {
@@ -68,6 +72,10 @@ export function App() {
   const [history, setHistory] = useState<HistorySnapshot>({ queries: [], opened_paths: [] });
   const [profiles, setProfiles] = useState<SearchProfile[]>([]);
   const [newProfileName, setNewProfileName] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const enabledRoots = useMemo(
     () => roots.filter((root) => root.enabled).map((root) => root.path.trim()).filter(Boolean),
@@ -77,6 +85,90 @@ export function App() {
     () => results.find((item) => item.full_path === selectedPath) ?? null,
     [results, selectedPath]
   );
+  const activeFilterChips = useMemo(() => {
+    const chips: string[] = [];
+    if (strict) chips.push("strict");
+    if (ignoreCase) chips.push("ignore_case");
+    if (includeHidden) chips.push("hidden");
+    if (extensionsRaw.trim()) chips.push(`ext: ${extensionsRaw}`);
+    if (sizeFilterEnabled) chips.push(`size ${sizeComparison.toLowerCase()} ${sizeValue}${sizeUnit}`);
+    if (createdAfter) chips.push("created_after");
+    if (createdBefore) chips.push("created_before");
+    if (modifiedAfter) chips.push("modified_after");
+    if (modifiedBefore) chips.push("modified_before");
+    chips.push(`sort: ${sortMode.toLowerCase()}`);
+    chips.push(`limit: ${limit}`);
+    return chips;
+  }, [
+    strict,
+    ignoreCase,
+    includeHidden,
+    extensionsRaw,
+    sizeFilterEnabled,
+    sizeComparison,
+    sizeValue,
+    sizeUnit,
+    createdAfter,
+    createdBefore,
+    modifiedAfter,
+    modifiedBefore,
+    sortMode,
+    limit
+  ]);
+  const commandActions = useMemo<CommandPaletteAction[]>(
+    () => [
+      { id: "search", label: "Run search", run: () => void handleSearch() },
+      { id: "cancel", label: "Cancel search", run: () => void handleCancel() },
+      { id: "focus", label: "Focus search input", run: () => searchInputRef.current?.focus() },
+      {
+        id: "open",
+        label: "Open selected result",
+        run: () => {
+          if (selectedResult) void handleOpenPath(selectedResult.full_path);
+        }
+      },
+      {
+        id: "copy",
+        label: "Copy selected path",
+        run: () => {
+          if (selectedResult) void handleCopyPath(selectedResult.full_path);
+        }
+      },
+      {
+        id: "reset",
+        label: "Reset all filters",
+        run: () => resetFilters()
+      }
+    ],
+    [selectedResult]
+  );
+
+  function pushToast(text: string, kind: ToastItem["kind"] = "info"): void {
+    const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    setToasts((previous) => previous.concat({ id, text, kind }));
+    window.setTimeout(() => {
+      setToasts((previous) => previous.filter((item) => item.id !== id));
+    }, 2400);
+  }
+
+  function closeToast(id: string): void {
+    setToasts((previous) => previous.filter((item) => item.id !== id));
+  }
+
+  function resetFilters(): void {
+    setStrict(false);
+    setIgnoreCase(true);
+    setIncludeHidden(false);
+    setExtensionsRaw("");
+    setSizeFilterEnabled(false);
+    setCreatedAfter("");
+    setCreatedBefore("");
+    setModifiedAfter("");
+    setModifiedBefore("");
+    setSortMode("Relevance");
+    setLimit(500);
+    pushToast("Filters reset", "info");
+  }
 
   const buildCurrentRequest = (): SearchRequest => ({
     query,
@@ -158,24 +250,30 @@ export function App() {
         setStatus(`Done (${payload.total_results})`);
         setLimitReached(payload.limit_reached);
         setActiveSearchId(null);
+        setIsSearching(false);
         if (searchStartedAt !== null) {
           setElapsedMs(Date.now() - searchStartedAt);
         }
         void refreshPersistenceData();
+        pushToast(`Search finished: ${payload.total_results}`, "success");
       }),
       onSearchCancelled((payload) => {
         setStatus(`Cancelled (#${payload.search_id})`);
         setActiveSearchId(null);
+        setIsSearching(false);
         if (searchStartedAt !== null) {
           setElapsedMs(Date.now() - searchStartedAt);
         }
+        pushToast("Search cancelled", "info");
       }),
       onSearchError((payload) => {
         setStatus(`Error: ${payload.message}`);
         setActiveSearchId(null);
+        setIsSearching(false);
         if (searchStartedAt !== null) {
           setElapsedMs(Date.now() - searchStartedAt);
         }
+        pushToast(`Search error: ${payload.message}`, "error");
       })
     ])
       .then((unlisteners) => {
@@ -199,6 +297,58 @@ export function App() {
     void refreshPersistenceData();
   }, []);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+      const accel = event.ctrlKey || event.metaKey;
+      if (accel && key === "k") {
+        event.preventDefault();
+        setPaletteOpen(true);
+        return;
+      }
+      if (accel && key === "f") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+      if (key === "f5") {
+        event.preventDefault();
+        void handleSearch();
+        return;
+      }
+      if (key === "escape") {
+        if (paletteOpen) {
+          event.preventDefault();
+          setPaletteOpen(false);
+          return;
+        }
+        if (query) {
+          event.preventDefault();
+          setQuery("");
+        }
+        return;
+      }
+      if (key === "enter" && selectedResult) {
+        const target = event.target as HTMLElement | null;
+        if (!target || target.tagName.toLowerCase() !== "input") {
+          event.preventDefault();
+          void handleOpenPath(selectedResult.full_path);
+        }
+        return;
+      }
+      if (accel && key === "c" && selectedResult) {
+        const target = event.target as HTMLElement | null;
+        if (!target || target.tagName.toLowerCase() !== "input") {
+          event.preventDefault();
+          void handleCopyPath(selectedResult.full_path);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [paletteOpen, query, selectedResult]);
+
   async function handleSearch(): Promise<void> {
     if (!tauriRuntimeAvailable) {
       setStatus("Tauri runtime not detected");
@@ -211,6 +361,7 @@ export function App() {
     setSelectedPath(null);
     setLimitReached(false);
     setStatus("Searching...");
+    setIsSearching(true);
     setSearchStartedAt(Date.now());
     setElapsedMs(null);
 
@@ -221,6 +372,8 @@ export function App() {
     } catch (error) {
       setStatus(`Search failed: ${String(error)}`);
       setActiveSearchId(null);
+      setIsSearching(false);
+      pushToast("Search start failed", "error");
     }
   }
 
@@ -231,8 +384,35 @@ export function App() {
     try {
       await cancelSearch();
       setStatus("Cancelling...");
+      pushToast("Cancelling search...", "info");
     } catch (error) {
       setStatus(`Cancel failed: ${String(error)}`);
+      pushToast("Cancel failed", "error");
+    }
+  }
+
+  async function handleOpenPath(path: string): Promise<void> {
+    if (!tauriRuntimeAvailable) {
+      return;
+    }
+    try {
+      await actionOpenPath(path);
+      pushToast("Opened path", "success");
+      await refreshPersistenceData();
+    } catch {
+      pushToast("Open path failed", "error");
+    }
+  }
+
+  async function handleCopyPath(path: string): Promise<void> {
+    if (!tauriRuntimeAvailable) {
+      return;
+    }
+    try {
+      await actionCopyToClipboard(path);
+      pushToast("Path copied", "success");
+    } catch {
+      pushToast("Copy failed", "error");
     }
   }
 
@@ -317,7 +497,8 @@ export function App() {
   }
 
   return (
-    <main className="app-shell">
+    <>
+      <main className="app-shell">
       <header className="hero">
         <div>
           <p className="eyebrow">MIA Search MVP</p>
@@ -330,6 +511,7 @@ export function App() {
           </label>
           <input
             id="search-query"
+            ref={searchInputRef}
             className="search-input"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
@@ -355,6 +537,7 @@ export function App() {
               Clear
             </button>
           </div>
+          <p className="hotkeys-hint">Hotkeys: Ctrl/Cmd+K, Ctrl/Cmd+F, Esc, Enter, Ctrl/Cmd+C, F5</p>
         </div>
       </header>
 
@@ -496,6 +679,19 @@ export function App() {
               />
             </label>
           </div>
+          <div className="panel-header status-title">
+            <div className="panel-title">Active Filters</div>
+            <button type="button" className="button-secondary" onClick={resetFilters}>
+              Reset all
+            </button>
+          </div>
+          <div className="chip-row">
+            {activeFilterChips.map((chip) => (
+              <span className="chip chip-active" key={chip}>
+                {chip}
+              </span>
+            ))}
+          </div>
         </section>
 
         <section className="panel">
@@ -610,6 +806,13 @@ export function App() {
           </div>
 
           <div className="results-list" role="list" aria-label="Search results">
+            {isSearching && results.length === 0 ? (
+              <>
+                <div className="skeleton skeleton-card" />
+                <div className="skeleton skeleton-card" />
+                <div className="skeleton skeleton-card" />
+              </>
+            ) : null}
             {results.map((item) => (
               <article
                 className={`result-card${selectedPath === item.full_path ? " result-selected" : ""}`}
@@ -635,6 +838,28 @@ export function App() {
                     <dd>{item.source_root}</dd>
                   </div>
                 </dl>
+                <div className="panel-header">
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void handleOpenPath(item.full_path);
+                    }}
+                  >
+                    Open
+                  </button>
+                  <button
+                    type="button"
+                    className="button-secondary"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void handleCopyPath(item.full_path);
+                    }}
+                  >
+                    Copy path
+                  </button>
+                </div>
               </article>
             ))}
           </div>
@@ -723,6 +948,9 @@ export function App() {
           </dl>
         </section>
       </section>
-    </main>
+      </main>
+      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} actions={commandActions} />
+      <ToastHost items={toasts} onClose={closeToast} />
+    </>
   );
 }

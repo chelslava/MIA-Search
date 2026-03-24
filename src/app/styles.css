@@ -120,6 +120,12 @@ dt {
   margin-top: 16px;
 }
 
+.hotkeys-hint {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: #a7b7d4;
+}
+
 .button-primary,
 .button-secondary {
   border: 0;
@@ -275,6 +281,17 @@ dt {
   box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.22);
 }
 
+.skeleton {
+  border-radius: 18px;
+  background: linear-gradient(90deg, rgba(22, 34, 56, 0.8), rgba(49, 70, 106, 0.8), rgba(22, 34, 56, 0.8));
+  background-size: 200% 100%;
+  animation: shimmer 1.1s infinite linear;
+}
+
+.skeleton-card {
+  min-height: 120px;
+}
+
 .result-card h3,
 .result-card p,
 .result-meta dd {
@@ -318,6 +335,127 @@ dt {
 
 .status-title {
   margin-top: 16px;
+}
+
+.command-palette {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}
+
+.command-palette__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.62);
+}
+
+.command-palette__panel {
+  position: relative;
+  max-width: 680px;
+  margin: 8vh auto 0;
+  border-radius: 20px;
+  border: 1px solid rgba(148, 163, 184, 0.24);
+  background: rgba(9, 16, 30, 0.96);
+  padding: 16px;
+}
+
+.command-palette__label {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: #93c5fd;
+  letter-spacing: 0.12em;
+}
+
+.command-palette__input {
+  margin-top: 8px;
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: rgba(15, 23, 42, 0.92);
+  color: #f8fafc;
+  padding: 12px;
+}
+
+.command-palette__results {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.command-palette__item {
+  text-align: left;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.86);
+  color: #dbeafe;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.command-palette__empty {
+  color: #9fb2d9;
+  padding: 8px 2px;
+}
+
+.toast-host {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 60;
+  display: grid;
+  gap: 10px;
+}
+
+.toast {
+  min-width: 260px;
+  max-width: 360px;
+  border-radius: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  background: rgba(9, 16, 30, 0.96);
+  padding: 10px 12px;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.toast-info {
+  border-color: rgba(56, 189, 248, 0.5);
+}
+
+.toast-success {
+  border-color: rgba(34, 197, 94, 0.5);
+}
+
+.toast-error {
+  border-color: rgba(251, 113, 133, 0.6);
+}
+
+.toast-kind {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #93c5fd;
+}
+
+.toast-text {
+  margin: 4px 0 0;
+  color: #e2e8f0;
+}
+
+.toast-close {
+  border: 0;
+  background: transparent;
+  color: #cbd5e1;
+  cursor: pointer;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 @media (max-width: 900px) {

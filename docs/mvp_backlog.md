@@ -30,6 +30,8 @@
 - [x] Список результатов (минимум table/list)
 - [x] Базовая правая панель метаданных
 - [x] Статус-бар: count/status/time/limit reached
+- [x] Чипы активных фильтров + reset
+- [x] Toast/skeleton/hotkeys/command palette
 
 5. Действия над результатами
 - [ ] Open

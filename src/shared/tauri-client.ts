@@ -76,3 +76,11 @@ export async function profilesSave(profile: SearchProfile): Promise<SearchProfil
 export async function profilesDelete(profileId: string): Promise<boolean> {
   return invoke<boolean>("profiles_delete", { profileId });
 }
+
+export async function actionOpenPath(path: string): Promise<void> {
+  await invoke("actions_open_path", { path });
+}
+
+export async function actionCopyToClipboard(text: string): Promise<void> {
+  await invoke("actions_copy_to_clipboard", { text });
+}
