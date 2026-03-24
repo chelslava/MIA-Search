@@ -1,12 +1,30 @@
 use crate::core::models::SearchProfile;
+use crate::storage::persistence;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Default)]
+const PRESETS_FILE: &str = "profiles.json";
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ProfilesSnapshot {
+  pub items: Vec<SearchProfile>,
+  pub next_numeric_id: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct ProfilesStore {
   items: Vec<SearchProfile>,
   next_numeric_id: u64,
 }
 
 impl ProfilesStore {
+  pub fn load() -> Self {
+    let snapshot: ProfilesSnapshot = persistence::load_json(PRESETS_FILE);
+    Self {
+      items: snapshot.items,
+      next_numeric_id: snapshot.next_numeric_id,
+    }
+  }
+
   pub fn list(&self) -> Vec<SearchProfile> {
     self.items.clone()
   }
@@ -30,5 +48,16 @@ impl ProfilesStore {
     let before = self.items.len();
     self.items.retain(|profile| profile.id != profile_id);
     before != self.items.len()
+  }
+
+  pub fn snapshot(&self) -> ProfilesSnapshot {
+    ProfilesSnapshot {
+      items: self.items.clone(),
+      next_numeric_id: self.next_numeric_id,
+    }
+  }
+
+  pub fn persist(&self) -> Result<(), String> {
+    persistence::save_json(PRESETS_FILE, &self.snapshot())
   }
 }

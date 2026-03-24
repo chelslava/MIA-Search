@@ -17,5 +17,6 @@ pub fn settings_set(state: State<'_, AppState>, value: SettingsSnapshot) -> Resu
     .lock()
     .map_err(|_| "settings lock poisoned".to_string())?;
   settings.replace(value);
+  settings.persist()?;
   Ok(settings.snapshot())
 }

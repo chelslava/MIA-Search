@@ -1,4 +1,4 @@
-use crate::{platform, AppState};
+use crate::{commands::history::record_opened_path_if_enabled, platform, AppState};
 use serde::{Deserialize, Serialize};
 use tauri::State;
 
@@ -11,14 +11,17 @@ pub struct ActionResponse {
 }
 
 #[tauri::command]
-pub fn actions_open_path(_state: State<'_, AppState>, path: String) -> Result<ActionResponse, String> {
+pub fn actions_open_path(state: State<'_, AppState>, path: String) -> Result<ActionResponse, String> {
   match platform::open_path::open_path(&path) {
-    Ok(()) => Ok(ActionResponse {
-      action: "open_path".to_string(),
-      target: path,
-      success: true,
-      message: None,
-    }),
+    Ok(()) => {
+      record_opened_path_if_enabled(&state, path.clone())?;
+      Ok(ActionResponse {
+        action: "open_path".to_string(),
+        target: path,
+        success: true,
+        message: None,
+      })
+    }
     Err(error) => Ok(ActionResponse {
       action: "open_path".to_string(),
       target: path,

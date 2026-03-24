@@ -3,6 +3,7 @@ use crate::{
     models::{SearchRequest, SearchResultItem},
     search_service::SearchService,
   },
+  commands::history::record_query_if_enabled,
   AppState,
 };
 use serde::{Deserialize, Serialize};
@@ -50,6 +51,8 @@ pub fn search_start(
   state: State<'_, AppState>,
   request: SearchRequest,
 ) -> Result<SearchCommandResponse, String> {
+  record_query_if_enabled(&state, request.clone())?;
+
   let mut session = state
     .search_session
     .lock()

@@ -1,9 +1,26 @@
-#[derive(Debug, Clone, Default)]
+use crate::storage::persistence;
+use serde::{Deserialize, Serialize};
+
+const FAVORITES_FILE: &str = "favorites.json";
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct FavoritesSnapshot {
+  pub items: Vec<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct FavoritesStore {
   items: Vec<String>,
 }
 
 impl FavoritesStore {
+  pub fn load() -> Self {
+    let snapshot: FavoritesSnapshot = persistence::load_json(FAVORITES_FILE);
+    Self {
+      items: snapshot.items,
+    }
+  }
+
   pub fn list(&self) -> Vec<String> {
     self.items.clone()
   }
@@ -19,5 +36,15 @@ impl FavoritesStore {
     let before = self.items.len();
     self.items.retain(|item| item != path);
     before != self.items.len()
+  }
+
+  pub fn snapshot(&self) -> FavoritesSnapshot {
+    FavoritesSnapshot {
+      items: self.items.clone(),
+    }
+  }
+
+  pub fn persist(&self) -> Result<(), String> {
+    persistence::save_json(FAVORITES_FILE, &self.snapshot())
   }
 }

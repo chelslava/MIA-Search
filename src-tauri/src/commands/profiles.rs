@@ -19,7 +19,9 @@ pub fn profiles_save(state: State<'_, AppState>, profile: SearchProfile) -> Resu
     .profiles
     .lock()
     .map_err(|_| "profiles lock poisoned".to_string())?;
-  Ok(store.save(profile))
+  let saved = store.save(profile);
+  store.persist()?;
+  Ok(saved)
 }
 
 #[tauri::command]
@@ -28,5 +30,9 @@ pub fn profiles_delete(state: State<'_, AppState>, profile_id: String) -> Result
     .profiles
     .lock()
     .map_err(|_| "profiles lock poisoned".to_string())?;
-  Ok(store.delete(&profile_id))
+  let deleted = store.delete(&profile_id);
+  if deleted {
+    store.persist()?;
+  }
+  Ok(deleted)
 }

@@ -1,4 +1,7 @@
+use crate::storage::persistence;
 use serde::{Deserialize, Serialize};
+
+const SETTINGS_FILE: &str = "settings.json";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SettingsSnapshot {
@@ -35,17 +38,27 @@ impl Default for SettingsSnapshot {
   }
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct SettingsStore {
   value: SettingsSnapshot,
 }
 
 impl SettingsStore {
+  pub fn load() -> Self {
+    Self {
+      value: persistence::load_json(SETTINGS_FILE),
+    }
+  }
+
   pub fn snapshot(&self) -> SettingsSnapshot {
     self.value.clone()
   }
 
   pub fn replace(&mut self, value: SettingsSnapshot) {
     self.value = value;
+  }
+
+  pub fn persist(&self) -> Result<(), String> {
+    persistence::save_json(SETTINGS_FILE, &self.value)
   }
 }
