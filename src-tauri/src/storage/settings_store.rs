@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 const SETTINGS_FILE: &str = "settings.json";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(default)]
 pub struct SettingsSnapshot {
   pub theme: String,
   pub language: String,
@@ -13,6 +14,7 @@ pub struct SettingsSnapshot {
   pub show_hidden_by_default: bool,
   pub auto_similarity_sort: bool,
   pub keep_history: bool,
+  pub max_history_entries: usize,
   pub date_format: String,
   pub size_unit: String,
   pub double_click_action: String,
@@ -30,6 +32,7 @@ impl Default for SettingsSnapshot {
       show_hidden_by_default: false,
       auto_similarity_sort: true,
       keep_history: true,
+      max_history_entries: 200,
       date_format: "%Y-%m-%d %H:%M:%S".to_string(),
       size_unit: "MB".to_string(),
       double_click_action: "open".to_string(),

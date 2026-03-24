@@ -31,12 +31,13 @@ pub fn record_query_if_enabled(state: &State<'_, AppState>, request: SearchReque
   if !settings.keep_history {
     return Ok(());
   }
+  let history_limit = settings.max_history_entries;
 
   let mut history = state
     .history
     .lock()
     .map_err(|_| "history lock poisoned".to_string())?;
-  history.record_query(request);
+  history.record_query_with_limit(request, history_limit);
   history.persist()
 }
 
@@ -49,11 +50,12 @@ pub fn record_opened_path_if_enabled(state: &State<'_, AppState>, path: impl Int
   if !settings.keep_history {
     return Ok(());
   }
+  let history_limit = settings.max_history_entries;
 
   let mut history = state
     .history
     .lock()
     .map_err(|_| "history lock poisoned".to_string())?;
-  history.record_opened_path(path);
+  history.record_opened_path_with_limit(path, history_limit);
   history.persist()
 }

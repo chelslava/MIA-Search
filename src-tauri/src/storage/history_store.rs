@@ -29,8 +29,18 @@ impl HistoryStore {
     self.queries.push(request);
   }
 
+  pub fn record_query_with_limit(&mut self, request: SearchRequest, limit: usize) {
+    self.queries.push(request);
+    trim_oldest(&mut self.queries, limit);
+  }
+
   pub fn record_opened_path(&mut self, path: impl Into<String>) {
     self.opened_paths.push(path.into());
+  }
+
+  pub fn record_opened_path_with_limit(&mut self, path: impl Into<String>, limit: usize) {
+    self.opened_paths.push(path.into());
+    trim_oldest(&mut self.opened_paths, limit);
   }
 
   pub fn snapshot(&self) -> HistorySnapshot {
@@ -42,5 +52,16 @@ impl HistoryStore {
 
   pub fn persist(&self) -> Result<(), String> {
     persistence::save_json(HISTORY_FILE, &self.snapshot())
+  }
+}
+
+fn trim_oldest<T>(items: &mut Vec<T>, limit: usize) {
+  if limit == 0 {
+    items.clear();
+    return;
+  }
+  if items.len() > limit {
+    let drain_count = items.len() - limit;
+    items.drain(0..drain_count);
   }
 }
