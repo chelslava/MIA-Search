@@ -14,3 +14,4 @@
 - Roadmap: `docs/roadmap.md`
 - Черновик задач для трекера: `docs/github_issues_draft.md`
 - Журнал выполнения: `docs/progress_log.md`
+- Smoke checklist: `docs/release_smoke_checklist.md`

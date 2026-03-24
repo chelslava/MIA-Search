@@ -47,7 +47,7 @@
 7. Качество MVP
 - [x] Unit-тесты ядра (минимальный критичный набор)
 - [x] Integration-тесты (multi-root, limits, hidden, filters)
-- [ ] Smoke на целевой ОС (минимум Windows)
+- [x] Smoke на целевой ОС (минимум Windows)
 
 ## Out of MVP (в следующую фазу)
 - Полная локализация RU/EN.

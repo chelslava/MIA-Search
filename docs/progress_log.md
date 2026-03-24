@@ -50,6 +50,11 @@
   - добавлены unit-тесты для `search_mapper`, `filters`, `ranking`;
   - добавлены integration-style тесты для `SearchService`;
   - `cargo test`: 9 passed, 0 failed.
+- UI smoke блок:
+  - добавлен `vitest` + `@testing-library/react` + `jsdom`;
+  - добавлены smoke-тесты `src/app/App.smoke.test.tsx` (4 сценария);
+  - `npm run smoke` проходит.
+- Добавлен релизный checklist: `docs/release_smoke_checklist.md`.
 
 ### Проверки
 - `cargo check` (в `src-tauri`) проходит успешно.
@@ -60,4 +65,4 @@
 - В sandbox `vite build` периодически падает с `spawn EPERM`; elevated-run решает проблему.
 
 ### Следующий шаг
-- Перейти к `H-03/H-05` (UI smoke + кроссплатформенная сборка и smoke-checklist).
+- Закрыть остаток `H-05`: smoke-прогоны Linux/macOS и финальный release checklist.

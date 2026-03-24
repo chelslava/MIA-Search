@@ -45,7 +45,9 @@
 - `G-01`..`G-02` — Planned
 - `H-01` — Done
 - `H-02` — Done
-- `H-03`..`H-05` — Planned
+- `H-03` — Done
+- `H-04` — Planned
+- `H-05` — In Progress
 
 Примечание:
 - Факт создания структуры репозитория и модульных директорий закрывает `A-02`.
@@ -76,6 +78,8 @@
 - Clipboard действия (путь/имя) закрывают `F-03`.
 - Unit-тесты core search и маппинга закрывают `H-01`.
 - Integration-style тесты `SearchService` (multi-root/multi-ext/limit/depth) закрывают `H-02`.
+- UI smoke тесты (Vitest + Testing Library) закрывают `H-03`.
+- По `H-05` выполнен Windows smoke; Linux/macOS smoke остаются.
 - Статусы будут обновляться после каждого завершённого блока работ.
 
 Формат:
