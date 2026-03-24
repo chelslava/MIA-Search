@@ -52,42 +52,41 @@ describe("App smoke", () => {
     render(<App />);
     await waitFor(() => expect(mocks.favoritesListMock).toHaveBeenCalled());
 
-    expect(screen.getByText("MIA Search MVP")).toBeInTheDocument();
-    expect(screen.getByText("Search Options")).toBeInTheDocument();
-    expect(screen.getAllByText("Roots").length).toBeGreaterThan(0);
-    expect(screen.getByText("Results")).toBeInTheDocument();
-    expect(screen.getByText("Details")).toBeInTheDocument();
+    expect(screen.getByText("Файл")).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Имя" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Путь" })).toBeInTheDocument();
+    expect(screen.getByRole("columnheader", { name: "Действия" })).toBeInTheDocument();
   });
 
   it("starts search from UI", async () => {
     render(<App />);
-    await userEvent.click(screen.getByRole("button", { name: "Search" }));
+    await userEvent.click(screen.getByRole("button", { name: "Найти" }));
 
     await waitFor(() => {
       expect(mocks.startSearchMock).toHaveBeenCalledTimes(1);
     });
-    expect(screen.getByText("Running (#42)")).toBeInTheDocument();
+    expect(screen.getByText(/Состояние:\s*Выполняется \(#42\)/i)).toBeInTheDocument();
   });
 
   it("opens command palette with Ctrl+K and closes with Esc", async () => {
     render(<App />);
 
     fireEvent.keyDown(window, { key: "k", ctrlKey: true });
-    expect(screen.getByRole("dialog", { name: "Command palette" })).toBeInTheDocument();
+    expect(screen.getByRole("dialog", { name: "Палитра команд" })).toBeInTheDocument();
 
     fireEvent.keyDown(window, { key: "Escape" });
     await waitFor(() =>
-      expect(screen.queryByRole("dialog", { name: "Command palette" })).not.toBeInTheDocument()
+      expect(screen.queryByRole("dialog", { name: "Палитра команд" })).not.toBeInTheDocument()
     );
   });
 
   it("resets active filters", async () => {
     render(<App />);
-    const strictCheckbox = screen.getByRole("checkbox", { name: /strict/i });
+    const strictCheckbox = screen.getByRole("checkbox", { name: /строго/i });
     await userEvent.click(strictCheckbox);
     expect(strictCheckbox).toBeChecked();
 
-    await userEvent.click(screen.getByRole("button", { name: "Reset all" }));
+    await userEvent.click(screen.getByRole("button", { name: "Сброс" }));
     expect(strictCheckbox).not.toBeChecked();
   });
 });

@@ -16,8 +16,14 @@ export function ToastHost({ items, onClose }: ToastHostProps) {
     return null;
   }
 
+  const kindLabel: Record<ToastKind, string> = {
+    info: "инфо",
+    success: "успех",
+    error: "ошибка"
+  };
+
   return (
-    <div className="toast-host" aria-label="Notifications" aria-live="polite">
+    <div className="toast-host" aria-label="Уведомления" aria-live="polite">
       {items.map((item) => (
         <article
           key={item.id}
@@ -25,16 +31,16 @@ export function ToastHost({ items, onClose }: ToastHostProps) {
           role={item.kind === "error" ? "alert" : "status"}
         >
           <div className="toast-content">
-            <span className="toast-kind">{item.kind ?? "info"}</span>
+            <span className="toast-kind">{kindLabel[item.kind ?? "info"]}</span>
             <p className="toast-text">{item.text}</p>
           </div>
           <button
             type="button"
             className="toast-close"
-            aria-label="Close notification"
+            aria-label="Закрыть уведомление"
             onClick={() => onClose(item.id)}
           >
-            Close
+            Закрыть
           </button>
         </article>
       ))}

@@ -74,12 +74,12 @@ export function CommandPalette({ open, onClose, actions }: CommandPaletteProps) 
   }
 
   return (
-    <div className="command-palette" role="dialog" aria-modal="true" aria-label="Command palette">
+    <div className="command-palette" role="dialog" aria-modal="true" aria-label="Палитра команд">
       <div className="command-palette__backdrop" onClick={onClose} />
       <div className="command-palette__panel">
         <div className="command-palette__header">
           <label className="command-palette__label" htmlFor="command-palette-input">
-            Command Palette
+            Палитра команд
           </label>
           <input
             id="command-palette-input"
@@ -88,13 +88,13 @@ export function CommandPalette({ open, onClose, actions }: CommandPaletteProps) 
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={handleInputKeyDown}
-            placeholder="Type to filter commands"
+            placeholder="Введите текст для фильтрации команд"
             autoComplete="off"
             spellCheck={false}
           />
         </div>
 
-        <div className="command-palette__results" role="list" aria-label="Available actions">
+        <div className="command-palette__results" role="list" aria-label="Доступные действия">
           {filteredActions.length > 0 ? (
             filteredActions.map((action) => (
               <button
@@ -108,7 +108,7 @@ export function CommandPalette({ open, onClose, actions }: CommandPaletteProps) 
               </button>
             ))
           ) : (
-            <div className="command-palette__empty">No commands match the current query.</div>
+            <div className="command-palette__empty">Нет команд для текущего запроса.</div>
           )}
         </div>
       </div>

@@ -21,6 +21,7 @@ import {
   tauriRuntimeAvailable
 } from "../shared/tauri-client";
 import type {
+  EntryKind,
   HistorySnapshot,
   SearchProfile,
   SearchRequest,
@@ -52,6 +53,7 @@ export function App() {
   const [strict, setStrict] = useState(false);
   const [ignoreCase, setIgnoreCase] = useState(true);
   const [includeHidden, setIncludeHidden] = useState(false);
+  const [entryKind, setEntryKind] = useState<EntryKind>("Any");
   const [sortMode, setSortMode] = useState<SortMode>("Relevance");
   const [limit, setLimit] = useState(500);
   const [extensionsRaw, setExtensionsRaw] = useState("");
@@ -65,7 +67,7 @@ export function App() {
   const [modifiedBefore, setModifiedBefore] = useState("");
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
-  const [status, setStatus] = useState("Idle");
+  const [status, setStatus] = useState("Ожидание");
   const [activeSearchId, setActiveSearchId] = useState<number | null>(null);
   const [limitReached, setLimitReached] = useState(false);
   const [searchStartedAt, setSearchStartedAt] = useState<number | null>(null);
@@ -76,6 +78,7 @@ export function App() {
   const [newProfileName, setNewProfileName] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("dark");
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -89,17 +92,20 @@ export function App() {
   );
   const activeFilterChips = useMemo(() => {
     const chips: string[] = [];
-    if (strict) chips.push("strict");
-    if (ignoreCase) chips.push("ignore_case");
-    if (includeHidden) chips.push("hidden");
-    if (extensionsRaw.trim()) chips.push(`ext: ${extensionsRaw}`);
-    if (sizeFilterEnabled) chips.push(`size ${sizeComparison.toLowerCase()} ${sizeValue}${sizeUnit}`);
-    if (createdAfter) chips.push("created_after");
-    if (createdBefore) chips.push("created_before");
-    if (modifiedAfter) chips.push("modified_after");
-    if (modifiedBefore) chips.push("modified_before");
-    chips.push(`sort: ${sortMode.toLowerCase()}`);
-    chips.push(`limit: ${limit}`);
+    if (strict) chips.push("строгое совпадение");
+    if (ignoreCase) chips.push("без учета регистра");
+    if (includeHidden) chips.push("скрытые");
+    if (extensionsRaw.trim()) chips.push(`расширения: ${extensionsRaw}`);
+    if (sizeFilterEnabled) chips.push(`размер ${sizeComparison.toLowerCase()} ${sizeValue}${sizeUnit}`);
+    if (createdAfter) chips.push("создано после");
+    if (createdBefore) chips.push("создано до");
+    if (modifiedAfter) chips.push("изменено после");
+    if (modifiedBefore) chips.push("изменено до");
+    chips.push(
+      `тип: ${entryKind === "Any" ? "все" : entryKind === "File" ? "файлы" : "папки"}`
+    );
+    chips.push(`сортировка: ${sortMode.toLowerCase()}`);
+    chips.push(`лимит: ${limit}`);
     return chips;
   }, [
     strict,
@@ -114,38 +120,39 @@ export function App() {
     createdBefore,
     modifiedAfter,
     modifiedBefore,
+    entryKind,
     sortMode,
     limit
   ]);
   const commandActions = useMemo<CommandPaletteAction[]>(
     () => [
-      { id: "search", label: "Run search", run: () => void handleSearch() },
-      { id: "cancel", label: "Cancel search", run: () => void handleCancel() },
-      { id: "focus", label: "Focus search input", run: () => searchInputRef.current?.focus() },
+      { id: "search", label: "Запустить поиск", run: () => void handleSearch() },
+      { id: "cancel", label: "Отменить поиск", run: () => void handleCancel() },
+      { id: "focus", label: "Фокус в поле поиска", run: () => searchInputRef.current?.focus() },
       {
         id: "open",
-        label: "Open selected result",
+        label: "Открыть выбранный результат",
         run: () => {
           if (selectedResult) void handleOpenPath(selectedResult.full_path);
         }
       },
       {
         id: "copy",
-        label: "Copy selected path",
+        label: "Скопировать выбранный путь",
         run: () => {
           if (selectedResult) void handleCopyPath(selectedResult.full_path);
         }
       },
       {
         id: "reveal",
-        label: "Reveal selected in file manager",
+        label: "Показать в проводнике",
         run: () => {
           if (selectedResult) void handleRevealPath(selectedResult.full_path);
         }
       },
       {
         id: "reset",
-        label: "Reset all filters",
+        label: "Сбросить фильтры",
         run: () => resetFilters()
       }
     ],
@@ -174,9 +181,10 @@ export function App() {
     setCreatedBefore("");
     setModifiedAfter("");
     setModifiedBefore("");
+    setEntryKind("Any");
     setSortMode("Relevance");
     setLimit(500);
-    pushToast("Filters reset", "info");
+    pushToast("Фильтры сброшены", "info");
   }
 
   const buildCurrentRequest = (): SearchRequest => ({
@@ -192,7 +200,7 @@ export function App() {
       strict,
       ignore_case: ignoreCase,
       include_hidden: includeHidden,
-      entry_kind: "Any",
+      entry_kind: entryKind,
       size_filter: sizeFilterEnabled
         ? {
             comparison: sizeComparison,
@@ -227,7 +235,7 @@ export function App() {
       setHistory(historySnapshot);
       setProfiles(profileItems);
     } catch {
-      setStatus("Persistence load failed");
+      setStatus("Не удалось загрузить сохраненные данные");
     }
   }
 
@@ -239,6 +247,7 @@ export function App() {
     setStrict(req.options.strict);
     setIgnoreCase(req.options.ignore_case);
     setIncludeHidden(req.options.include_hidden);
+    setEntryKind(req.options.entry_kind);
     setSortMode(req.options.sort_mode);
     setLimit(req.options.limit ?? 500);
   }
@@ -256,7 +265,7 @@ export function App() {
         setResults((previous) => previous.concat(payload.results));
       }),
       onSearchDone((payload) => {
-        setStatus(`Done (${payload.total_results})`);
+        setStatus(`Готово (${payload.total_results})`);
         setLimitReached(payload.limit_reached);
         setActiveSearchId(null);
         setIsSearching(false);
@@ -264,25 +273,25 @@ export function App() {
           setElapsedMs(Date.now() - searchStartedAt);
         }
         void refreshPersistenceData();
-        pushToast(`Search finished: ${payload.total_results}`, "success");
+        pushToast(`Поиск завершен: ${payload.total_results}`, "success");
       }),
       onSearchCancelled((payload) => {
-        setStatus(`Cancelled (#${payload.search_id})`);
+        setStatus(`Отменено (#${payload.search_id})`);
         setActiveSearchId(null);
         setIsSearching(false);
         if (searchStartedAt !== null) {
           setElapsedMs(Date.now() - searchStartedAt);
         }
-        pushToast("Search cancelled", "info");
+        pushToast("Поиск отменен", "info");
       }),
       onSearchError((payload) => {
-        setStatus(`Error: ${payload.message}`);
+        setStatus(`Ошибка: ${payload.message}`);
         setActiveSearchId(null);
         setIsSearching(false);
         if (searchStartedAt !== null) {
           setElapsedMs(Date.now() - searchStartedAt);
         }
-        pushToast(`Search error: ${payload.message}`, "error");
+        pushToast(`Ошибка поиска: ${payload.message}`, "error");
       })
     ])
       .then((unlisteners) => {
@@ -293,7 +302,7 @@ export function App() {
         unlistenHandlers.push(...unlisteners);
       })
       .catch(() => {
-        setStatus("Event subscription failed");
+        setStatus("Не удалось подписаться на события");
       });
 
     return () => {
@@ -305,6 +314,10 @@ export function App() {
   useEffect(() => {
     void refreshPersistenceData();
   }, []);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -360,7 +373,7 @@ export function App() {
 
   async function handleSearch(): Promise<void> {
     if (!tauriRuntimeAvailable) {
-      setStatus("Tauri runtime not detected");
+      setStatus("Tauri runtime не обнаружен");
       return;
     }
 
@@ -369,7 +382,7 @@ export function App() {
     setResults([]);
     setSelectedPath(null);
     setLimitReached(false);
-    setStatus("Searching...");
+    setStatus("Поиск...");
     setIsSearching(true);
     setSearchStartedAt(Date.now());
     setElapsedMs(null);
@@ -377,12 +390,12 @@ export function App() {
     try {
       const response = await startSearch(request);
       setActiveSearchId(response.search_id);
-      setStatus(`Running (#${response.search_id})`);
+      setStatus(`Выполняется (#${response.search_id})`);
     } catch (error) {
-      setStatus(`Search failed: ${String(error)}`);
+      setStatus(`Ошибка запуска поиска: ${String(error)}`);
       setActiveSearchId(null);
       setIsSearching(false);
-      pushToast("Search start failed", "error");
+      pushToast("Не удалось запустить поиск", "error");
     }
   }
 
@@ -392,11 +405,11 @@ export function App() {
     }
     try {
       await cancelSearch();
-      setStatus("Cancelling...");
-      pushToast("Cancelling search...", "info");
+      setStatus("Отмена...");
+      pushToast("Отмена поиска...", "info");
     } catch (error) {
-      setStatus(`Cancel failed: ${String(error)}`);
-      pushToast("Cancel failed", "error");
+      setStatus(`Ошибка отмены: ${String(error)}`);
+      pushToast("Не удалось отменить поиск", "error");
     }
   }
 
@@ -406,10 +419,10 @@ export function App() {
     }
     try {
       await actionOpenPath(path);
-      pushToast("Opened path", "success");
+      pushToast("Путь открыт", "success");
       await refreshPersistenceData();
     } catch {
-      pushToast("Open path failed", "error");
+      pushToast("Не удалось открыть путь", "error");
     }
   }
 
@@ -419,9 +432,9 @@ export function App() {
     }
     try {
       await actionCopyToClipboard(path);
-      pushToast("Path copied", "success");
+      pushToast("Путь скопирован", "success");
     } catch {
-      pushToast("Copy failed", "error");
+      pushToast("Не удалось скопировать путь", "error");
     }
   }
 
@@ -431,9 +444,9 @@ export function App() {
     }
     try {
       await actionCopyToClipboard(name);
-      pushToast("Name copied", "success");
+      pushToast("Имя скопировано", "success");
     } catch {
-      pushToast("Copy name failed", "error");
+      pushToast("Не удалось скопировать имя", "error");
     }
   }
 
@@ -443,10 +456,10 @@ export function App() {
     }
     try {
       await actionOpenParent(path);
-      pushToast("Parent opened", "success");
+      pushToast("Родительская папка открыта", "success");
       await refreshPersistenceData();
     } catch {
-      pushToast("Open parent failed", "error");
+      pushToast("Не удалось открыть родительскую папку", "error");
     }
   }
 
@@ -456,9 +469,9 @@ export function App() {
     }
     try {
       await actionRevealPath(path);
-      pushToast("Revealed in file manager", "success");
+      pushToast("Показано в проводнике", "success");
     } catch {
-      pushToast("Reveal failed", "error");
+      pushToast("Не удалось показать в проводнике", "error");
     }
   }
 
@@ -483,7 +496,7 @@ export function App() {
       const items = await favoritesAdd(path);
       setFavorites(items);
     } catch {
-      setStatus("Failed to add favorite");
+      setStatus("Не удалось добавить в избранное");
     }
   }
 
@@ -495,7 +508,7 @@ export function App() {
       await favoritesRemove(path);
       setFavorites((previous) => previous.filter((item) => item !== path));
     } catch {
-      setStatus("Failed to remove favorite");
+      setStatus("Не удалось удалить из избранного");
     }
   }
 
@@ -514,7 +527,7 @@ export function App() {
       setNewProfileName("");
       await refreshPersistenceData();
     } catch {
-      setStatus("Failed to save profile");
+      setStatus("Не удалось сохранить профиль");
     }
   }
 
@@ -526,7 +539,7 @@ export function App() {
       await profilesDelete(profileId);
       setProfiles((previous) => previous.filter((profile) => profile.id !== profileId));
     } catch {
-      setStatus("Failed to delete profile");
+      setStatus("Не удалось удалить профиль");
     }
   }
 
@@ -538,499 +551,255 @@ export function App() {
       const snapshot = await historyClear();
       setHistory(snapshot);
     } catch {
-      setStatus("Failed to clear history");
+      setStatus("Не удалось очистить историю");
     }
   }
 
   return (
     <>
       <main className="app-shell">
-      <header className="hero">
-        <div>
-          <p className="eyebrow">MIA Search MVP</p>
-          <h1>Cross-platform desktop file search.</h1>
-          <p className="subcopy">Rust backend + streaming results + cancellable search.</p>
-        </div>
-        <div className="search-card">
-          <label className="search-label" htmlFor="search-query">
-            Search query
-          </label>
-          <input
-            id="search-query"
-            ref={searchInputRef}
-            className="search-input"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Type file or directory name"
-          />
-          <div className="search-actions">
+        <div className="top-panel">
+          <div className="menu-bar">
+            <span>Файл</span>
+            <span>Правка</span>
+            <span>Вид</span>
+            <span>Поиск</span>
+            <span>Закладки</span>
+            <span>Сервис</span>
+            <span>Справка</span>
+          </div>
+          <div className="toolbar-row">
+            <input
+              id="search-query"
+              ref={searchInputRef}
+              className="search-input"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Поиск файлов и папок"
+            />
             <button type="button" className="button-primary" onClick={handleSearch}>
-              Search
+              Найти
             </button>
             <button type="button" className="button-secondary" onClick={handleCancel}>
-              Cancel
+              Отмена
             </button>
-            <button
-              type="button"
-              className="button-secondary"
-              onClick={() => {
-                setQuery("");
-                setResults([]);
-                setStatus("Idle");
-                setActiveSearchId(null);
-              }}
+            <button type="button" className="button-secondary" onClick={resetFilters}>
+              Сброс
+            </button>
+            <button type="button" className="button-secondary" onClick={() => setPaletteOpen(true)}>
+              Палитра
+            </button>
+            <select
+              className="mini-input"
+              aria-label="search-scope"
+              value={entryKind}
+              onChange={(event) => setEntryKind(event.target.value as EntryKind)}
             >
-              Clear
-            </button>
+              <option value="Any">Все</option>
+              <option value="File">Файлы</option>
+              <option value="Directory">Папки</option>
+            </select>
+            <select
+              className="mini-input"
+              aria-label="theme-select"
+              value={theme}
+              onChange={(event) => setTheme(event.target.value as "light" | "dark")}
+            >
+              <option value="dark">Темная</option>
+              <option value="light">Светлая</option>
+            </select>
           </div>
-          <p className="hotkeys-hint">Hotkeys: Ctrl/Cmd+K, Ctrl/Cmd+F, Esc, Enter, Ctrl/Cmd+C, F5</p>
-        </div>
-      </header>
 
-      <section className="grid-layout" aria-label="Search workspace">
-        <section className="panel">
-          <div className="panel-title">Search Options</div>
-          <div className="option-row">
-            <label>
-              <input type="checkbox" checked={strict} onChange={(e) => setStrict(e.target.checked)} /> strict
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={ignoreCase}
-                onChange={(e) => setIgnoreCase(e.target.checked)}
-              />{" "}
-              ignore_case
-            </label>
-            <label>
-              <input
-                type="checkbox"
-                checked={includeHidden}
-                onChange={(e) => setIncludeHidden(e.target.checked)}
-              />{" "}
-              include_hidden
-            </label>
-          </div>
-          <div className="option-row">
-            <label htmlFor="limit-input">limit</label>
+          <div className="toolbar-row compact-controls">
             <input
-              id="limit-input"
+              className="search-input compact-input"
+              value={extensionsRaw}
+              onChange={(e) => setExtensionsRaw(e.target.value)}
+              placeholder="расширения: rs,md,txt"
+            />
+            <select
+              className="mini-input"
+              value={sortMode}
+              onChange={(e) => setSortMode(e.target.value as SortMode)}
+            >
+              <option value="Relevance">релевантность</option>
+              <option value="Name">имя</option>
+              <option value="Size">размер</option>
+              <option value="Modified">дата изм.</option>
+              <option value="Type">тип</option>
+            </select>
+            <input
               className="mini-input"
               type="number"
               min={1}
               value={limit}
               onChange={(e) => setLimit(Math.max(1, Number(e.target.value) || 1))}
+              title="лимит"
             />
-          </div>
-          <div className="option-row">
-            <label htmlFor="sort-mode">sort</label>
-            <select
-              id="sort-mode"
-              className="mini-input"
-              value={sortMode}
-              onChange={(e) => setSortMode(e.target.value as SortMode)}
-            >
-              <option value="Relevance">relevance</option>
-              <option value="Name">name</option>
-              <option value="Size">size</option>
-              <option value="Modified">modified</option>
-              <option value="Type">type</option>
-            </select>
-          </div>
-          <div className="option-row">
-            <label htmlFor="extensions-input">extensions</label>
-            <input
-              id="extensions-input"
-              className="search-input compact-input"
-              value={extensionsRaw}
-              onChange={(e) => setExtensionsRaw(e.target.value)}
-              placeholder="rs,md,txt"
-            />
-          </div>
-          <div className="option-row">
-            <label>
+            <label className="compact-check">
+              <input type="checkbox" checked={strict} onChange={(e) => setStrict(e.target.checked)} />
+              строго
+            </label>
+            <label className="compact-check">
+              <input type="checkbox" checked={ignoreCase} onChange={(e) => setIgnoreCase(e.target.checked)} />
+              регистр
+            </label>
+            <label className="compact-check">
               <input
                 type="checkbox"
-                checked={sizeFilterEnabled}
-                onChange={(e) => setSizeFilterEnabled(e.target.checked)}
-              />{" "}
-              size filter
+                checked={includeHidden}
+                onChange={(e) => setIncludeHidden(e.target.checked)}
+              />
+              скрытые
             </label>
-            <select
-              className="mini-input"
-              value={sizeComparison}
-              onChange={(e) => setSizeComparison(e.target.value as "Smaller" | "Equal" | "Greater")}
-              disabled={!sizeFilterEnabled}
-            >
-              <option value="Greater">greater</option>
-              <option value="Smaller">smaller</option>
-              <option value="Equal">equal</option>
-            </select>
+          </div>
+
+          <div className="toolbar-row compact-controls">
             <input
-              className="mini-input"
-              type="number"
-              min={0}
-              value={sizeValue}
-              onChange={(e) => setSizeValue(Math.max(0, Number(e.target.value) || 0))}
-              disabled={!sizeFilterEnabled}
+              className="search-input compact-input"
+              value={newRoot}
+              onChange={(event) => setNewRoot(event.target.value)}
+              placeholder="Добавить корневой путь"
             />
-            <select
-              className="mini-input"
-              value={sizeUnit}
-              onChange={(e) => setSizeUnit(e.target.value as "B" | "KB" | "MB" | "GB" | "TB")}
-              disabled={!sizeFilterEnabled}
-            >
-              <option value="B">B</option>
-              <option value="KB">KB</option>
-              <option value="MB">MB</option>
-              <option value="GB">GB</option>
-              <option value="TB">TB</option>
-            </select>
-          </div>
-          <div className="option-grid">
-            <label>
-              created_after
-              <input
-                className="search-input compact-input"
-                type="datetime-local"
-                value={createdAfter}
-                onChange={(e) => setCreatedAfter(e.target.value)}
-              />
-            </label>
-            <label>
-              created_before
-              <input
-                className="search-input compact-input"
-                type="datetime-local"
-                value={createdBefore}
-                onChange={(e) => setCreatedBefore(e.target.value)}
-              />
-            </label>
-            <label>
-              modified_after
-              <input
-                className="search-input compact-input"
-                type="datetime-local"
-                value={modifiedAfter}
-                onChange={(e) => setModifiedAfter(e.target.value)}
-              />
-            </label>
-            <label>
-              modified_before
-              <input
-                className="search-input compact-input"
-                type="datetime-local"
-                value={modifiedBefore}
-                onChange={(e) => setModifiedBefore(e.target.value)}
-              />
-            </label>
-          </div>
-          <div className="panel-header status-title">
-            <div className="panel-title">Active Filters</div>
-            <button type="button" className="button-secondary" onClick={resetFilters}>
-              Reset all
+            <button type="button" className="button-secondary" onClick={handleAddRoot}>
+              Добавить корень
+            </button>
+            <input
+              className="search-input compact-input"
+              value={newProfileName}
+              onChange={(event) => setNewProfileName(event.target.value)}
+              placeholder="Имя профиля"
+            />
+            <button type="button" className="button-secondary" onClick={() => void handleSaveProfile()}>
+              Сохранить профиль
+            </button>
+            <button type="button" className="button-secondary" onClick={() => void handleClearHistory()}>
+              Очистить историю
             </button>
           </div>
+
           <div className="chip-row">
+            {roots.map((root) => (
+              <button
+                key={root.path}
+                type="button"
+                className={`chip ${root.enabled ? "chip-active" : ""}`}
+                onClick={() =>
+                  setRoots((previous) =>
+                    previous.map((item) => (item.path === root.path ? { ...item, enabled: !item.enabled } : item))
+                  )
+                }
+              >
+                {root.enabled ? "вкл" : "выкл"}: {root.path}
+              </button>
+            ))}
             {activeFilterChips.map((chip) => (
               <span className="chip chip-active" key={chip}>
                 {chip}
               </span>
             ))}
           </div>
-        </section>
+        </div>
 
-        <section className="panel">
-          <div className="panel-title">Roots</div>
-          <div className="root-adder">
-            <input
-              className="search-input"
-              value={newRoot}
-              onChange={(event) => setNewRoot(event.target.value)}
-              placeholder="Add root path"
-            />
-            <button type="button" className="button-secondary" onClick={handleAddRoot}>
-              Add
-            </button>
-          </div>
-          <ul className="root-list">
-            {roots.map((root) => (
-              <li key={root.path}>
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={root.enabled}
-                    onChange={(event) =>
-                      setRoots((previous) =>
-                        previous.map((item) =>
-                          item.path === root.path ? { ...item, enabled: event.target.checked } : item
-                        )
-                      )
-                    }
-                  />{" "}
-                  {root.path}
-                </label>
-              </li>
-            ))}
-          </ul>
-          <div className="panel-title status-title">Favorites</div>
-          {favorites.length > 0 ? (
-            <ul className="simple-list">
-              {favorites.map((item) => (
-                <li key={item}>
-                  <button type="button" className="link-button" onClick={() => setSelectedPath(item)}>
-                    {item}
-                  </button>
-                  <button
-                    type="button"
-                    className="link-button danger"
-                    onClick={() => {
-                      void handleRemoveFavorite(item);
-                    }}
-                  >
-                    remove
-                  </button>
-                </li>
+        <div className="table-wrap" aria-label="Search results">
+          <table className="results-table">
+            <thead>
+              <tr>
+                <th>Имя</th>
+                <th>Путь</th>
+                <th>Тип</th>
+                <th>Размер</th>
+                <th>Изменен</th>
+                <th>Корень</th>
+                <th>Действия</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isSearching && results.length === 0 ? (
+                <>
+                  <tr>
+                    <td colSpan={7}>
+                      <div className="skeleton skeleton-row" />
+                    </td>
+                  </tr>
+                  <tr>
+                    <td colSpan={7}>
+                      <div className="skeleton skeleton-row" />
+                    </td>
+                  </tr>
+                </>
+              ) : null}
+              {results.map((item) => (
+                <tr
+                  key={item.full_path}
+                  className={selectedPath === item.full_path ? "row-selected" : ""}
+                  onClick={() => setSelectedPath(item.full_path)}
+                >
+                  <td>{item.name || "—"}</td>
+                  <td className="path-cell">{item.full_path}</td>
+                  <td>{item.is_dir ? "Папка" : "Файл"}</td>
+                  <td>{item.size ?? "—"}</td>
+                  <td>{item.modified_at ?? "—"}</td>
+                  <td>{item.source_root}</td>
+                  <td>
+                    <div className="row-actions">
+                      <button
+                        type="button"
+                        className="mini-btn"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleOpenPath(item.full_path);
+                        }}
+                      >
+                        Открыть
+                      </button>
+                      <button
+                        type="button"
+                        className="mini-btn"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleOpenParent(item.full_path);
+                        }}
+                      >
+                        Родитель
+                      </button>
+                      <button
+                        type="button"
+                        className="mini-btn"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleRevealPath(item.full_path);
+                        }}
+                      >
+                        Показать
+                      </button>
+                      <button
+                        type="button"
+                        className="mini-btn"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void handleCopyPath(item.full_path);
+                        }}
+                      >
+                        Копия
+                      </button>
+                    </div>
+                  </td>
+                </tr>
               ))}
-            </ul>
-          ) : (
-            <p className="panel-copy">No favorites yet.</p>
-          )}
+            </tbody>
+          </table>
+        </div>
 
-          <div className="panel-title status-title">Profiles</div>
-          <div className="root-adder">
-            <input
-              className="search-input compact-input"
-              value={newProfileName}
-              onChange={(event) => setNewProfileName(event.target.value)}
-              placeholder="Profile name"
-            />
-            <button type="button" className="button-secondary" onClick={() => void handleSaveProfile()}>
-              Save
-            </button>
-          </div>
-          {profiles.length > 0 ? (
-            <ul className="simple-list">
-              {profiles.map((profile) => (
-                <li key={profile.id}>
-                  <button type="button" className="link-button" onClick={() => applyProfile(profile)}>
-                    {profile.name}
-                  </button>
-                  <button
-                    type="button"
-                    className="link-button danger"
-                    onClick={() => {
-                      void handleDeleteProfile(profile.id);
-                    }}
-                  >
-                    delete
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="panel-copy">No profiles saved.</p>
-          )}
-
-          <div className="panel-title status-title">History</div>
-          <div className="panel-header">
-            <p className="panel-copy">
-              queries: {history.queries.length}, opened: {history.opened_paths.length}
-            </p>
-            <button type="button" className="button-secondary" onClick={() => void handleClearHistory()}>
-              Clear
-            </button>
-          </div>
-        </section>
-
-        <section className="panel panel-results">
-          <div className="panel-header">
-            <div>
-              <div className="panel-title">Results</div>
-              <p className="panel-copy">{results.length} streamed items</p>
-            </div>
-          </div>
-
-          <div className="results-list" role="list" aria-label="Search results">
-            {isSearching && results.length === 0 ? (
-              <>
-                <div className="skeleton skeleton-card" />
-                <div className="skeleton skeleton-card" />
-                <div className="skeleton skeleton-card" />
-              </>
-            ) : null}
-            {results.map((item) => (
-              <article
-                className={`result-card${selectedPath === item.full_path ? " result-selected" : ""}`}
-                key={item.full_path}
-                role="listitem"
-                onClick={() => setSelectedPath(item.full_path)}
-              >
-                <div>
-                  <h3>{item.name || item.full_path}</h3>
-                  <p>{item.full_path}</p>
-                </div>
-                <dl className="result-meta">
-                  <div>
-                    <dt>Type</dt>
-                    <dd>{item.is_dir ? "Directory" : "File"}</dd>
-                  </div>
-                  <div>
-                    <dt>Size</dt>
-                    <dd>{item.size ?? "—"}</dd>
-                  </div>
-                  <div>
-                    <dt>Root</dt>
-                    <dd>{item.source_root}</dd>
-                  </div>
-                </dl>
-                <div className="panel-header">
-                  <button
-                    type="button"
-                    className="button-secondary"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      void handleOpenPath(item.full_path);
-                    }}
-                  >
-                    Open
-                  </button>
-                  <button
-                    type="button"
-                    className="button-secondary"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      void handleCopyPath(item.full_path);
-                    }}
-                  >
-                    Copy path
-                  </button>
-                  <button
-                    type="button"
-                    className="button-secondary"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      void handleRevealPath(item.full_path);
-                    }}
-                  >
-                    Reveal
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="panel">
-          <div className="panel-title">Details</div>
-          {selectedResult ? (
-            <dl className="status-grid">
-              <div>
-                <dt>Name</dt>
-                <dd>{selectedResult.name || "—"}</dd>
-              </div>
-              <div>
-                <dt>Path</dt>
-                <dd>{selectedResult.full_path}</dd>
-              </div>
-              <div>
-                <dt>Type</dt>
-                <dd>{selectedResult.is_dir ? "Directory" : "File"}</dd>
-              </div>
-              <div>
-                <dt>Extension</dt>
-                <dd>{selectedResult.extension ?? "—"}</dd>
-              </div>
-              <div>
-                <dt>Modified</dt>
-                <dd>{selectedResult.modified_at ?? "—"}</dd>
-              </div>
-              <div>
-                <dt>Hidden</dt>
-                <dd>{selectedResult.hidden ? "Yes" : "No"}</dd>
-              </div>
-            </dl>
-          ) : (
-            <p className="panel-copy">Select a result to see metadata.</p>
-          )}
-          {selectedResult ? (
-            <div className="panel-header">
-              <button
-                type="button"
-                className="button-secondary"
-                onClick={() => {
-                  void handleAddFavorite(selectedResult.full_path);
-                }}
-              >
-                Add to favorites
-              </button>
-              <button
-                type="button"
-                className="button-secondary"
-                onClick={() => {
-                  void handleRemoveFavorite(selectedResult.full_path);
-                }}
-              >
-                Remove favorite
-              </button>
-              <button
-                type="button"
-                className="button-secondary"
-                onClick={() => {
-                  void handleOpenParent(selectedResult.full_path);
-                }}
-              >
-                Open parent
-              </button>
-              <button
-                type="button"
-                className="button-secondary"
-                onClick={() => {
-                  void handleRevealPath(selectedResult.full_path);
-                }}
-              >
-                Reveal
-              </button>
-              <button
-                type="button"
-                className="button-secondary"
-                onClick={() => {
-                  void handleCopyName(selectedResult.name || "");
-                }}
-              >
-                Copy name
-              </button>
-            </div>
-          ) : null}
-          <div className="panel-title status-title">Status</div>
-          <dl className="status-grid">
-            <div>
-              <dt>State</dt>
-              <dd>{status}</dd>
-            </div>
-            <div>
-              <dt>Search ID</dt>
-              <dd>{activeSearchId ?? "—"}</dd>
-            </div>
-            <div>
-              <dt>Roots</dt>
-              <dd>{enabledRoots.length}</dd>
-            </div>
-            <div>
-              <dt>Limit reached</dt>
-              <dd>{limitReached ? "Yes" : "No"}</dd>
-            </div>
-            <div>
-              <dt>Elapsed</dt>
-              <dd>{elapsedMs === null ? "—" : `${elapsedMs} ms`}</dd>
-            </div>
-            <div>
-              <dt>Runtime</dt>
-              <dd>{tauriRuntimeAvailable ? "Tauri" : "Web mode"}</dd>
-            </div>
-          </dl>
-        </section>
-      </section>
+        <div className="status-bar">
+          <span>Состояние: {status}</span>
+          <span>Найдено: {results.length}</span>
+          <span>Корней: {enabledRoots.length}</span>
+          <span>ID поиска: {activeSearchId ?? "—"}</span>
+          <span>Лимит: {limitReached ? "достигнут" : "не достигнут"}</span>
+          <span>Время: {elapsedMs === null ? "—" : `${elapsedMs} мс`}</span>
+          {selectedResult ? <span>Выбрано: {selectedResult.name || selectedResult.full_path}</span> : null}
+        </div>
       </main>
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} actions={commandActions} />
       <ToastHost items={toasts} onClose={closeToast} />
