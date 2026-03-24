@@ -45,8 +45,8 @@
 - [x] Профили поиска (минимально: save/load)
 
 7. Качество MVP
-- [ ] Unit-тесты ядра (минимальный критичный набор)
-- [ ] Integration-тесты (multi-root, limits, hidden, filters)
+- [x] Unit-тесты ядра (минимальный критичный набор)
+- [x] Integration-тесты (multi-root, limits, hidden, filters)
 - [ ] Smoke на целевой ОС (минимум Windows)
 
 ## Out of MVP (в следующую фазу)

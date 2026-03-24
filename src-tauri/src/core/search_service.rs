@@ -12,6 +12,45 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::SystemTime;
 
+impl PartialEq for crate::core::models::SearchOptions {
+  fn eq(&self, other: &Self) -> bool {
+    self.max_depth == other.max_depth
+      && self.limit == other.limit
+      && self.strict == other.strict
+      && self.ignore_case == other.ignore_case
+      && self.include_hidden == other.include_hidden
+      && self.entry_kind == other.entry_kind
+      && self.sort_mode == other.sort_mode
+      && option_size_filter_eq(&self.size_filter, &other.size_filter)
+      && option_date_filter_eq(&self.created_filter, &other.created_filter)
+      && option_date_filter_eq(&self.modified_filter, &other.modified_filter)
+  }
+}
+
+fn option_size_filter_eq(
+  left: &Option<crate::core::models::SizeFilter>,
+  right: &Option<crate::core::models::SizeFilter>,
+) -> bool {
+  match (left, right) {
+    (None, None) => true,
+    (Some(left), Some(right)) => left.bytes == right.bytes && left.comparison == right.comparison,
+    _ => false,
+  }
+}
+
+fn option_date_filter_eq(
+  left: &Option<crate::core::models::DateFilter>,
+  right: &Option<crate::core::models::DateFilter>,
+) -> bool {
+  match (left, right) {
+    (None, None) => true,
+    (Some(left), Some(right)) => {
+      left.field == right.field && left.comparison == right.comparison && left.value == right.value
+    }
+    _ => false,
+  }
+}
+
 const BATCH_SIZE: usize = 100;
 
 #[derive(Debug, Clone, Default)]
@@ -344,4 +383,106 @@ fn resolve_source_root(roots: &[String], path: &str) -> Option<String> {
     .iter()
     .find(|root| path.starts_with(root.as_str()))
     .cloned()
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use std::collections::HashSet;
+  use std::fs;
+  use std::path::Path;
+  use tempfile::tempdir;
+
+  fn write_file(path: &Path, contents: &str) {
+    if let Some(parent) = path.parent() {
+      fs::create_dir_all(parent).expect("failed to create parent directories");
+    }
+    fs::write(path, contents).expect("failed to write test file");
+  }
+
+  fn request_for_roots(roots: Vec<String>) -> SearchRequest {
+    let mut request = SearchRequest::default();
+    request.roots = roots;
+    request.options.max_depth = Some(1);
+    request.options.limit = Some(100);
+    request
+  }
+
+  #[test]
+  fn multi_root_search_returns_items_from_both_roots() {
+    let root_a = tempdir().expect("root_a");
+    let root_b = tempdir().expect("root_b");
+
+    write_file(&root_a.path().join("alpha.txt"), "alpha");
+    write_file(&root_b.path().join("beta.txt"), "beta");
+
+    let root_a_path = root_a.path().to_string_lossy().to_string();
+    let root_b_path = root_b.path().to_string_lossy().to_string();
+    let mut request = request_for_roots(vec![root_a_path.clone(), root_b_path.clone()]);
+    request.options.sort_mode = SortMode::Name;
+
+    let execution = SearchService::execute(&request);
+    let file_roots: HashSet<String> = execution
+      .items
+      .iter()
+      .filter(|item| item.is_file)
+      .map(|item| item.source_root.clone())
+      .collect();
+
+    assert!(file_roots.contains(&root_a_path));
+    assert!(file_roots.contains(&root_b_path));
+    assert!(execution.items.iter().any(|item| item.name == "alpha.txt"));
+    assert!(execution.items.iter().any(|item| item.name == "beta.txt"));
+  }
+
+  #[test]
+  fn multi_extension_dedupe_behavior_basic_sanity() {
+    let root = tempdir().expect("root");
+    write_file(&root.path().join("duplicate.rs"), "fn main() {}");
+
+    let mut request = request_for_roots(vec![root.path().to_string_lossy().to_string()]);
+    request.extensions = vec!["rs".to_string(), "rs".to_string()];
+    request.options.sort_mode = SortMode::Name;
+
+    let execution = SearchService::execute(&request);
+    let paths: HashSet<String> = execution.items.iter().map(|item| item.full_path.clone()).collect();
+
+    assert_eq!(execution.items.len(), 1);
+    assert_eq!(paths.len(), 1);
+    assert_eq!(execution.items[0].name, "duplicate.rs");
+  }
+
+  #[test]
+  fn limit_respected_and_limit_reached_true() {
+    let root = tempdir().expect("root");
+    write_file(&root.path().join("a.txt"), "a");
+    write_file(&root.path().join("b.txt"), "b");
+    write_file(&root.path().join("c.txt"), "c");
+
+    let mut request = request_for_roots(vec![root.path().to_string_lossy().to_string()]);
+    request.options.limit = Some(2);
+    request.options.sort_mode = SortMode::Name;
+
+    let execution = SearchService::execute(&request);
+
+    assert_eq!(execution.items.len(), 2);
+    assert!(execution.limit_reached);
+  }
+
+  #[test]
+  fn depth_restriction_basic_case() {
+    let root = tempdir().expect("root");
+    write_file(&root.path().join("top.txt"), "top");
+    write_file(&root.path().join("nested/deep.txt"), "deep");
+
+    let mut request = request_for_roots(vec![root.path().to_string_lossy().to_string()]);
+    request.options.max_depth = Some(1);
+    request.options.sort_mode = SortMode::Name;
+
+    let execution = SearchService::execute(&request);
+    let names: HashSet<String> = execution.items.iter().map(|item| item.name.clone()).collect();
+
+    assert!(names.contains("top.txt"));
+    assert!(!execution.items.iter().any(|item| item.full_path.ends_with("nested/deep.txt")));
+  }
 }

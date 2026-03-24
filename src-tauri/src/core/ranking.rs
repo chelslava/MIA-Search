@@ -15,3 +15,44 @@ pub fn sort_results(items: &mut [SearchResultItem], mode: &SortMode) {
     SortMode::Type => items.sort_by(|left, right| left.extension.cmp(&right.extension)),
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn item(name: &str, size: Option<u64>) -> SearchResultItem {
+    SearchResultItem {
+      name: name.to_string(),
+      size,
+      ..SearchResultItem::default()
+    }
+  }
+
+  #[test]
+  fn sort_results_by_name_orders_ascending() {
+    let mut items = vec![
+      item("zeta.txt", Some(3)),
+      item("alpha.txt", Some(1)),
+      item("beta.txt", Some(2)),
+    ];
+
+    sort_results(&mut items, &SortMode::Name);
+
+    let names: Vec<_> = items.iter().map(|item| item.name.as_str()).collect();
+    assert_eq!(names, vec!["alpha.txt", "beta.txt", "zeta.txt"]);
+  }
+
+  #[test]
+  fn sort_results_by_size_orders_ascending() {
+    let mut items = vec![
+      item("large.txt", Some(300)),
+      item("small.txt", Some(100)),
+      item("medium.txt", Some(200)),
+    ];
+
+    sort_results(&mut items, &SortMode::Size);
+
+    let sizes: Vec<_> = items.iter().map(|item| item.size).collect();
+    assert_eq!(sizes, vec![Some(100), Some(200), Some(300)]);
+  }
+}

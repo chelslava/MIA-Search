@@ -46,6 +46,10 @@
   - open parent directory;
   - reveal in file manager;
   - copy full path / copy name.
+- Тестовый блок:
+  - добавлены unit-тесты для `search_mapper`, `filters`, `ranking`;
+  - добавлены integration-style тесты для `SearchService`;
+  - `cargo test`: 9 passed, 0 failed.
 
 ### Проверки
 - `cargo check` (в `src-tauri`) проходит успешно.
@@ -56,4 +60,4 @@
 - В sandbox `vite build` периодически падает с `spawn EPERM`; elevated-run решает проблему.
 
 ### Следующий шаг
-- Перейти к тестовому блоку `H-01/H-02` (unit + integration для core search).
+- Перейти к `H-03/H-05` (UI smoke + кроссплатформенная сборка и smoke-checklist).
