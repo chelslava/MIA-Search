@@ -82,3 +82,15 @@ export interface SearchErrorEvent {
   search_id: number;
   message: string;
 }
+
+export interface SearchProfile {
+  id: string;
+  name: string;
+  request: SearchRequest;
+  pinned: boolean;
+}
+
+export interface HistorySnapshot {
+  queries: SearchRequest[];
+  opened_paths: string[];
+}

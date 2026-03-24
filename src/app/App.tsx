@@ -1,14 +1,28 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   cancelSearch,
+  favoritesAdd,
+  favoritesList,
+  favoritesRemove,
+  historyClear,
+  historyList,
   onSearchBatch,
   onSearchCancelled,
   onSearchDone,
   onSearchError,
+  profilesDelete,
+  profilesList,
+  profilesSave,
   startSearch,
   tauriRuntimeAvailable
 } from "../shared/tauri-client";
-import type { SearchRequest, SearchResultItem, SortMode } from "../shared/search-types";
+import type {
+  HistorySnapshot,
+  SearchProfile,
+  SearchRequest,
+  SearchResultItem,
+  SortMode
+} from "../shared/search-types";
 import "./styles.css";
 
 type RootItem = {
@@ -50,6 +64,10 @@ export function App() {
   const [limitReached, setLimitReached] = useState(false);
   const [searchStartedAt, setSearchStartedAt] = useState<number | null>(null);
   const [elapsedMs, setElapsedMs] = useState<number | null>(null);
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [history, setHistory] = useState<HistorySnapshot>({ queries: [], opened_paths: [] });
+  const [profiles, setProfiles] = useState<SearchProfile[]>([]);
+  const [newProfileName, setNewProfileName] = useState("");
 
   const enabledRoots = useMemo(
     () => roots.filter((root) => root.enabled).map((root) => root.path.trim()).filter(Boolean),
@@ -59,6 +77,70 @@ export function App() {
     () => results.find((item) => item.full_path === selectedPath) ?? null,
     [results, selectedPath]
   );
+
+  const buildCurrentRequest = (): SearchRequest => ({
+    query,
+    roots: enabledRoots.length > 0 ? enabledRoots : ["."],
+    extensions: extensionsRaw
+      .split(",")
+      .map((value) => value.trim().replace(/^\./, ""))
+      .filter(Boolean),
+    options: {
+      max_depth: null,
+      limit,
+      strict,
+      ignore_case: ignoreCase,
+      include_hidden: includeHidden,
+      entry_kind: "Any",
+      size_filter: sizeFilterEnabled
+        ? {
+            comparison: sizeComparison,
+            bytes: Math.max(0, sizeValue) * sizeUnitMultipliers[sizeUnit]
+          }
+        : null,
+      created_filter: createdAfter
+        ? { field: "Created", comparison: "After", value: new Date(createdAfter).toISOString() }
+        : createdBefore
+          ? { field: "Created", comparison: "Before", value: new Date(createdBefore).toISOString() }
+          : null,
+      modified_filter: modifiedAfter
+        ? { field: "Modified", comparison: "After", value: new Date(modifiedAfter).toISOString() }
+        : modifiedBefore
+          ? { field: "Modified", comparison: "Before", value: new Date(modifiedBefore).toISOString() }
+          : null,
+      sort_mode: sortMode
+    }
+  });
+
+  async function refreshPersistenceData(): Promise<void> {
+    if (!tauriRuntimeAvailable) {
+      return;
+    }
+    try {
+      const [favItems, historySnapshot, profileItems] = await Promise.all([
+        favoritesList(),
+        historyList(),
+        profilesList()
+      ]);
+      setFavorites(favItems);
+      setHistory(historySnapshot);
+      setProfiles(profileItems);
+    } catch {
+      setStatus("Persistence load failed");
+    }
+  }
+
+  function applyProfile(profile: SearchProfile): void {
+    const req = profile.request;
+    setQuery(req.query);
+    setRoots(req.roots.length > 0 ? req.roots.map((path) => ({ path, enabled: true })) : defaultRoots);
+    setExtensionsRaw(req.extensions.join(","));
+    setStrict(req.options.strict);
+    setIgnoreCase(req.options.ignore_case);
+    setIncludeHidden(req.options.include_hidden);
+    setSortMode(req.options.sort_mode);
+    setLimit(req.options.limit ?? 500);
+  }
 
   useEffect(() => {
     if (!tauriRuntimeAvailable) {
@@ -79,6 +161,7 @@ export function App() {
         if (searchStartedAt !== null) {
           setElapsedMs(Date.now() - searchStartedAt);
         }
+        void refreshPersistenceData();
       }),
       onSearchCancelled((payload) => {
         setStatus(`Cancelled (#${payload.search_id})`);
@@ -112,45 +195,17 @@ export function App() {
     };
   }, [searchStartedAt]);
 
+  useEffect(() => {
+    void refreshPersistenceData();
+  }, []);
+
   async function handleSearch(): Promise<void> {
     if (!tauriRuntimeAvailable) {
       setStatus("Tauri runtime not detected");
       return;
     }
 
-    const request: SearchRequest = {
-      query,
-      roots: enabledRoots.length > 0 ? enabledRoots : ["."],
-      extensions: extensionsRaw
-        .split(",")
-        .map((value) => value.trim().replace(/^\./, ""))
-        .filter(Boolean),
-      options: {
-        max_depth: null,
-        limit,
-        strict,
-        ignore_case: ignoreCase,
-        include_hidden: includeHidden,
-        entry_kind: "Any",
-        size_filter: sizeFilterEnabled
-          ? {
-              comparison: sizeComparison,
-              bytes: Math.max(0, sizeValue) * sizeUnitMultipliers[sizeUnit]
-            }
-          : null,
-        created_filter: createdAfter
-          ? { field: "Created", comparison: "After", value: new Date(createdAfter).toISOString() }
-          : createdBefore
-            ? { field: "Created", comparison: "Before", value: new Date(createdBefore).toISOString() }
-            : null,
-        modified_filter: modifiedAfter
-          ? { field: "Modified", comparison: "After", value: new Date(modifiedAfter).toISOString() }
-          : modifiedBefore
-            ? { field: "Modified", comparison: "Before", value: new Date(modifiedBefore).toISOString() }
-            : null,
-        sort_mode: sortMode
-      }
-    };
+    const request: SearchRequest = buildCurrentRequest();
 
     setResults([]);
     setSelectedPath(null);
@@ -192,6 +247,73 @@ export function App() {
     }
     setRoots((previous) => previous.concat({ path, enabled: true }));
     setNewRoot("");
+  }
+
+  async function handleAddFavorite(path: string): Promise<void> {
+    if (!tauriRuntimeAvailable) {
+      return;
+    }
+    try {
+      const items = await favoritesAdd(path);
+      setFavorites(items);
+    } catch {
+      setStatus("Failed to add favorite");
+    }
+  }
+
+  async function handleRemoveFavorite(path: string): Promise<void> {
+    if (!tauriRuntimeAvailable) {
+      return;
+    }
+    try {
+      await favoritesRemove(path);
+      setFavorites((previous) => previous.filter((item) => item !== path));
+    } catch {
+      setStatus("Failed to remove favorite");
+    }
+  }
+
+  async function handleSaveProfile(): Promise<void> {
+    const profileName = newProfileName.trim();
+    if (!profileName || !tauriRuntimeAvailable) {
+      return;
+    }
+    try {
+      await profilesSave({
+        id: "",
+        name: profileName,
+        pinned: false,
+        request: buildCurrentRequest()
+      });
+      setNewProfileName("");
+      await refreshPersistenceData();
+    } catch {
+      setStatus("Failed to save profile");
+    }
+  }
+
+  async function handleDeleteProfile(profileId: string): Promise<void> {
+    if (!tauriRuntimeAvailable) {
+      return;
+    }
+    try {
+      await profilesDelete(profileId);
+      setProfiles((previous) => previous.filter((profile) => profile.id !== profileId));
+    } catch {
+      setStatus("Failed to delete profile");
+    }
+  }
+
+  async function handleClearHistory(): Promise<void> {
+    if (!tauriRuntimeAvailable) {
+      return;
+    }
+    try {
+      const snapshot = await historyClear();
+      setHistory(snapshot);
+    } catch {
+      setStatus("Failed to clear history");
+    }
   }
 
   return (
@@ -409,6 +531,74 @@ export function App() {
               </li>
             ))}
           </ul>
+          <div className="panel-title status-title">Favorites</div>
+          {favorites.length > 0 ? (
+            <ul className="simple-list">
+              {favorites.map((item) => (
+                <li key={item}>
+                  <button type="button" className="link-button" onClick={() => setSelectedPath(item)}>
+                    {item}
+                  </button>
+                  <button
+                    type="button"
+                    className="link-button danger"
+                    onClick={() => {
+                      void handleRemoveFavorite(item);
+                    }}
+                  >
+                    remove
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="panel-copy">No favorites yet.</p>
+          )}
+
+          <div className="panel-title status-title">Profiles</div>
+          <div className="root-adder">
+            <input
+              className="search-input compact-input"
+              value={newProfileName}
+              onChange={(event) => setNewProfileName(event.target.value)}
+              placeholder="Profile name"
+            />
+            <button type="button" className="button-secondary" onClick={() => void handleSaveProfile()}>
+              Save
+            </button>
+          </div>
+          {profiles.length > 0 ? (
+            <ul className="simple-list">
+              {profiles.map((profile) => (
+                <li key={profile.id}>
+                  <button type="button" className="link-button" onClick={() => applyProfile(profile)}>
+                    {profile.name}
+                  </button>
+                  <button
+                    type="button"
+                    className="link-button danger"
+                    onClick={() => {
+                      void handleDeleteProfile(profile.id);
+                    }}
+                  >
+                    delete
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="panel-copy">No profiles saved.</p>
+          )}
+
+          <div className="panel-title status-title">History</div>
+          <div className="panel-header">
+            <p className="panel-copy">
+              queries: {history.queries.length}, opened: {history.opened_paths.length}
+            </p>
+            <button type="button" className="button-secondary" onClick={() => void handleClearHistory()}>
+              Clear
+            </button>
+          </div>
         </section>
 
         <section className="panel panel-results">
@@ -482,6 +672,28 @@ export function App() {
           ) : (
             <p className="panel-copy">Select a result to see metadata.</p>
           )}
+          {selectedResult ? (
+            <div className="panel-header">
+              <button
+                type="button"
+                className="button-secondary"
+                onClick={() => {
+                  void handleAddFavorite(selectedResult.full_path);
+                }}
+              >
+                Add to favorites
+              </button>
+              <button
+                type="button"
+                className="button-secondary"
+                onClick={() => {
+                  void handleRemoveFavorite(selectedResult.full_path);
+                }}
+              >
+                Remove favorite
+              </button>
+            </div>
+          ) : null}
           <div className="panel-title status-title">Status</div>
           <dl className="status-grid">
             <div>

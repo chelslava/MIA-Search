@@ -226,6 +226,34 @@ dt {
   line-height: 1.9;
 }
 
+.simple-list {
+  margin: 10px 0 0;
+  padding-left: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.simple-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.link-button {
+  border: 0;
+  background: transparent;
+  color: #7dd3fc;
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+}
+
+.link-button.danger {
+  color: #fda4af;
+}
+
 .results-list {
   display: grid;
   gap: 14px;

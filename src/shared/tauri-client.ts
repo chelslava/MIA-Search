@@ -1,10 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
+  HistorySnapshot,
   SearchBatchEvent,
   SearchCancelResponse,
   SearchDoneEvent,
   SearchErrorEvent,
+  SearchProfile,
   SearchRequest,
   SearchStartResponse
 } from "./search-types";
@@ -41,4 +43,36 @@ export async function onSearchCancelled(
 
 export async function onSearchError(handler: (payload: SearchErrorEvent) => void): Promise<UnlistenFn> {
   return listen<SearchErrorEvent>("search:error", (event) => handler(event.payload));
+}
+
+export async function favoritesList(): Promise<string[]> {
+  return invoke<string[]>("favorites_list");
+}
+
+export async function favoritesAdd(path: string): Promise<string[]> {
+  return invoke<string[]>("favorites_add", { path });
+}
+
+export async function favoritesRemove(path: string): Promise<boolean> {
+  return invoke<boolean>("favorites_remove", { path });
+}
+
+export async function historyList(): Promise<HistorySnapshot> {
+  return invoke<HistorySnapshot>("history_list");
+}
+
+export async function historyClear(): Promise<HistorySnapshot> {
+  return invoke<HistorySnapshot>("history_clear");
+}
+
+export async function profilesList(): Promise<SearchProfile[]> {
+  return invoke<SearchProfile[]>("profiles_list");
+}
+
+export async function profilesSave(profile: SearchProfile): Promise<SearchProfile> {
+  return invoke<SearchProfile>("profiles_save", { profile });
+}
+
+export async function profilesDelete(profileId: string): Promise<boolean> {
+  return invoke<boolean>("profiles_delete", { profileId });
 }
