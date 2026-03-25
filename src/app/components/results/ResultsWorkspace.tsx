@@ -1,6 +1,8 @@
-import type { RefObject } from "react";
+import type { MouseEvent, RefObject } from "react";
 import type { SearchResultItem, SortMode } from "../../../shared/search-types";
 import type { DisplayMode, FilterChip } from "../../types";
+import { Button } from "../../../components/ui/button";
+import { Select } from "../../../components/ui/select";
 
 type ResultsWorkspaceProps = {
   containerRef?: RefObject<HTMLElement | null>;
@@ -16,7 +18,7 @@ type ResultsWorkspaceProps = {
   results: SearchResultItem[];
   selectedPath: string | null;
   onSelectPath: (path: string) => void;
-  onResultContextMenu: (event: React.MouseEvent, item: SearchResultItem) => void;
+  onResultContextMenu: (event: MouseEvent<HTMLTableRowElement>, item: SearchResultItem) => void;
   scrollTop: number;
   setScrollTop: (value: number) => void;
   visibleRows: {
@@ -51,78 +53,104 @@ export function ResultsWorkspace({
   t
 }: ResultsWorkspaceProps) {
   return (
-    <section className="center-panel" ref={containerRef}>
-      <div className="center-toolbar">
-        <div className="inline-row">
-          <button
-            className={displayMode === "table" ? "mode-btn active" : "mode-btn"}
+    <section ref={containerRef} className="flex h-full min-h-0 flex-col gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-alt)] p-3">
+        <div className="flex flex-wrap gap-2">
+          <Button
             type="button"
+            size="sm"
+            variant={displayMode === "table" ? "default" : "outline"}
             onClick={() => setDisplayMode("table")}
           >
             {t("app.labels.viewTable", "Таблица")}
-          </button>
-          <button
-            className={displayMode === "compact" ? "mode-btn active" : "mode-btn"}
+          </Button>
+          <Button
             type="button"
+            size="sm"
+            variant={displayMode === "compact" ? "default" : "outline"}
             onClick={() => setDisplayMode("compact")}
           >
             {t("app.labels.viewCompact", "Компактно")}
-          </button>
-          <button
-            className={displayMode === "cards" ? "mode-btn active" : "mode-btn"}
+          </Button>
+          <Button
             type="button"
+            size="sm"
+            variant={displayMode === "cards" ? "default" : "outline"}
             onClick={() => setDisplayMode("cards")}
           >
             {t("app.labels.viewCards", "Карточки")}
-          </button>
+          </Button>
         </div>
-        <div className="inline-row">
-          <select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)}>
+        <div className="flex flex-wrap items-center gap-2">
+          <Select
+            value={sortMode}
+            onChange={(event) => setSortMode(event.target.value as SortMode)}
+            className="min-w-[14rem]"
+          >
             <option value="Relevance">{t("app.labels.sortRelevance", "По релевантности")}</option>
             <option value="Name">{t("app.labels.sortName", "По имени")}</option>
             <option value="Size">{t("app.labels.sortSize", "По размеру")}</option>
             <option value="Modified">{t("app.labels.sortModified", "По дате изменения")}</option>
             <option value="Type">{t("app.labels.sortType", "По типу")}</option>
-          </select>
+          </Select>
           {isSearching ? (
-            <button className="primary-btn" type="button" onClick={onCancelSearch}>
+            <Button type="button" variant="secondary" onClick={onCancelSearch} className="whitespace-nowrap">
               {t("app.labels.cancelSearch", "Отменить поиск")}
-            </button>
+            </Button>
           ) : (
-            <button className="primary-btn" type="button" onClick={onSearch}>
+            <Button type="button" onClick={onSearch} className="whitespace-nowrap">
               {t("app.labels.search", "Поиск")}
-            </button>
+            </Button>
           )}
         </div>
       </div>
 
-      <div className="chips-row">
+      <div className="flex flex-wrap items-center gap-2">
         {chips.map((chip) => (
-          <button key={chip.id} className="chip" type="button" onClick={chip.remove}>
-            {chip.label} ✕
-          </button>
+          <Button
+            key={chip.id}
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={chip.remove}
+            className="h-auto rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-medium"
+          >
+            {chip.label} <span aria-hidden="true">✕</span>
+          </Button>
         ))}
         {chips.length > 0 ? (
-          <button className="ghost-btn" type="button" onClick={onClearAllFilters}>
+          <Button type="button" variant="outline" size="sm" onClick={onClearAllFilters}>
             {t("app.labels.resetAllFilters", "Сбросить все фильтры")}
-          </button>
+          </Button>
         ) : null}
       </div>
 
       {displayMode === "cards" ? (
-        <div className="cards-grid" onScroll={(event) => setScrollTop((event.target as HTMLDivElement).scrollTop)}>
+        <div
+          className="grid min-h-0 flex-1 auto-rows-min gap-3 overflow-auto rounded-xl border border-[var(--border)] bg-[var(--surface-alt)] p-3 sm:grid-cols-2 xl:grid-cols-3"
+          onScroll={(event) => setScrollTop((event.currentTarget as HTMLDivElement).scrollTop)}
+        >
           {results.map((item) => (
             <article
               key={item.full_path}
-              className={selectedPath === item.full_path ? "result-card selected" : "result-card"}
+              className={
+                selectedPath === item.full_path
+                  ? "cursor-pointer rounded-xl border border-[var(--accent)] bg-[color-mix(in_srgb,var(--surface)_88%,var(--accent))] p-4 shadow-sm transition-colors"
+                  : "cursor-pointer rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm transition-colors hover:border-[var(--accent)] hover:bg-[color-mix(in_srgb,var(--surface)_88%,var(--accent))]"
+              }
               onClick={() => onSelectPath(item.full_path)}
             >
-              <div className="card-title">
-                {item.is_dir ? "📁" : "📄"} {item.name || t("app.labels.noName", "Без имени")}
+              <div className="mb-2 flex items-start gap-2 text-sm font-semibold text-[var(--text)]">
+                <span aria-hidden="true" className="text-base leading-none">
+                  {item.is_dir ? "📁" : "📄"}
+                </span>
+                <span className="min-w-0 break-words">
+                  {item.name || t("app.labels.noName", "Без имени")}
+                </span>
               </div>
-              <div className="card-path">{item.full_path}</div>
-              <div className="card-meta">
-                {item.is_dir ? t("app.labels.dir", "Папка") : t("app.labels.file", "Файл")} •{" "}
+              <div className="mb-2 break-all text-xs text-[var(--muted)]">{item.full_path}</div>
+              <div className="text-xs text-[var(--muted)]">
+                {item.is_dir ? t("app.labels.dir", "Папка") : t("app.labels.file", "Файл")} {"•"}{" "}
                 {formatBytes(item.size) || "-"}
               </div>
             </article>
@@ -130,18 +158,18 @@ export function ResultsWorkspace({
         </div>
       ) : (
         <div
-          className={displayMode === "compact" ? "results-wrap compact" : "results-wrap"}
-          onScroll={(event) => setScrollTop((event.target as HTMLDivElement).scrollTop)}
+          className="min-h-0 flex-1 overflow-auto rounded-xl border border-[var(--border)] bg-[var(--surface-alt)]"
+          onScroll={(event) => setScrollTop((event.currentTarget as HTMLDivElement).scrollTop)}
         >
-          <table className="results-table">
-            <thead>
-              <tr>
-                <th>{t("app.labels.colIcon", "Иконка")}</th>
-                <th>{t("app.labels.colName", "Имя")}</th>
-                <th>{t("app.labels.colPath", "Полный путь")}</th>
-                <th>{t("app.labels.colSize", "Размер")}</th>
-                <th>{t("app.labels.colModified", "Дата изменения")}</th>
-                <th>{t("app.labels.colType", "Тип")}</th>
+          <table className="w-full border-separate border-spacing-0 text-sm">
+            <thead className="sticky top-0 z-10 bg-[var(--surface-alt)]">
+              <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
+                <th className="border-b border-[var(--border)] px-4 py-3 font-medium">{t("app.labels.colIcon", "Иконка")}</th>
+                <th className="border-b border-[var(--border)] px-4 py-3 font-medium">{t("app.labels.colName", "Имя")}</th>
+                <th className="border-b border-[var(--border)] px-4 py-3 font-medium">{t("app.labels.colPath", "Полный путь")}</th>
+                <th className="border-b border-[var(--border)] px-4 py-3 font-medium">{t("app.labels.colSize", "Размер")}</th>
+                <th className="border-b border-[var(--border)] px-4 py-3 font-medium">{t("app.labels.colModified", "Дата изменения")}</th>
+                <th className="border-b border-[var(--border)] px-4 py-3 font-medium">{t("app.labels.colType", "Тип")}</th>
               </tr>
             </thead>
             <tbody>
@@ -155,18 +183,30 @@ export function ResultsWorkspace({
                 <tr
                   data-path={item.full_path}
                   key={item.full_path}
-                  className={selectedPath === item.full_path ? "selected" : ""}
+                  className={
+                    selectedPath === item.full_path
+                      ? "cursor-pointer bg-[color-mix(in_srgb,var(--surface)_84%,var(--accent))] transition-colors hover:bg-[color-mix(in_srgb,var(--surface)_80%,var(--accent))]"
+                      : "cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--surface)_88%,var(--accent))]"
+                  }
                   onClick={() => onSelectPath(item.full_path)}
-                  onContextMenu={(event) => onResultContextMenu(event, item)}
+                  onContextMenu={(event: MouseEvent<HTMLTableRowElement>) => onResultContextMenu(event, item)}
                 >
-                  <td className={item.hidden ? "muted-40" : ""}>{item.is_dir ? "📁" : "📄"}</td>
-                  <td className={item.is_dir ? "name-cell dir" : "name-cell"}>
+                  <td className={`border-b border-[var(--border)] px-4 py-3 ${item.hidden ? "text-[var(--muted)] opacity-60" : ""}`}>
+                    {item.is_dir ? "📁" : "📄"}
+                  </td>
+                  <td className={`border-b border-[var(--border)] px-4 py-3 ${item.is_dir ? "font-medium text-[var(--text)]" : "text-[var(--text)]"}`}>
                     {item.name || t("app.labels.noName", "Без имени")}
                   </td>
-                  <td className="path-cell">{item.full_path}</td>
-                  <td>{item.is_dir ? "" : formatBytes(item.size)}</td>
-                  <td>{formatDate(item.modified_at)}</td>
-                  <td>{item.is_dir ? t("app.labels.dir", "Папка") : t("app.labels.file", "Файл")}</td>
+                  <td className="max-w-0 truncate border-b border-[var(--border)] px-4 py-3 text-[var(--muted)]">{item.full_path}</td>
+                  <td className="border-b border-[var(--border)] px-4 py-3 text-[var(--text)]">
+                    {item.is_dir ? "" : formatBytes(item.size)}
+                  </td>
+                  <td className="border-b border-[var(--border)] px-4 py-3 text-[var(--text)]">
+                    {formatDate(item.modified_at)}
+                  </td>
+                  <td className="border-b border-[var(--border)] px-4 py-3 text-[var(--text)]">
+                    {item.is_dir ? t("app.labels.dir", "Папка") : t("app.labels.file", "Файл")}
+                  </td>
                 </tr>
               ))}
 
