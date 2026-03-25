@@ -24,6 +24,7 @@ type BuildSearchRequestInput = {
   createdAfter: string;
   createdBefore: string;
   sortMode: SortMode;
+  regexEnabled: boolean;
 };
 
 const sizeUnitMultipliers: Record<string, number> = {
@@ -44,7 +45,7 @@ type ParsedQueryCommands = {
   extensions: string[];
 };
 
-function parseQueryCommands(rawQuery: string): ParsedQueryCommands {
+function parseQueryCommands(rawQuery: string, regexEnabled: boolean): ParsedQueryCommands {
   let text = rawQuery.trim();
   let matchMode: MatchMode = "Plain";
   let strict: boolean | undefined;
@@ -54,10 +55,12 @@ function parseQueryCommands(rawQuery: string): ParsedQueryCommands {
   const extensions = new Set<string>();
 
   const prefixedModes: Array<{ prefixes: string[]; mode: MatchMode }> = [
-    { prefixes: ["regex:", "re:"], mode: "Regex" },
     { prefixes: ["wildcard:", "wc:"], mode: "Wildcard" },
     { prefixes: ["plain:", "p:"], mode: "Plain" }
   ];
+  if (regexEnabled) {
+    prefixedModes.unshift({ prefixes: ["regex:", "re:"], mode: "Regex" });
+  }
 
   for (const item of prefixedModes) {
     const matchedPrefix = item.prefixes.find((prefix) => text.toLowerCase().startsWith(prefix));
@@ -74,8 +77,10 @@ function parseQueryCommands(rawQuery: string): ParsedQueryCommands {
   for (const token of tokens) {
     const lower = token.toLowerCase();
     if (lower === "/re" || lower === "/regex") {
-      matchMode = "Regex";
-      continue;
+      if (regexEnabled) {
+        matchMode = "Regex";
+        continue;
+      }
     }
     if (lower === "/wc" || lower === "/wildcard") {
       matchMode = "Wildcard";
@@ -151,7 +156,7 @@ export function buildSearchRequest(input: BuildSearchRequestInput): SearchReques
   const createdBeforeIso = input.createdFilterEnabled ? toIsoOrNull(input.createdBefore) : null;
   const modifiedAfterIso = input.modifiedFilterEnabled ? toIsoOrNull(input.modifiedAfter) : null;
   const modifiedBeforeIso = input.modifiedFilterEnabled ? toIsoOrNull(input.modifiedBefore) : null;
-  const parsed = parseQueryCommands(input.query);
+  const parsed = parseQueryCommands(input.query, input.regexEnabled);
   const uiExtensions = input.extensionsRaw
     .split(",")
     .map((value) => value.trim().replace(/^\./, ""))

@@ -166,6 +166,7 @@ const ru = {
         en: "English"
       },
       liveSearchDefault: "Live search по умолчанию",
+      regexEnabled: "Включить regex",
       debounce: "Debounce (мс)",
       customTheme: "Пользовательская тема",
       themeName: {

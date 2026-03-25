@@ -61,7 +61,6 @@ export function App() {
     t(key, { defaultValue, ...(values ?? {}) });
   const [query, setQuery] = useState("");
   const [roots, setRoots] = useState<RootItem[]>(defaultRoots);
-  const [newRoot, setNewRoot] = useState("");
   const [primaryRoot, setPrimaryRoot] = useState(defaultRootPath);
   const [strict, setStrict] = useState(false);
   const [ignoreCase, setIgnoreCase] = useState(true);
@@ -106,6 +105,7 @@ export function App() {
   const [leftWidth, setLeftWidth] = useState(260);
   const [rightWidth, setRightWidth] = useState(280);
   const [liveSearch, setLiveSearch] = useState(true);
+  const [regexEnabled, setRegexEnabled] = useState<boolean>(() => localStorage.getItem("mia.regexEnabled") !== "false");
   const [debounceMs, setDebounceMs] = useState(300);
   const [themeId, setThemeId] = useState<string>(() => localStorage.getItem("mia.theme") ?? "dark");
   const [customThemes, setCustomThemes] = useState<ThemePreset[]>(() => {
@@ -428,7 +428,8 @@ export function App() {
       createdFilterEnabled,
       createdAfter,
       createdBefore,
-      sortMode
+      sortMode,
+      regexEnabled
     });
   }
 
@@ -550,11 +551,6 @@ export function App() {
     setRoots((previous) => previous.concat({ path: normalized, enabled: true }));
   }
 
-  function handleAddRoot(): void {
-    upsertRoot(newRoot);
-    setNewRoot("");
-  }
-
   async function handlePickRootPath(): Promise<void> {
     if (!tauriRuntimeAvailable) {
       setStatus(tr("app.status.tauriUnavailable", "Tauri runtime не обнаружен"));
@@ -565,7 +561,6 @@ export function App() {
       if (!selected) return;
       upsertRoot(selected);
       setPrimaryRoot(selected);
-      setNewRoot(selected);
     } catch {
       pushToast(tr("app.toast.pickFolderFailed", "Не удалось выбрать папку"), "error");
     }
@@ -664,6 +659,10 @@ export function App() {
   useEffect(() => {
     localStorage.setItem("mia.customThemes", JSON.stringify(customThemes));
   }, [customThemes]);
+
+  useEffect(() => {
+    localStorage.setItem("mia.regexEnabled", regexEnabled ? "true" : "false");
+  }, [regexEnabled]);
 
   useEffect(() => {
     applyThemeColors(activeTheme.colors);
@@ -765,6 +764,7 @@ export function App() {
     modifiedBefore,
     modifiedFilterEnabled,
     query,
+    regexEnabled,
     roots,
     sizeComparison,
     sizeFilterEnabled,
@@ -967,6 +967,8 @@ export function App() {
             onLanguageChange={(value) => void i18n.changeLanguage(value)}
             liveSearch={liveSearch}
             onLiveSearchChange={setLiveSearch}
+            regexEnabled={regexEnabled}
+            onRegexEnabledChange={setRegexEnabled}
             debounceMs={debounceMs}
             onDebounceMsChange={setDebounceMs}
             newThemeName={newThemeName}
@@ -993,7 +995,6 @@ export function App() {
               tr={tr}
               roots={roots}
               primaryRoot={primaryRoot}
-              newRoot={newRoot}
               newProfileName={newProfileName}
               history={history}
               profiles={profiles}
@@ -1004,8 +1005,6 @@ export function App() {
               onToggleHistoryOpen={() => setHistoryOpen((prev) => !prev)}
               onToggleTreeExpand={handleToggleTreeExpand}
               onSelectTreeRoot={handleSelectTreeRoot}
-              onNewRootChange={setNewRoot}
-              onAddRoot={handleAddRoot}
               onPickRootPath={() => void handlePickRootPath()}
               onRemoveRoot={handleRemoveRoot}
               onRootEnabledChange={(path, enabled) =>

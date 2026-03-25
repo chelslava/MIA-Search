@@ -78,6 +78,8 @@ export type SettingsPanelProps = {
   onLanguageChange: (value: AppLanguage) => void;
   liveSearch: boolean;
   onLiveSearchChange: (value: boolean) => void;
+  regexEnabled: boolean;
+  onRegexEnabledChange: (value: boolean) => void;
   debounceMs: number;
   onDebounceMsChange: (value: number) => void;
   newThemeName: string;

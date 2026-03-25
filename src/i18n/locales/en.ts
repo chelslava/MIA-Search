@@ -166,6 +166,7 @@ const en = {
         en: "English"
       },
       liveSearchDefault: "Live search by default",
+      regexEnabled: "Enable regex",
       debounce: "Debounce (ms)",
       customTheme: "Custom theme",
       themeName: {

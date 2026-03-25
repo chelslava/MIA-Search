@@ -10,7 +10,6 @@ export type LeftSidebarProps = {
   tr: TranslateFn;
   roots: RootItem[];
   primaryRoot: string;
-  newRoot: string;
   newProfileName: string;
   history: HistorySnapshot;
   profiles: SearchProfile[];
@@ -21,8 +20,6 @@ export type LeftSidebarProps = {
   onToggleHistoryOpen: () => void;
   onToggleTreeExpand: (path: string) => void;
   onSelectTreeRoot: (path: string) => void;
-  onNewRootChange: (value: string) => void;
-  onAddRoot: () => void;
   onPickRootPath: () => void | Promise<void>;
   onRemoveRoot: (path: string) => void;
   onRootEnabledChange: (path: string, enabled: boolean) => void;
@@ -111,7 +108,6 @@ export function LeftSidebar({
   tr,
   roots,
   primaryRoot,
-  newRoot,
   newProfileName,
   history,
   profiles,
@@ -122,8 +118,6 @@ export function LeftSidebar({
   onToggleHistoryOpen,
   onToggleTreeExpand,
   onSelectTreeRoot,
-  onNewRootChange,
-  onAddRoot,
   onPickRootPath,
   onRemoveRoot,
   onRootEnabledChange,
@@ -154,16 +148,8 @@ export function LeftSidebar({
           <strong className="block text-[11px] font-medium text-[var(--text)]">
             {tr("app.roots.primary", "Основной: {{path}}", { path: primaryRoot })}
           </strong>
-          <div className="flex flex-col gap-1 sm:flex-row">
-            <Input
-              value={newRoot}
-              onChange={(event) => onNewRootChange(event.target.value)}
-              placeholder={tr("app.roots.newPath.placeholder", "Новый путь")}
-            />
-            <Button type="button" variant="secondary" size="sm" onClick={onAddRoot} className="h-7 shrink-0 px-2 text-[11px]">
-              {tr("app.roots.addPath", "Добавить путь")}
-            </Button>
-            <Button type="button" variant="secondary" size="sm" onClick={() => void onPickRootPath()} className="h-7 shrink-0 px-2 text-[11px]">
+          <div className="flex">
+            <Button type="button" variant="secondary" size="sm" onClick={() => void onPickRootPath()} className="h-7 w-full px-2 text-[11px]">
               {tr("app.roots.pickPath", "Выбрать...")}
             </Button>
           </div>

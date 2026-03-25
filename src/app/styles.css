@@ -28,7 +28,7 @@ body,
 body {
   background: var(--bg);
   color: var(--text);
-  font-size: 13px;
+  font-size: 12px;
   min-width: 800px;
 }
 
@@ -46,8 +46,8 @@ button {
   height: 100%;
   display: grid;
   grid-template-rows: auto auto 1fr auto;
-  gap: 4px;
-  padding: 4px;
+  gap: 2px;
+  padding: 2px;
   background: radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 10%, transparent), transparent 45%),
     var(--bg);
 }
@@ -64,7 +64,7 @@ button {
 }
 
 .search-input {
-  min-width: 220px;
+  min-width: 180px;
 }
 
 .splitter {
