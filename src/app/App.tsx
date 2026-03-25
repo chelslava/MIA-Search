@@ -1,5 +1,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   actionCopyToClipboard,
   actionOpenParent,
@@ -25,175 +26,20 @@ import type {
   EntryKind,
   HistorySnapshot,
   SearchProfile,
-  SearchRequest,
   SearchResultItem,
   SizeComparison,
   SortMode
 } from "../shared/search-types";
 import { CommandPalette, type CommandPaletteAction } from "../widgets/CommandPalette";
 import { ToastHost, type ToastItem } from "../widgets/ToastHost";
+import { formatBytes, formatDate } from "./formatters";
+import { buildSearchRequest } from "./search-request";
+import { applyThemeColors, builtInThemes, darkenHex, tintHex } from "./theme";
+import type { ContextMenuState, DisplayMode, FilterChip, RootItem, ThemePreset } from "./types";
 import "./styles.css";
-
-type RootItem = { path: string; enabled: boolean };
-type DisplayMode = "table" | "compact" | "cards";
-type ThemeColors = {
-  bg: string;
-  surface: string;
-  surfaceAlt: string;
-  border: string;
-  text: string;
-  muted: string;
-  accent: string;
-  accentSoft: string;
-};
-type ThemePreset = { id: string; name: string; colors: ThemeColors; builtIn?: boolean };
-type ContextMenuState =
-  | { type: "result"; x: number; y: number; item: SearchResultItem }
-  | { type: "root"; x: number; y: number; path: string }
-  | null;
-type FilterChip = { id: string; label: string; remove: () => void };
 
 const defaultRoots: RootItem[] = [{ path: ".", enabled: true }];
 const rowHeight = 34;
-
-const builtInThemes: ThemePreset[] = [
-  {
-    id: "light",
-    name: "Светлая",
-    builtIn: true,
-    colors: {
-      bg: "#ffffff",
-      surface: "#f8fafc",
-      surfaceAlt: "#eef2f7",
-      border: "#d7dee8",
-      text: "#11181C",
-      muted: "#526173",
-      accent: "#0F67FF",
-      accentSoft: "#dce8ff"
-    }
-  },
-  {
-    id: "dark",
-    name: "Темная",
-    builtIn: true,
-    colors: {
-      bg: "#0F0F12",
-      surface: "#171a21",
-      surfaceAlt: "#1f2430",
-      border: "#303846",
-      text: "#EDEDED",
-      muted: "#A3ADBC",
-      accent: "#3B82F6",
-      accentSoft: "#1e355d"
-    }
-  },
-  {
-    id: "sepia",
-    name: "Сепия",
-    builtIn: true,
-    colors: {
-      bg: "#FBF5E8",
-      surface: "#f2e7d1",
-      surfaceAlt: "#ead9bb",
-      border: "#d4bea0",
-      text: "#3A2C1F",
-      muted: "#6f5841",
-      accent: "#C37B2E",
-      accentSoft: "#f2ddc4"
-    }
-  },
-  {
-    id: "aquamarine",
-    name: "Аквамарин",
-    builtIn: true,
-    colors: {
-      bg: "#EFF7F6",
-      surface: "#e0f0ed",
-      surfaceAlt: "#d2e8e4",
-      border: "#b2d1cb",
-      text: "#1E3B3A",
-      muted: "#4f6f6d",
-      accent: "#2D9C7C",
-      accentSoft: "#c9ebe1"
-    }
-  },
-  {
-    id: "night-blue",
-    name: "Ночная синь",
-    builtIn: true,
-    colors: {
-      bg: "#111122",
-      surface: "#171a31",
-      surfaceAlt: "#1e2342",
-      border: "#2c3460",
-      text: "#E0E4F0",
-      muted: "#98a3c3",
-      accent: "#6C8EFF",
-      accentSoft: "#283666"
-    }
-  }
-];
-
-function formatBytes(size: number | null): string {
-  if (size === null || size < 0) return "";
-  if (size < 1024) return `${size} B`;
-  const units = ["KB", "MB", "GB", "TB"];
-  let value = size / 1024;
-  let unitIndex = 0;
-  while (value >= 1024 && unitIndex < units.length - 1) {
-    value /= 1024;
-    unitIndex += 1;
-  }
-  return `${value.toFixed(value >= 100 ? 0 : 1)} ${units[unitIndex]}`;
-}
-
-function formatDate(dateValue: string | null): string {
-  if (!dateValue) return "";
-  const parsed = new Date(dateValue);
-  if (Number.isNaN(parsed.getTime())) return "";
-  return parsed.toLocaleString("ru-RU");
-}
-
-function tintHex(hex: string, ratio: number): string {
-  const valid = /^#?[0-9A-Fa-f]{6}$/.test(hex);
-  if (!valid) return "#808080";
-  const normalized = hex.startsWith("#") ? hex.slice(1) : hex;
-  const r = Number.parseInt(normalized.slice(0, 2), 16);
-  const g = Number.parseInt(normalized.slice(2, 4), 16);
-  const b = Number.parseInt(normalized.slice(4, 6), 16);
-  const blend = (value: number) => Math.max(0, Math.min(255, Math.round(value + (255 - value) * ratio)));
-  return `#${[blend(r), blend(g), blend(b)].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
-}
-
-function darkenHex(hex: string, ratio: number): string {
-  const valid = /^#?[0-9A-Fa-f]{6}$/.test(hex);
-  if (!valid) return "#303030";
-  const normalized = hex.startsWith("#") ? hex.slice(1) : hex;
-  const r = Number.parseInt(normalized.slice(0, 2), 16);
-  const g = Number.parseInt(normalized.slice(2, 4), 16);
-  const b = Number.parseInt(normalized.slice(4, 6), 16);
-  const blend = (value: number) => Math.max(0, Math.min(255, Math.round(value * (1 - ratio))));
-  return `#${[blend(r), blend(g), blend(b)].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
-}
-
-function applyThemeColors(colors: ThemeColors): void {
-  const root = document.documentElement;
-  root.style.setProperty("--bg", colors.bg);
-  root.style.setProperty("--surface", colors.surface);
-  root.style.setProperty("--surface-alt", colors.surfaceAlt);
-  root.style.setProperty("--border", colors.border);
-  root.style.setProperty("--text", colors.text);
-  root.style.setProperty("--muted", colors.muted);
-  root.style.setProperty("--accent", colors.accent);
-  root.style.setProperty("--accent-soft", colors.accentSoft);
-}
-
-function toIsoOrNull(value: string): string | null {
-  if (!value) return null;
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed.toISOString();
-}
 
 export function App() {
   const [query, setQuery] = useState("");
@@ -260,19 +106,12 @@ export function App() {
   const [newThemeBg, setNewThemeBg] = useState("#1b1f2a");
   const [newThemeText, setNewThemeText] = useState("#e7edf8");
   const [newThemeAccent, setNewThemeAccent] = useState("#4a8cff");
-  const [language, setLanguage] = useState<"ru" | "en">("ru");
+  const { i18n } = useTranslation();
+  const language = i18n.resolvedLanguage === "en" ? "en" : "ru";
   const [listHeight, setListHeight] = useState(460);
   const [scrollTop, setScrollTop] = useState(0);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const resultPaneRef = useRef<HTMLDivElement | null>(null);
-  const sizeUnitMultipliers: Record<string, number> = {
-    B: 1,
-    KB: 1024,
-    MB: 1024 ** 2,
-    GB: 1024 ** 3,
-    TB: 1024 ** 4
-  };
-
   const themeOptions = useMemo(() => {
     const systemTheme: ThemePreset = {
       id: "system",
@@ -441,45 +280,31 @@ export function App() {
     }
   }
 
-  function buildCurrentRequest(): SearchRequest {
-    const createdAfterIso = createdFilterEnabled ? toIsoOrNull(createdAfter) : null;
-    const createdBeforeIso = createdFilterEnabled ? toIsoOrNull(createdBefore) : null;
-    const modifiedAfterIso = modifiedFilterEnabled ? toIsoOrNull(modifiedAfter) : null;
-    const modifiedBeforeIso = modifiedFilterEnabled ? toIsoOrNull(modifiedBefore) : null;
-
-    return {
+  function buildCurrentRequest() {
+    return buildSearchRequest({
       query,
-      roots: enabledRoots.length > 0 ? enabledRoots : [primaryRoot || "."],
-      extensions: extensionsRaw
-        .split(",")
-        .map((value) => value.trim().replace(/^\./, ""))
-        .filter(Boolean),
-      options: {
-        max_depth: maxDepthUnlimited ? null : maxDepth,
-        limit,
-        strict,
-        ignore_case: ignoreCase,
-        include_hidden: includeHidden,
-        entry_kind: entryKind,
-        size_filter: sizeFilterEnabled
-          ? {
-              comparison: sizeComparison,
-              bytes: Math.max(0, sizeValue) * sizeUnitMultipliers[sizeUnit]
-            }
-          : null,
-        created_filter: createdAfterIso
-          ? { field: "Created", comparison: "After", value: createdAfterIso }
-          : createdBeforeIso
-            ? { field: "Created", comparison: "Before", value: createdBeforeIso }
-            : null,
-        modified_filter: modifiedAfterIso
-          ? { field: "Modified", comparison: "After", value: modifiedAfterIso }
-          : modifiedBeforeIso
-            ? { field: "Modified", comparison: "Before", value: modifiedBeforeIso }
-            : null,
-        sort_mode: sortMode
-      }
-    };
+      enabledRoots,
+      primaryRoot,
+      extensionsRaw,
+      maxDepthUnlimited,
+      maxDepth,
+      limit,
+      strict,
+      ignoreCase,
+      includeHidden,
+      entryKind,
+      sizeFilterEnabled,
+      sizeComparison,
+      sizeValue,
+      sizeUnit,
+      modifiedFilterEnabled,
+      modifiedAfter,
+      modifiedBefore,
+      createdFilterEnabled,
+      createdAfter,
+      createdBefore,
+      sortMode
+    });
   }
 
   function applyProfile(profile: SearchProfile): void {
@@ -1019,7 +844,7 @@ export function App() {
               <div>
                 <h4>Общие</h4>
                 <label>Язык
-                  <select value={language} onChange={(event) => setLanguage(event.target.value as "ru" | "en")}>
+                  <select value={language} onChange={(event) => void i18n.changeLanguage(event.target.value)}>
                     <option value="ru">Русский</option><option value="en">English</option>
                   </select>
                 </label>

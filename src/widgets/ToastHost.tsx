@@ -1,3 +1,5 @@
+import { useTranslation } from "react-i18next";
+
 type ToastKind = "info" | "success" | "error";
 
 export interface ToastItem {
@@ -12,18 +14,20 @@ interface ToastHostProps {
 }
 
 export function ToastHost({ items, onClose }: ToastHostProps) {
+  const { t } = useTranslation();
+
   if (items.length === 0) {
     return null;
   }
 
   const kindLabel: Record<ToastKind, string> = {
-    info: "инфо",
-    success: "успех",
-    error: "ошибка"
+    info: t("toast.kind.info"),
+    success: t("toast.kind.success"),
+    error: t("toast.kind.error")
   };
 
   return (
-    <div className="toast-host" aria-label="Уведомления" aria-live="polite">
+    <div className="toast-host" aria-label={t("toast.hostLabel")} aria-live="polite">
       {items.map((item) => (
         <article
           key={item.id}
@@ -37,10 +41,10 @@ export function ToastHost({ items, onClose }: ToastHostProps) {
           <button
             type="button"
             className="toast-close"
-            aria-label="Закрыть уведомление"
+            aria-label={t("toast.closeButtonAriaLabel")}
             onClick={() => onClose(item.id)}
           >
-            Закрыть
+            {t("toast.closeButton")}
           </button>
         </article>
       ))}

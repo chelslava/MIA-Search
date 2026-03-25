@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useTranslation } from "react-i18next";
 
 export type CommandPaletteAction = {
   id: string;
@@ -15,6 +16,7 @@ export type CommandPaletteProps = {
 export function CommandPalette({ open, onClose, actions }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const { t } = useTranslation();
 
   const filteredActions = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -74,12 +76,12 @@ export function CommandPalette({ open, onClose, actions }: CommandPaletteProps) 
   }
 
   return (
-    <div className="command-palette" role="dialog" aria-modal="true" aria-label="Палитра команд">
+    <div className="command-palette" role="dialog" aria-modal="true" aria-label={t("commandPalette.ariaLabel")}>
       <div className="command-palette__backdrop" onClick={onClose} />
       <div className="command-palette__panel">
         <div className="command-palette__header">
           <label className="command-palette__label" htmlFor="command-palette-input">
-            Палитра команд
+            {t("commandPalette.title")}
           </label>
           <input
             id="command-palette-input"
@@ -88,13 +90,13 @@ export function CommandPalette({ open, onClose, actions }: CommandPaletteProps) 
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             onKeyDown={handleInputKeyDown}
-            placeholder="Введите текст для фильтрации команд"
+            placeholder={t("commandPalette.placeholder")}
             autoComplete="off"
             spellCheck={false}
           />
         </div>
 
-        <div className="command-palette__results" role="list" aria-label="Доступные действия">
+        <div className="command-palette__results" role="list" aria-label={t("commandPalette.resultsLabel")}>
           {filteredActions.length > 0 ? (
             filteredActions.map((action) => (
               <button
@@ -108,7 +110,7 @@ export function CommandPalette({ open, onClose, actions }: CommandPaletteProps) 
               </button>
             ))
           ) : (
-            <div className="command-palette__empty">Нет команд для текущего запроса.</div>
+            <div className="command-palette__empty">{t("commandPalette.emptyState")}</div>
           )}
         </div>
       </div>
