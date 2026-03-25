@@ -5,11 +5,12 @@ mod core;
 mod platform;
 mod storage;
 
-use commands::{actions, favorites, history, profiles, search, settings};
+use commands::{actions, favorites, history, index, profiles, search, settings};
 use std::sync::Mutex;
 use storage::{
   favorites_store::FavoritesStore,
   history_store::HistoryStore,
+  index_store::IndexStore,
   presets_store::ProfilesStore,
   settings_store::SettingsStore,
 };
@@ -20,6 +21,7 @@ pub struct AppState {
   pub profiles: Mutex<ProfilesStore>,
   pub history: Mutex<HistoryStore>,
   pub favorites: Mutex<FavoritesStore>,
+  pub index: Mutex<IndexStore>,
 }
 
 impl AppState {
@@ -30,6 +32,7 @@ impl AppState {
       profiles: Mutex::new(ProfilesStore::load()),
       history: Mutex::new(HistoryStore::load()),
       favorites: Mutex::new(FavoritesStore::load()),
+      index: Mutex::new(IndexStore::load()),
     }
   }
 
@@ -45,6 +48,7 @@ fn main() {
     .invoke_handler(tauri::generate_handler![
       search::search_start,
       search::search_cancel,
+      search::search_enrich_metadata,
       settings::settings_get,
       settings::settings_set,
       profiles::profiles_list,
@@ -61,7 +65,9 @@ fn main() {
       actions::actions_copy_to_clipboard,
       actions::fs_list_roots,
       actions::fs_list_children,
-      actions::fs_pick_folder
+      actions::fs_pick_folder,
+      index::index_rebuild,
+      index::index_status
     ])
     .run(tauri::generate_context!())
     .expect("failed to run tauri application");

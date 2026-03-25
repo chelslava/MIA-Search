@@ -25,7 +25,7 @@ pub fn request_to_plan(request: &SearchRequest) -> SearchPlan {
 #[cfg(test)]
 mod tests {
   use super::*;
-  use crate::core::models::{EntryKind, MatchMode, SearchOptions, SearchRequest, SortMode};
+  use crate::core::models::{EntryKind, MatchMode, SearchBackend, SearchOptions, SearchRequest, SortMode};
 
   #[test]
   fn request_to_plan_trims_query_roots_and_extensions() {
@@ -69,6 +69,7 @@ mod tests {
         created_filter: None,
         modified_filter: None,
         sort_mode: SortMode::Name,
+        search_backend: SearchBackend::Index,
       },
     };
 
@@ -85,5 +86,6 @@ mod tests {
     assert_eq!(plan.options.entry_kind, EntryKind::Directory);
     assert_eq!(plan.options.match_mode, MatchMode::Regex);
     assert_eq!(plan.options.sort_mode, SortMode::Name);
+    assert_eq!(plan.options.search_backend, SearchBackend::Index);
   }
 }

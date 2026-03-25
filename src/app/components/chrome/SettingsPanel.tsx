@@ -13,6 +13,10 @@ export function SettingsPanel({
   onRegexEnabledChange,
   debounceMs,
   onDebounceMsChange,
+  indexTtlHours,
+  onIndexTtlHoursChange,
+  indexCheckIntervalMinutes,
+  onIndexCheckIntervalMinutesChange,
   newThemeName,
   onNewThemeNameChange,
   newThemeBg,
@@ -77,6 +81,34 @@ export function SettingsPanel({
               max={2000}
               value={debounceMs}
               onChange={(event) => onDebounceMsChange(Math.max(100, Number(event.target.value) || 300))}
+              className="w-full"
+            />
+          </label>
+          <label className="block space-y-1 text-[11px] font-medium text-[var(--text)]">
+            <span>{tr("app.settings.indexTtlHours", "TTL авто-индекса (часы)")}</span>
+            <Input
+              type="number"
+              min={1}
+              max={168}
+              value={indexTtlHours}
+              onChange={(event) =>
+                onIndexTtlHoursChange(Math.max(1, Math.min(168, Number(event.target.value) || 6)))
+              }
+              className="w-full"
+            />
+          </label>
+          <label className="block space-y-1 text-[11px] font-medium text-[var(--text)]">
+            <span>{tr("app.settings.indexCheckIntervalMinutes", "Проверка индекса (мин)")}</span>
+            <Input
+              type="number"
+              min={1}
+              max={120}
+              value={indexCheckIntervalMinutes}
+              onChange={(event) =>
+                onIndexCheckIntervalMinutesChange(
+                  Math.max(1, Math.min(120, Number(event.target.value) || 15))
+                )
+              }
               className="w-full"
             />
           </label>

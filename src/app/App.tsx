@@ -15,6 +15,8 @@ import {
   fsListRoots,
   historyClear,
   historyList,
+  indexRebuild,
+  indexStatus,
   onSearchBatch,
   onSearchCancelled,
   onSearchDone,
@@ -22,6 +24,7 @@ import {
   profilesDelete,
   profilesList,
   profilesSave,
+  searchEnrichMetadata,
   startSearch,
   tauriRuntimeAvailable
 } from "../shared/tauri-client";
@@ -29,7 +32,12 @@ import type {
   EntryKind,
   FsTreeNode,
   HistorySnapshot,
+  IndexStatusResponse,
+  MatchMode,
+  SearchBackend,
+  SearchMetadataPatch,
   SearchProfile,
+  SearchRequest,
   SearchResultItem,
   SizeComparison,
   SortMode
@@ -54,6 +62,8 @@ const defaultRootPath =
   typeof navigator !== "undefined" && /windows/i.test(navigator.userAgent) ? "C:\\" : "/";
 const defaultRoots: RootItem[] = [{ path: defaultRootPath, enabled: true }];
 const rowHeight = 34;
+const DEFAULT_INDEX_TTL_HOURS = 6;
+const DEFAULT_INDEX_CHECK_INTERVAL_MINUTES = 15;
 
 function compareSearchItems(left: SearchResultItem, right: SearchResultItem, mode: SortMode): number {
   switch (mode) {
@@ -78,6 +88,86 @@ function sortResultsForMode(items: SearchResultItem[], mode: SortMode): SearchRe
   return [...items].sort((left, right) => compareSearchItems(left, right, mode));
 }
 
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function arraysEqual(left: string[], right: string[]): boolean {
+  if (left.length !== right.length) return false;
+  return left.every((item, index) => item === right[index]);
+}
+
+function sameSearchContextWithoutQuery(left: SearchRequest, right: SearchRequest): boolean {
+  return (
+    arraysEqual(left.roots, right.roots) &&
+    arraysEqual(left.extensions, right.extensions) &&
+    JSON.stringify(left.options) === JSON.stringify(right.options)
+  );
+}
+
+function filterPlainResults(items: SearchResultItem[], query: string, ignoreCase: boolean): SearchResultItem[] {
+  const normalizedQuery = ignoreCase ? query.toLocaleLowerCase() : query;
+  return items.filter((item) => {
+    const name = ignoreCase ? item.name.toLocaleLowerCase() : item.name;
+    const fullPath = ignoreCase ? item.full_path.toLocaleLowerCase() : item.full_path;
+    return name.includes(normalizedQuery) || fullPath.includes(normalizedQuery);
+  });
+}
+
+function isIndexStale(updatedAt: string, ttlMs: number, now = Date.now()): boolean {
+  const stamp = new Date(updatedAt).getTime();
+  if (!Number.isFinite(stamp) || stamp <= 0) return true;
+  return now - stamp > ttlMs;
+}
+
+function computeAdaptiveDebounce(request: SearchRequest, configuredDebounceMs: number): number {
+  const mode = request.options.match_mode;
+  const heavyMode = mode === "Regex" || mode === "Wildcard";
+  const manyRoots = request.roots.length >= 3;
+  if (heavyMode || manyRoots) {
+    return clamp(configuredDebounceMs, 200, 300);
+  }
+
+  const shortPlainQuery = mode === "Plain" && request.query.trim().length <= 5;
+  const noHeavyFilters =
+    request.extensions.length === 0 &&
+    request.options.max_depth === null &&
+    request.options.size_filter === null &&
+    request.options.created_filter === null &&
+    request.options.modified_filter === null;
+  if (shortPlainQuery && noHeavyFilters) {
+    return clamp(configuredDebounceMs, 80, 120);
+  }
+
+  return clamp(configuredDebounceMs, 120, 220);
+}
+
+function mergeMetadataIntoResults(items: SearchResultItem[], patches: SearchMetadataPatch[]): SearchResultItem[] {
+  if (patches.length === 0) return items;
+  const patchByPath = new Map<string, SearchMetadataPatch>();
+  for (const patch of patches) {
+    patchByPath.set(patch.full_path, patch);
+  }
+
+  return items.map((item) => {
+    const patch = patchByPath.get(item.full_path);
+    if (!patch) return item;
+    return {
+      ...item,
+      extension: patch.extension !== undefined ? patch.extension : item.extension,
+      size: patch.size !== undefined ? patch.size : item.size,
+      created_at: patch.created_at !== undefined ? patch.created_at : item.created_at,
+      modified_at: patch.modified_at !== undefined ? patch.modified_at : item.modified_at,
+      hidden: patch.hidden !== undefined ? patch.hidden : item.hidden
+    };
+  });
+}
+
+type IncrementalSearchContext = {
+  request: SearchRequest;
+  results: SearchResultItem[];
+};
+
 export function App() {
   const { t, i18n } = useTranslation();
   const tr = (key: string, defaultValue: string, values?: Record<string, unknown>) =>
@@ -90,7 +180,9 @@ export function App() {
   const [includeHidden, setIncludeHidden] = useState(false);
   const [entryKind, setEntryKind] = useState<EntryKind>("Any");
   const [extensionsRaw, setExtensionsRaw] = useState("");
+  const [matchMode, setMatchMode] = useState<MatchMode>("Plain");
   const [sortMode, setSortMode] = useState<SortMode>("Relevance");
+  const [searchBackend, setSearchBackend] = useState<SearchBackend>("Scan");
   const [maxDepthUnlimited, setMaxDepthUnlimited] = useState(true);
   const [maxDepth, setMaxDepth] = useState(3);
   const [sizeFilterEnabled, setSizeFilterEnabled] = useState(false);
@@ -130,6 +222,16 @@ export function App() {
   const [liveSearch, setLiveSearch] = useState(true);
   const [regexEnabled, setRegexEnabled] = useState<boolean>(() => localStorage.getItem("mia.regexEnabled") !== "false");
   const [debounceMs, setDebounceMs] = useState(300);
+  const [indexTtlHours, setIndexTtlHours] = useState<number>(() => {
+    const raw = Number(localStorage.getItem("mia.indexTtlHours"));
+    if (!Number.isFinite(raw) || raw <= 0) return DEFAULT_INDEX_TTL_HOURS;
+    return Math.max(1, Math.min(168, Math.round(raw)));
+  });
+  const [indexCheckIntervalMinutes, setIndexCheckIntervalMinutes] = useState<number>(() => {
+    const raw = Number(localStorage.getItem("mia.indexCheckIntervalMinutes"));
+    if (!Number.isFinite(raw) || raw <= 0) return DEFAULT_INDEX_CHECK_INTERVAL_MINUTES;
+    return Math.max(1, Math.min(120, Math.round(raw)));
+  });
   const [themeId, setThemeId] = useState<string>(() => localStorage.getItem("mia.theme") ?? "dark");
   const [customThemes, setCustomThemes] = useState<ThemePreset[]>(() => {
     try {
@@ -143,6 +245,9 @@ export function App() {
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [indexStatusSnapshot, setIndexStatusSnapshot] = useState<IndexStatusResponse | null>(null);
+  const [isRebuildingIndex, setIsRebuildingIndex] = useState(false);
+  const [indexHint, setIndexHint] = useState("");
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
@@ -158,6 +263,12 @@ export function App() {
   const activeSearchIdRef = useRef<number | null>(null);
   const searchStartedAtRef = useRef<number | null>(null);
   const sortModeRef = useRef<SortMode>("Relevance");
+  const bufferedBatchRef = useRef<SearchResultItem[]>([]);
+  const pendingCheckedDeltaRef = useRef(0);
+  const batchFlushFrameRef = useRef<number | null>(null);
+  const incrementalSearchRef = useRef<IncrementalSearchContext | null>(null);
+  const metadataLoadedPathsRef = useRef<Set<string>>(new Set());
+  const metadataInFlightPathsRef = useRef<Set<string>>(new Set());
   const themeOptions = useMemo(() => {
     const systemTheme: ThemePreset = {
       id: "system",
@@ -180,11 +291,27 @@ export function App() {
     () => roots.filter((root) => root.enabled).map((root) => root.path.trim()).filter(Boolean),
     [roots]
   );
+  const indexRoots = useMemo(
+    () => (enabledRoots.length > 0 ? enabledRoots : [primaryRoot].filter(Boolean)),
+    [enabledRoots, primaryRoot]
+  );
+  const indexTtlMs = useMemo(
+    () => Math.max(1, indexTtlHours) * 60 * 60 * 1000,
+    [indexTtlHours]
+  );
+  const indexCheckIntervalMs = useMemo(
+    () => Math.max(1, indexCheckIntervalMinutes) * 60 * 1000,
+    [indexCheckIntervalMinutes]
+  );
 
   const selectedResult = useMemo(
     () => results.find((item) => item.full_path === selectedPath) ?? null,
     [results, selectedPath]
   );
+  const indexUpdatedAtLabel = useMemo(() => {
+    if (!indexStatusSnapshot?.updated_at) return "-";
+    return formatDate(indexStatusSnapshot.updated_at);
+  }, [indexStatusSnapshot]);
 
   const limit = useMemo(() => {
     if (limitMode === "100") return 100;
@@ -305,6 +432,11 @@ export function App() {
     () => [
       { id: "cmd-new", label: tr("app.commands.newSearch", "> Новый поиск"), run: () => void handleSearch() },
       {
+        id: "cmd-rebuild-index",
+        label: tr("app.commands.rebuildIndex", "> Перестроить индекс"),
+        run: () => void handleRebuildIndex(indexRoots)
+      },
+      {
         id: "cmd-clear-history",
         label: tr("app.commands.clearHistory", "> Очистить историю"),
         run: () => void handleClearHistory()
@@ -330,7 +462,7 @@ export function App() {
         run: () => applyProfile(profile)
       }))
     ],
-    [profiles, tr]
+    [indexRoots, profiles, tr]
   );
 
   function pushToast(text: string, kind: ToastItem["kind"] = "info"): void {
@@ -347,6 +479,7 @@ export function App() {
 
   function clearAllFilters(): void {
     setEntryKind("Any");
+    setMatchMode("Plain");
     setExtensionsRaw("");
     setMaxDepthUnlimited(true);
     setMaxDepth(3);
@@ -384,6 +517,60 @@ export function App() {
     } catch {
       setTreeChildren((previous) => ({ ...previous, [path]: [] }));
     }
+  }
+
+  async function refreshIndexStatus(): Promise<IndexStatusResponse | null> {
+    if (!tauriRuntimeAvailable) return null;
+    try {
+      const snapshot = await indexStatus();
+      setIndexStatusSnapshot(snapshot);
+      return snapshot;
+    } catch {
+      setIndexHint(tr("app.index.statusUnavailable", "Index status недоступен"));
+      return null;
+    }
+  }
+
+  async function handleRebuildIndex(rootsForIndex: string[]): Promise<void> {
+    if (!tauriRuntimeAvailable || rootsForIndex.length === 0) return;
+    setIsRebuildingIndex(true);
+    setIndexHint(tr("app.index.rebuilding", "Идёт перестроение индекса..."));
+    try {
+      const rebuilt = await indexRebuild(rootsForIndex);
+      setIndexStatusSnapshot({
+        status: rebuilt.entries > 0 ? "ready" : "empty",
+        entries: rebuilt.entries,
+        roots: rebuilt.roots,
+        updated_at: rebuilt.updated_at
+      });
+      setIndexHint(tr("app.index.rebuildDone", "Индекс обновлён"));
+    } catch {
+      setIndexHint(tr("app.index.rebuildFailed", "Не удалось перестроить индекс"));
+    } finally {
+      setIsRebuildingIndex(false);
+    }
+  }
+
+  function scheduleResultsFlush(): void {
+    if (batchFlushFrameRef.current !== null) return;
+    batchFlushFrameRef.current = window.requestAnimationFrame(() => {
+      batchFlushFrameRef.current = null;
+      if (bufferedBatchRef.current.length === 0) return;
+      const nextChunk = bufferedBatchRef.current;
+      bufferedBatchRef.current = [];
+      const checkedDelta = pendingCheckedDeltaRef.current;
+      pendingCheckedDeltaRef.current = 0;
+      if (checkedDelta > 0) {
+        setCheckedPaths((prev) => prev + checkedDelta);
+      }
+      setResults((prev) => {
+        const next = sortResultsForMode(prev.concat(nextChunk), sortModeRef.current);
+        if (incrementalSearchRef.current) {
+          incrementalSearchRef.current = { ...incrementalSearchRef.current, results: next };
+        }
+        return next;
+      });
+    });
   }
 
   function handleToggleTreeExpand(path: string): void {
@@ -444,6 +631,7 @@ export function App() {
       ignoreCase,
       includeHidden,
       entryKind,
+      matchMode,
       sizeFilterEnabled,
       sizeComparison,
       sizeValue,
@@ -455,7 +643,7 @@ export function App() {
       createdAfter,
       createdBefore,
       sortMode,
-      regexEnabled
+      searchBackend
     });
   }
 
@@ -470,7 +658,9 @@ export function App() {
     setIgnoreCase(req.options.ignore_case);
     setIncludeHidden(req.options.include_hidden);
     setEntryKind(req.options.entry_kind);
+    setMatchMode(req.options.match_mode);
     setSortMode(req.options.sort_mode);
+    setSearchBackend(req.options.search_backend ?? "Scan");
     setMaxDepthUnlimited(req.options.max_depth === null);
     setMaxDepth(req.options.max_depth ?? 3);
     if (req.options.limit === null) {
@@ -486,11 +676,41 @@ export function App() {
       setCustomLimit(req.options.limit);
     }
   }
-  async function handleSearch(): Promise<void> {
+  function tryIncrementalPlainSearch(nextRequest: SearchRequest): boolean {
+    if (isSearching) return false;
+    const previous = incrementalSearchRef.current;
+    if (!previous) return false;
+    if (!sameSearchContextWithoutQuery(previous.request, nextRequest)) return false;
+    if (previous.request.options.match_mode !== "Plain" || nextRequest.options.match_mode !== "Plain") return false;
+    if (previous.request.options.strict || nextRequest.options.strict) return false;
+
+    const previousQuery = previous.request.query.trim();
+    const nextQuery = nextRequest.query.trim();
+    if (!previousQuery || !nextQuery || nextQuery.length <= previousQuery.length) return false;
+
+    const normalize = (value: string) =>
+      nextRequest.options.ignore_case ? value.toLocaleLowerCase() : value;
+    if (!normalize(nextQuery).startsWith(normalize(previousQuery))) return false;
+
+    const filtered = sortResultsForMode(
+      filterPlainResults(previous.results, nextQuery, nextRequest.options.ignore_case),
+      sortModeRef.current
+    );
+    incrementalSearchRef.current = { request: nextRequest, results: filtered };
+    setResults(filtered);
+    setSelectedPath((prev) => (prev && filtered.some((item) => item.full_path === prev) ? prev : null));
+    setScrollTop(0);
+    setStatus(tr("app.status.ready", "Готово"));
+    setIsSearching(false);
+    return true;
+  }
+
+  async function handleSearch(preparedRequest?: SearchRequest): Promise<void> {
     if (!tauriRuntimeAvailable) {
       setStatus(tr("app.status.tauriUnavailable", "Tauri runtime не обнаружен"));
       return;
     }
+    const request = preparedRequest ?? buildCurrentRequest();
     setResults([]);
     setScrollTop(0);
     setSelectedPath(null);
@@ -500,9 +720,18 @@ export function App() {
     setIsSearching(true);
     setSearchStartedAt(Date.now());
     setElapsedMs(null);
+    incrementalSearchRef.current = { request, results: [] };
+    bufferedBatchRef.current = [];
+    pendingCheckedDeltaRef.current = 0;
+    if (batchFlushFrameRef.current !== null) {
+      window.cancelAnimationFrame(batchFlushFrameRef.current);
+      batchFlushFrameRef.current = null;
+    }
+    metadataLoadedPathsRef.current.clear();
+    metadataInFlightPathsRef.current.clear();
 
     try {
-      const response = await startSearch(buildCurrentRequest());
+      const response = await startSearch(request);
       setActiveSearchId(response.search_id);
     } catch (error) {
       setIsSearching(false);
@@ -691,6 +920,20 @@ export function App() {
   }, [regexEnabled]);
 
   useEffect(() => {
+    if (!regexEnabled && matchMode === "Regex") {
+      setMatchMode("Plain");
+    }
+  }, [matchMode, regexEnabled]);
+
+  useEffect(() => {
+    localStorage.setItem("mia.indexTtlHours", String(indexTtlHours));
+  }, [indexTtlHours]);
+
+  useEffect(() => {
+    localStorage.setItem("mia.indexCheckIntervalMinutes", String(indexCheckIntervalMinutes));
+  }, [indexCheckIntervalMinutes]);
+
+  useEffect(() => {
     applyThemeColors(activeTheme.colors);
   }, [activeTheme]);
 
@@ -708,7 +951,13 @@ export function App() {
 
   useEffect(() => {
     sortModeRef.current = sortMode;
-    setResults((prev) => sortResultsForMode(prev, sortMode));
+    setResults((prev) => {
+      const next = sortResultsForMode(prev, sortMode);
+      if (incrementalSearchRef.current) {
+        incrementalSearchRef.current = { ...incrementalSearchRef.current, results: next };
+      }
+      return next;
+    });
   }, [sortMode]);
 
   useEffect(() => {
@@ -718,6 +967,48 @@ export function App() {
   useEffect(() => {
     void loadComputerRoots();
   }, []);
+
+  useEffect(() => {
+    if (!tauriRuntimeAvailable || searchBackend !== "Index") return;
+    if (indexRoots.length === 0) return;
+
+    let cancelled = false;
+    const runCheck = async () => {
+      if (cancelled || isRebuildingIndex || isSearching) return;
+      const snapshot = await refreshIndexStatus();
+      if (cancelled || !snapshot) return;
+
+      const stale = isIndexStale(snapshot.updated_at, indexTtlMs);
+      const rootsChanged = snapshot.roots !== indexRoots.length;
+      const shouldRebuild = snapshot.status === "empty" || rootsChanged || stale;
+
+      if (!shouldRebuild) {
+        setIndexHint(tr("app.index.ready", "Индекс готов"));
+        return;
+      }
+
+      if (stale) {
+        setIndexHint(tr("app.index.rebuildStale", "Индекс устарел, запускаю авто-обновление"));
+      } else if (rootsChanged) {
+        setIndexHint(tr("app.index.rebuildRootsChanged", "Набор roots изменился, обновляю индекс"));
+      }
+
+      await handleRebuildIndex(indexRoots);
+    };
+
+    const startupTimer = window.setTimeout(() => {
+      void runCheck();
+    }, 250);
+    const intervalId = window.setInterval(() => {
+      void runCheck();
+    }, indexCheckIntervalMs);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(startupTimer);
+      window.clearInterval(intervalId);
+    };
+  }, [indexCheckIntervalMs, indexRoots, indexTtlMs, isRebuildingIndex, isSearching, searchBackend, tr]);
 
   useEffect(() => {
     if (!tauriRuntimeAvailable) return;
@@ -734,8 +1025,9 @@ export function App() {
         if (payload.search_id !== activeSearchIdRef.current) {
           return;
         }
-        setResults((prev) => sortResultsForMode(prev.concat(payload.results), sortModeRef.current));
-        setCheckedPaths((prev) => prev + payload.results.length);
+        bufferedBatchRef.current.push(...payload.results);
+        pendingCheckedDeltaRef.current += payload.results.length;
+        scheduleResultsFlush();
       }),
       onSearchDone((payload) => {
         if (activeSearchIdRef.current === null) {
@@ -748,6 +1040,26 @@ export function App() {
         setStatus(tr("app.status.ready", "Готово"));
         setLimitReached(payload.limit_reached);
         setIsSearching(false);
+        if (batchFlushFrameRef.current !== null) {
+          window.cancelAnimationFrame(batchFlushFrameRef.current);
+          batchFlushFrameRef.current = null;
+        }
+        if (pendingCheckedDeltaRef.current > 0) {
+          const checkedDelta = pendingCheckedDeltaRef.current;
+          pendingCheckedDeltaRef.current = 0;
+          setCheckedPaths((prev) => prev + checkedDelta);
+        }
+        if (bufferedBatchRef.current.length > 0) {
+          const remaining = bufferedBatchRef.current;
+          bufferedBatchRef.current = [];
+          setResults((prev) => {
+            const next = sortResultsForMode(prev.concat(remaining), sortModeRef.current);
+            if (incrementalSearchRef.current) {
+              incrementalSearchRef.current = { ...incrementalSearchRef.current, results: next };
+            }
+            return next;
+          });
+        }
         setActiveSearchId(null);
         if (searchStartedAtRef.current !== null) {
           setElapsedMs(Date.now() - searchStartedAtRef.current);
@@ -764,6 +1076,16 @@ export function App() {
         }
         setStatus(tr("app.status.stopped", "Остановлено"));
         setIsSearching(false);
+        if (pendingCheckedDeltaRef.current > 0) {
+          const checkedDelta = pendingCheckedDeltaRef.current;
+          pendingCheckedDeltaRef.current = 0;
+          setCheckedPaths((prev) => prev + checkedDelta);
+        }
+        bufferedBatchRef.current = [];
+        if (batchFlushFrameRef.current !== null) {
+          window.cancelAnimationFrame(batchFlushFrameRef.current);
+          batchFlushFrameRef.current = null;
+        }
         setActiveSearchId(null);
         if (searchStartedAtRef.current !== null) {
           setElapsedMs(Date.now() - searchStartedAtRef.current);
@@ -779,6 +1101,16 @@ export function App() {
         }
         setStatus(tr("app.status.error", "Ошибка: {{message}}", { message: payload.message }));
         setIsSearching(false);
+        if (pendingCheckedDeltaRef.current > 0) {
+          const checkedDelta = pendingCheckedDeltaRef.current;
+          pendingCheckedDeltaRef.current = 0;
+          setCheckedPaths((prev) => prev + checkedDelta);
+        }
+        bufferedBatchRef.current = [];
+        if (batchFlushFrameRef.current !== null) {
+          window.cancelAnimationFrame(batchFlushFrameRef.current);
+          batchFlushFrameRef.current = null;
+        }
         setActiveSearchId(null);
         if (searchStartedAtRef.current !== null) {
           setElapsedMs(Date.now() - searchStartedAtRef.current);
@@ -808,11 +1140,13 @@ export function App() {
 
   useEffect(() => {
     if (!liveSearch) return;
+    const request = buildCurrentRequest();
+    if (!request.query.trim()) return;
+    const adaptiveDebounce = computeAdaptiveDebounce(request, debounceMs);
     const timer = window.setTimeout(() => {
-      if (query.trim()) {
-        void handleSearch();
-      }
-    }, Math.max(100, debounceMs));
+      if (tryIncrementalPlainSearch(request)) return;
+      void handleSearch(request);
+    }, adaptiveDebounce);
     return () => window.clearTimeout(timer);
   }, [
     createdAfter,
@@ -825,6 +1159,7 @@ export function App() {
     includeHidden,
     limit,
     liveSearch,
+    matchMode,
     maxDepth,
     maxDepthUnlimited,
     modifiedAfter,
@@ -837,9 +1172,57 @@ export function App() {
     sizeFilterEnabled,
     sizeUnit,
     sizeValue,
+    searchBackend,
     sortMode,
     strict
   ]);
+
+  useEffect(() => {
+    if (!tauriRuntimeAvailable || isSearching || displayMode === "cards" || visibleRows.items.length === 0) return;
+
+    const targetPaths = visibleRows.items
+      .map((item) => item.full_path)
+      .filter(
+        (path) =>
+          !metadataLoadedPathsRef.current.has(path) &&
+          !metadataInFlightPathsRef.current.has(path)
+      )
+      .slice(0, 64);
+    if (targetPaths.length === 0) return;
+
+    for (const path of targetPaths) {
+      metadataInFlightPathsRef.current.add(path);
+    }
+
+    let cancelled = false;
+    void searchEnrichMetadata(targetPaths)
+      .then((patches) => {
+        if (cancelled) return;
+        for (const path of targetPaths) {
+          metadataLoadedPathsRef.current.add(path);
+        }
+        if (patches.length === 0) return;
+        setResults((prev) => {
+          const next = mergeMetadataIntoResults(prev, patches);
+          if (incrementalSearchRef.current) {
+            incrementalSearchRef.current = { ...incrementalSearchRef.current, results: next };
+          }
+          return next;
+        });
+      })
+      .catch(() => {
+        // metadata enrichment is best-effort
+      })
+      .finally(() => {
+        for (const path of targetPaths) {
+          metadataInFlightPathsRef.current.delete(path);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [displayMode, isSearching, visibleRows.items]);
 
   useEffect(() => {
     if (!resultPaneRef.current) return;
@@ -882,6 +1265,17 @@ export function App() {
     return () => window.removeEventListener("click", onClick);
   }, []);
 
+  useEffect(
+    () => () => {
+      if (batchFlushFrameRef.current !== null) {
+        window.cancelAnimationFrame(batchFlushFrameRef.current);
+      }
+      pendingCheckedDeltaRef.current = 0;
+      bufferedBatchRef.current = [];
+    },
+    []
+  );
+
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
@@ -900,6 +1294,13 @@ export function App() {
       if (key === "f5") {
         event.preventDefault();
         void handleSearch();
+        return;
+      }
+      if (accel && event.shiftKey && key === "r") {
+        event.preventDefault();
+        if (searchBackend === "Index" && indexRoots.length > 0 && !isRebuildingIndex) {
+          void handleRebuildIndex(indexRoots);
+        }
         return;
       }
       if (key === "escape") {
@@ -934,7 +1335,7 @@ export function App() {
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [results, selectedPath, selectedResult]);
+  }, [indexRoots, isRebuildingIndex, results, searchBackend, selectedPath, selectedResult]);
 
   useEffect(() => {
     if (window.innerWidth < 1024) {
@@ -965,6 +1366,12 @@ export function App() {
           isSearching={isSearching}
           onSearch={() => void handleSearch()}
           onCancelSearch={() => void handleCancel()}
+          matchMode={matchMode}
+          onMatchModeChange={setMatchMode}
+          entryKind={entryKind}
+          onEntryKindChange={setEntryKind}
+          ignoreCase={ignoreCase}
+          onIgnoreCaseChange={setIgnoreCase}
           liveSearch={liveSearch}
           onLiveSearchChange={setLiveSearch}
           includeHidden={includeHidden}
@@ -1020,6 +1427,13 @@ export function App() {
             onIgnoreCaseChange={setIgnoreCase}
             includeHidden={includeHidden}
             onIncludeHiddenChange={setIncludeHidden}
+            searchBackend={searchBackend}
+            onSearchBackendChange={setSearchBackend}
+            indexStatus={indexStatusSnapshot}
+            indexUpdatedAtLabel={indexUpdatedAtLabel}
+            isRebuildingIndex={isRebuildingIndex}
+            onRebuildIndex={() => void handleRebuildIndex(indexRoots)}
+            indexHint={indexHint}
             limitMode={limitMode}
             onLimitModeChange={setLimitMode}
             customLimit={customLimit}
@@ -1043,6 +1457,10 @@ export function App() {
             onRegexEnabledChange={setRegexEnabled}
             debounceMs={debounceMs}
             onDebounceMsChange={setDebounceMs}
+            indexTtlHours={indexTtlHours}
+            onIndexTtlHoursChange={setIndexTtlHours}
+            indexCheckIntervalMinutes={indexCheckIntervalMinutes}
+            onIndexCheckIntervalMinutesChange={setIndexCheckIntervalMinutes}
             newThemeName={newThemeName}
             onNewThemeNameChange={setNewThemeName}
             newThemeBg={newThemeBg}
@@ -1059,7 +1477,13 @@ export function App() {
         <section
           className="layout"
           style={{
-            gridTemplateColumns: `${leftVisible ? `${leftWidth}px 2px` : "0px 0px"} 1fr ${rightVisible ? `2px ${rightWidth}px` : "0px 0px"}`
+            gridTemplateColumns: leftVisible
+              ? rightVisible
+                ? `${leftWidth}px 2px minmax(0, 1fr) 2px ${rightWidth}px`
+                : `${leftWidth}px 2px minmax(0, 1fr)`
+              : rightVisible
+                ? `minmax(0, 1fr) 2px ${rightWidth}px`
+                : "minmax(0, 1fr)"
           }}
         >
           {leftVisible ? (

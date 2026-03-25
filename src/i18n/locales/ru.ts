@@ -103,7 +103,7 @@ const ru = {
       placeholder: "Поиск файлов и папок...",
       commandHints:
         "Команды: /wc *.rs  /re ^main.*\\.ts$  /plain текст  /files /folders  ext:rs,md  /case /nocase",
-      commandQuickHintDefault: "Быстрые команды: вставьте токен кнопкой и сразу ищите",
+      commandQuickHintDefault: "Быстрые переключатели: включайте режимы кнопками ниже",
       quickButtons: {
         wc: "WC",
         re: "RE",
@@ -186,6 +186,8 @@ const ru = {
       liveSearchDefault: "Live search по умолчанию",
       regexEnabled: "Включить regex",
       debounce: "Debounce (мс)",
+      indexTtlHours: "TTL авто-индекса (часы)",
+      indexCheckIntervalMinutes: "Проверка индекса (мин)",
       customTheme: "Пользовательская тема",
       themeName: {
         placeholder: "Имя темы"
@@ -296,13 +298,14 @@ const ru = {
     },
     commands: {
       newSearch: "> Новый поиск",
+      rebuildIndex: "> Перестроить индекс",
       clearHistory: "> Очистить историю",
       toggleTheme: "> Переключить тему",
       focusSearch: "/ Фокус в строку поиска",
       help: "? Горячие клавиши"
     },
     messages: {
-      hotkeys: "⌘K, ⌘F, Esc, F5, ↑/↓, Enter"
+      hotkeys: "⌘K, ⌘F, ⌘⇧R, Esc, F5, ↑/↓, Enter"
     },
     status: {
       persistenceError: "Ошибка загрузки данных",

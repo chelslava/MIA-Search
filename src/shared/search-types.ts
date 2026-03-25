@@ -2,6 +2,7 @@ export type EntryKind = "Any" | "File" | "Directory";
 
 export type SortMode = "Relevance" | "Name" | "Size" | "Modified" | "Type";
 export type MatchMode = "Plain" | "Wildcard" | "Regex";
+export type SearchBackend = "Scan" | "Index";
 
 export type SizeComparison = "Smaller" | "Equal" | "Greater";
 
@@ -31,6 +32,7 @@ export interface SearchOptions {
   created_filter: DateFilter | null;
   modified_filter: DateFilter | null;
   sort_mode: SortMode;
+  search_backend: SearchBackend;
 }
 
 export interface SearchRequest {
@@ -53,6 +55,15 @@ export interface SearchResultItem {
   hidden: boolean;
   score: number | null;
   source_root: string;
+}
+
+export interface SearchMetadataPatch {
+  full_path: string;
+  extension?: string | null;
+  size?: number | null;
+  created_at?: string | null;
+  modified_at?: string | null;
+  hidden?: boolean;
 }
 
 export interface SearchStartResponse {
@@ -102,4 +113,18 @@ export interface FsTreeNode {
   path: string;
   is_drive: boolean;
   has_children: boolean;
+}
+
+export interface IndexStatusResponse {
+  status: "empty" | "ready";
+  entries: number;
+  roots: number;
+  updated_at: string;
+}
+
+export interface IndexRebuildResponse {
+  status: "ok";
+  roots: number;
+  entries: number;
+  updated_at: string;
 }

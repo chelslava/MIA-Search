@@ -103,7 +103,7 @@ const en = {
       placeholder: "Search files and folders...",
       commandHints:
         "Commands: /wc *.rs  /re ^main.*\\.ts$  /plain text  /files /folders  ext:rs,md  /case /nocase",
-      commandQuickHintDefault: "Quick commands: click a token button and search immediately",
+      commandQuickHintDefault: "Quick toggles: switch modes with the buttons below",
       quickButtons: {
         wc: "WC",
         re: "RE",
@@ -186,6 +186,8 @@ const en = {
       liveSearchDefault: "Live search by default",
       regexEnabled: "Enable regex",
       debounce: "Debounce (ms)",
+      indexTtlHours: "Auto-index TTL (hours)",
+      indexCheckIntervalMinutes: "Index check interval (min)",
       customTheme: "Custom theme",
       themeName: {
         placeholder: "Theme name"
@@ -296,13 +298,14 @@ const en = {
     },
     commands: {
       newSearch: "> New search",
+      rebuildIndex: "> Rebuild index",
       clearHistory: "> Clear history",
       toggleTheme: "> Toggle theme",
       focusSearch: "/ Focus search input",
       help: "? Keyboard shortcuts"
     },
     messages: {
-      hotkeys: "⌘K, ⌘F, Esc, F5, ↑/↓, Enter"
+      hotkeys: "⌘K, ⌘F, ⌘⇧R, Esc, F5, ↑/↓, Enter"
     },
     status: {
       persistenceError: "Failed to load data",

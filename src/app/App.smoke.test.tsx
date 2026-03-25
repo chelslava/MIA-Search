@@ -16,7 +16,8 @@ const mocks = vi.hoisted(() => ({
   actionOpenPathMock: vi.fn(async () => undefined),
   actionOpenParentMock: vi.fn(async () => undefined),
   actionRevealPathMock: vi.fn(async () => undefined),
-  actionCopyToClipboardMock: vi.fn(async () => undefined)
+  actionCopyToClipboardMock: vi.fn(async () => undefined),
+  searchEnrichMetadataMock: vi.fn(async () => [])
 }));
 
 vi.mock("../shared/tauri-client", () => ({
@@ -35,6 +36,7 @@ vi.mock("../shared/tauri-client", () => ({
   actionOpenParent: mocks.actionOpenParentMock,
   actionRevealPath: mocks.actionRevealPathMock,
   actionCopyToClipboard: mocks.actionCopyToClipboardMock,
+  searchEnrichMetadata: mocks.searchEnrichMetadataMock,
   onSearchBatch: async () => () => {},
   onSearchDone: async () => () => {},
   onSearchCancelled: async () => () => {},

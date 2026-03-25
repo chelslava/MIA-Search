@@ -1,4 +1,4 @@
-# План реализации проекта File Finder (Rust_Search + Tauri)
+# План реализации проекта MIA Search (Rust_Search + Tauri)
 
 ## 1. Инициация и каркас (1 неделя)
 - Утвердить архитектуру: `Core Search Layer` / `Application Layer` / `Presentation Layer`.

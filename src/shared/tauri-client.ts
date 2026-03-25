@@ -3,6 +3,9 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   FsTreeNode,
   HistorySnapshot,
+  IndexRebuildResponse,
+  IndexStatusResponse,
+  SearchMetadataPatch,
   SearchBatchEvent,
   SearchCancelResponse,
   SearchDoneEvent,
@@ -105,4 +108,17 @@ export async function fsListChildren(path: string): Promise<FsTreeNode[]> {
 export async function fsPickFolder(): Promise<string | null> {
   const selected = await invoke<string | null>("fs_pick_folder");
   return selected ?? null;
+}
+
+export async function indexStatus(): Promise<IndexStatusResponse> {
+  return invoke<IndexStatusResponse>("index_status");
+}
+
+export async function indexRebuild(roots: string[]): Promise<IndexRebuildResponse> {
+  return invoke<IndexRebuildResponse>("index_rebuild", { roots });
+}
+
+export async function searchEnrichMetadata(paths: string[]): Promise<SearchMetadataPatch[]> {
+  if (paths.length === 0) return [];
+  return invoke<SearchMetadataPatch[]>("search_enrich_metadata", { paths });
 }

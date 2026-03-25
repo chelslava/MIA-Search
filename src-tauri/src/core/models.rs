@@ -42,6 +42,18 @@ impl Default for SortMode {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum SearchBackend {
+  Scan,
+  Index,
+}
+
+impl Default for SearchBackend {
+  fn default() -> Self {
+    Self::Scan
+  }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum SizeComparison {
   Smaller,
   Equal,
@@ -95,6 +107,8 @@ pub struct SearchOptions {
   pub created_filter: Option<DateFilter>,
   pub modified_filter: Option<DateFilter>,
   pub sort_mode: SortMode,
+  #[serde(default)]
+  pub search_backend: SearchBackend,
 }
 
 impl Default for SearchOptions {
@@ -111,6 +125,7 @@ impl Default for SearchOptions {
       created_filter: None,
       modified_filter: None,
       sort_mode: SortMode::Relevance,
+      search_backend: SearchBackend::Scan,
     }
   }
 }
@@ -250,6 +265,7 @@ mod tests {
     assert!(options.created_filter.is_none());
     assert!(options.modified_filter.is_none());
     assert_eq!(options.sort_mode, SortMode::Relevance);
+    assert_eq!(options.search_backend, SearchBackend::Scan);
   }
 
   #[test]
@@ -279,6 +295,7 @@ mod tests {
     assert!(request.options.created_filter.is_none());
     assert!(request.options.modified_filter.is_none());
     assert_eq!(request.options.sort_mode, SearchOptions::default().sort_mode);
+    assert_eq!(request.options.search_backend, SearchOptions::default().search_backend);
 
     assert_eq!(session.active_search_id, None);
     assert!(session.last_request.is_none());

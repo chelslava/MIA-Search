@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import type { TopBarProps } from "./props";
+import type { EntryKind } from "../../../shared/search-types";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Select } from "../../../components/ui/select";
@@ -14,6 +15,12 @@ export function TopBar({
   isSearching,
   onSearch,
   onCancelSearch,
+  matchMode,
+  onMatchModeChange,
+  entryKind,
+  onEntryKindChange,
+  ignoreCase,
+  onIgnoreCaseChange,
   liveSearch,
   onLiveSearchChange,
   includeHidden,
@@ -34,33 +41,8 @@ export function TopBar({
 
   const defaultHint = tr(
     "app.search.commandQuickHintDefault",
-    "Быстрые команды: вставьте токен кнопкой и сразу ищите"
+    "Быстрые переключатели: включайте режимы кнопками ниже"
   );
-
-  function normalizeSpaces(value: string): string {
-    return value.replace(/\s+/g, " ").trim();
-  }
-
-  function addToken(token: string): void {
-    const current = normalizeSpaces(query);
-    const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const tokenRegex = new RegExp(`(?:^|\\s)${escaped}(?:\\s|$)`, "i");
-    if (tokenRegex.test(current)) {
-      searchInputRef.current?.focus();
-      return;
-    }
-    onQueryChange(current ? `${current} ${token}` : token);
-    searchInputRef.current?.focus();
-  }
-
-  function setModeToken(token: string): void {
-    const current = normalizeSpaces(query);
-    const cleared = normalizeSpaces(
-      current.replace(/(^|\s)(\/re|\/regex|\/wc|\/wildcard|\/plain)\b/gi, " ")
-    );
-    onQueryChange(cleared ? `${cleared} ${token}` : token);
-    searchInputRef.current?.focus();
-  }
 
   const commandButtons = useMemo(
     () => [
@@ -68,7 +50,8 @@ export function TopBar({
         id: "wc",
         label: tr("app.search.quickButtons.wc", "WC"),
         hint: tr("app.search.quickHints.wc", "Wildcard режим: * и ?"),
-        onClick: () => setModeToken("/wc"),
+        active: matchMode === "Wildcard",
+        onClick: () => onMatchModeChange("Wildcard"),
         disabled: false
       },
       {
@@ -77,39 +60,44 @@ export function TopBar({
         hint: regexEnabled
           ? tr("app.search.quickHints.re", "Regex режим: регулярные выражения")
           : tr("app.search.quickHints.reDisabled", "Regex отключен в настройках"),
-        onClick: () => setModeToken("/re"),
+        active: matchMode === "Regex",
+        onClick: () => onMatchModeChange("Regex"),
         disabled: !regexEnabled
       },
       {
         id: "plain",
         label: tr("app.search.quickButtons.plain", "PLAIN"),
         hint: tr("app.search.quickHints.plain", "Обычный текстовый поиск"),
-        onClick: () => setModeToken("/plain"),
+        active: matchMode === "Plain",
+        onClick: () => onMatchModeChange("Plain"),
         disabled: false
       },
       {
         id: "files",
         label: tr("app.search.quickButtons.files", "FILES"),
         hint: tr("app.search.quickHints.files", "Искать только файлы"),
-        onClick: () => addToken("/files"),
+        active: entryKind === "File",
+        onClick: () => onEntryKindChange(entryKind === "File" ? "Any" : "File"),
         disabled: false
       },
       {
         id: "folders",
         label: tr("app.search.quickButtons.folders", "DIRS"),
         hint: tr("app.search.quickHints.folders", "Искать только папки"),
-        onClick: () => addToken("/folders"),
+        active: entryKind === "Directory",
+        onClick: () => onEntryKindChange(entryKind === "Directory" ? "Any" : "Directory"),
         disabled: false
       },
       {
         id: "case",
         label: tr("app.search.quickButtons.case", "Aa"),
         hint: tr("app.search.quickHints.case", "С учетом регистра"),
-        onClick: () => addToken("/case"),
+        active: !ignoreCase,
+        onClick: () => onIgnoreCaseChange(!ignoreCase),
         disabled: false
       }
     ],
-    [query, regexEnabled, tr]
+    [entryKind, ignoreCase, matchMode, onEntryKindChange, onIgnoreCaseChange, onMatchModeChange, regexEnabled, tr]
   );
 
   return (
@@ -230,7 +218,7 @@ export function TopBar({
               <Button
                 key={item.id}
                 type="button"
-                variant="ghost"
+                variant={item.active ? "default" : "ghost"}
                 size="sm"
                 className="h-5 rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] px-1 text-[10px] leading-none"
                 onMouseEnter={() => setActiveHint(item.hint)}

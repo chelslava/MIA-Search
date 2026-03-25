@@ -25,6 +25,7 @@ impl PartialEq for crate::core::models::SearchOptions {
       && self.entry_kind == other.entry_kind
       && self.match_mode == other.match_mode
       && self.sort_mode == other.sort_mode
+      && self.search_backend == other.search_backend
       && option_size_filter_eq(&self.size_filter, &other.size_filter)
       && option_date_filter_eq(&self.created_filter, &other.created_filter)
       && option_date_filter_eq(&self.modified_filter, &other.modified_filter)
@@ -289,7 +290,7 @@ impl SearchService {
       }
 
       let source_root = resolve_source_root(&roots_for_source, &path).unwrap_or_else(|| default_root.clone());
-      let mut item = MetadataService::enrich_path(&path, source_root);
+      let mut item = MetadataService::lightweight_path(&path, source_root);
       if matches!(request.options.sort_mode, SortMode::Relevance) && !query.is_empty() {
         item.score = score_relevance(&item.name, &query);
       }

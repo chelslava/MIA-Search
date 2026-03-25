@@ -6,6 +6,39 @@ use std::path::{Path, PathBuf};
 pub struct MetadataService;
 
 impl MetadataService {
+  pub fn lightweight_path(path: impl AsRef<Path>, source_root: impl AsRef<Path>) -> SearchResultItem {
+    let path = path.as_ref();
+    let file_name = path
+      .file_name()
+      .and_then(|value| value.to_str())
+      .unwrap_or_default()
+      .to_string();
+    let parent_path = path
+      .parent()
+      .map(PathBuf::from)
+      .and_then(|value| value.to_str().map(|text| text.to_string()))
+      .unwrap_or_default();
+    let extension = path.extension().and_then(|value| value.to_str()).map(|value| value.to_string());
+    let (is_file, is_dir) = std::fs::metadata(path)
+      .map(|meta| (meta.is_file(), meta.is_dir()))
+      .unwrap_or((false, false));
+
+    SearchResultItem {
+      name: file_name.clone(),
+      full_path: path.to_string_lossy().to_string(),
+      parent_path,
+      is_file,
+      is_dir,
+      extension,
+      size: None,
+      created_at: None,
+      modified_at: None,
+      hidden: file_name.starts_with('.'),
+      score: None,
+      source_root: source_root.as_ref().to_string_lossy().to_string(),
+    }
+  }
+
   pub fn enrich_path(path: impl AsRef<Path>, source_root: impl AsRef<Path>) -> SearchResultItem {
     let path = path.as_ref();
     let metadata = std::fs::metadata(path);
@@ -94,5 +127,19 @@ mod tests {
     assert!(!item.is_file);
     assert!(!item.is_dir);
     assert_eq!(item.size, None);
+  }
+
+  #[test]
+  fn lightweight_path_omits_heavy_metadata_fields() {
+    let dir = tempdir().expect("tempdir");
+    let file_path = dir.path().join("light.txt");
+    fs::write(&file_path, "hello").expect("write file");
+
+    let item = MetadataService::lightweight_path(&file_path, dir.path());
+    assert_eq!(item.name, "light.txt");
+    assert!(item.is_file);
+    assert_eq!(item.size, None);
+    assert!(item.created_at.is_none());
+    assert!(item.modified_at.is_none());
   }
 }

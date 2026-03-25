@@ -1,5 +1,13 @@
 import type { RefObject } from "react";
-import type { EntryKind, SearchResultItem, SizeComparison, SortMode } from "../../../shared/search-types";
+import type {
+  MatchMode,
+  EntryKind,
+  IndexStatusResponse,
+  SearchBackend,
+  SearchResultItem,
+  SizeComparison,
+  SortMode
+} from "../../../shared/search-types";
 import type { ContextMenuState, DisplayMode, FilterChip, RootItem, ThemePreset } from "../../types";
 
 export type TranslateFn = (key: string, defaultValue: string, values?: Record<string, unknown>) => string;
@@ -17,6 +25,12 @@ export type TopBarProps = {
   isSearching: boolean;
   onSearch: () => void;
   onCancelSearch: () => void;
+  matchMode: MatchMode;
+  onMatchModeChange: (value: MatchMode) => void;
+  entryKind: EntryKind;
+  onEntryKindChange: (value: EntryKind) => void;
+  ignoreCase: boolean;
+  onIgnoreCaseChange: (value: boolean) => void;
   liveSearch: boolean;
   onLiveSearchChange: (value: boolean) => void;
   includeHidden: boolean;
@@ -69,6 +83,13 @@ export type FiltersPanelProps = {
   onIgnoreCaseChange: (value: boolean) => void;
   includeHidden: boolean;
   onIncludeHiddenChange: (value: boolean) => void;
+  searchBackend: SearchBackend;
+  onSearchBackendChange: (value: SearchBackend) => void;
+  indexStatus: IndexStatusResponse | null;
+  indexUpdatedAtLabel: string;
+  isRebuildingIndex: boolean;
+  onRebuildIndex: () => void;
+  indexHint: string;
   limitMode: LimitMode;
   onLimitModeChange: (value: LimitMode) => void;
   customLimit: number;
@@ -87,6 +108,10 @@ export type SettingsPanelProps = {
   onRegexEnabledChange: (value: boolean) => void;
   debounceMs: number;
   onDebounceMsChange: (value: number) => void;
+  indexTtlHours: number;
+  onIndexTtlHoursChange: (value: number) => void;
+  indexCheckIntervalMinutes: number;
+  onIndexCheckIntervalMinutesChange: (value: number) => void;
   newThemeName: string;
   onNewThemeNameChange: (value: string) => void;
   newThemeBg: string;

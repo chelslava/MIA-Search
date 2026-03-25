@@ -8,8 +8,11 @@
 - Desktop-приложение на `Tauri 2 + React + TypeScript`.
 - Поисковое ядро на Rust (`rust_search`) с потоковой выдачей, отменой и параллельным worker-pool сканированием.
 - Multi-root поиск, depth/limit, strict/ignore_case/include_hidden.
-- Режимы запроса: `plain`, `wildcard`, `regex` + inline-команды в строке поиска.
+- Режимы запроса: `plain`, `wildcard`, `regex` через UI toggle-кнопки.
 - Фильтры (тип, расширения, размер, дата), сортировки, dedupe.
+- Двухфазная выдача: lightweight stream + async metadata enrichment.
+- Index backend (`index_rebuild`, `index_status`) с fallback на scan.
+- Управление index в UI: `Scan/Index`, `Rebuild index`, статус, авто-реиндексация по TTL/интервалу.
 - Действия с результатами: open/open parent/reveal/copy.
 - Stores: settings/history/favorites/profiles с persistence.
 - Компактный UI (левое дерево дисков/папок, верхняя панель, статус-бар, детали).
@@ -31,22 +34,22 @@ MVP считается готовым, когда:
 
 ## 3. План выхода в MVP (финальный коридор)
 
-## Этап M1: Стабилизация (25-27 марта 2026)
-- [x] Исправить wildcard-поиск по нескольким root при лимитах.
+## Этап M1: Release Prep (25-27 марта 2026)
+- [x] Стабилизировать потоковый поиск и отмену.
+- [x] Включить индексный backend с fallback и UI-управлением.
+- [x] Снизить риск UI-фризов при стриме.
 - [x] Поднять backend coverage до 80%+.
-- [ ] Добить edge-cases поиска (permission denied, пустые/битые пути, очень длинные пути).
-- [x] Минимальный perf-прогон на «тяжёлых» root (оценка latency первого батча и общего времени).
 
-## Этап M2: Release Candidate (28-30 марта 2026)
-- [ ] Собрать и проверить `cargo tauri build` для Windows.
-- [ ] Пройти `docs/release_smoke_checklist.md` на Windows полностью.
-- [ ] Обновить пользовательскую инструкцию запуска/поиска/команд.
-- [ ] Зафиксировать RC-тег (например `v0.1.0-rc1`).
+## Этап M2: Candidate Verification (28-30 марта 2026)
+- [x] Собрать `cargo tauri build` для Windows (NSIS bundle).
+- [x] Пройти release smoke-checklist.
+- [x] Синхронизировать README/user guide/release notes.
+- [ ] Подтвердить финальный go/no-go и поставить тег `v0.1.0`.
 
-## Этап M3: MVP Freeze (31 марта - 2 апреля 2026)
-- [ ] Закрыть только критические регрессии (без крупных UI-рефакторингов).
-- [ ] Повторный полный smoke + sanity тестов.
-- [ ] Выпустить MVP-tag (`v0.1.0`).
+## Этап M3: MVP Launch (31 марта - 2 апреля 2026)
+- [ ] Опубликовать GitHub Release с артефактом и release notes.
+- [ ] Зафиксировать post-MVP backlog и freeze policy для hotfix.
+- [ ] Подготовить короткий план поддержки релиза (ошибки/P0/P1).
 
 ## 4. Post-MVP roadmap (после 2 апреля 2026)
 
@@ -54,6 +57,7 @@ MVP считается готовым, когда:
 - Расширенные метрики (TTFR, scanned paths/sec, access errors).
 - Оптимизация сканирования больших root и отзывчивости UI.
 - Улучшение виртуализации и компактных режимов представления.
+- Инкрементальная/фоновая актуализация индекса без полного rebuild.
 
 ## R2: Кроссплатформенная эксплуатация (апрель-май 2026)
 - Полноценные smoke прогоны Linux/macOS.

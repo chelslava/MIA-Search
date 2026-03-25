@@ -1,4 +1,4 @@
-import type { EntryKind } from "../../../shared/search-types";
+import type { EntryKind, SearchBackend } from "../../../shared/search-types";
 import type { FiltersPanelProps } from "./props";
 import { useId } from "react";
 import { Button } from "../../../components/ui/button";
@@ -41,6 +41,13 @@ export function FiltersPanel({
   onIgnoreCaseChange,
   includeHidden,
   onIncludeHiddenChange,
+  searchBackend,
+  onSearchBackendChange,
+  indexStatus,
+  indexUpdatedAtLabel,
+  isRebuildingIndex,
+  onRebuildIndex,
+  indexHint,
   limitMode,
   onLimitModeChange,
   customLimit,
@@ -326,6 +333,43 @@ export function FiltersPanel({
             value={customLimit}
             onChange={(event) => onCustomLimitChange(Math.max(1, Number(event.target.value) || 1))}
           />
+        </fieldset>
+
+        <fieldset className="space-y-2 rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] p-2">
+          <legend className="px-1 text-xs font-medium text-[var(--text)]">
+            {tr("app.filters.backend.legend", "Backend поиска")}
+          </legend>
+          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+            <Select
+              value={searchBackend}
+              onChange={(event) => onSearchBackendChange(event.target.value as SearchBackend)}
+            >
+              <option value="Index">{tr("app.filters.backend.index", "Index")}</option>
+              <option value="Scan">{tr("app.filters.backend.scan", "Scan")}</option>
+            </Select>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onRebuildIndex}
+              disabled={isRebuildingIndex}
+            >
+              {isRebuildingIndex
+                ? tr("app.filters.backend.rebuilding", "Rebuilding...")
+                : tr("app.filters.backend.rebuild", "Rebuild index")}
+            </Button>
+          </div>
+          <div className="rounded-sm border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[11px] text-[var(--muted)]">
+            <div>
+              {tr("app.filters.backend.status", "Статус")}: {indexStatus?.status ?? "-"}
+            </div>
+            <div>
+              {tr("app.filters.backend.entries", "Entries")}: {indexStatus?.entries ?? 0}
+            </div>
+            <div>
+              {tr("app.filters.backend.updatedAt", "Updated")}: {indexUpdatedAtLabel}
+            </div>
+            {indexHint ? <div>{indexHint}</div> : null}
+          </div>
         </fieldset>
       </div>
       <div className="flex flex-wrap gap-2">

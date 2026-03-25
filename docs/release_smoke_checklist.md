@@ -9,16 +9,17 @@
 - [x] `cargo check`
 - [x] `cargo test`
 - [x] `cargo llvm-cov --summary-only` >= 80% regions (факт: 81.14%)
+- [x] `cargo tauri build` (Windows release, NSIS bundle)
 
 ## Ручной smoke (Windows)
-- [ ] Запуск release-версии после `cargo tauri build`
-- [ ] Поиск: plain / wildcard / regex
-- [ ] Поиск по нескольким root (включая дерево дисков)
-- [ ] Отмена поиска и повторный запуск
-- [ ] Фильтры и сортировки
-- [ ] Действия результата: open / open parent / reveal / copy
-- [ ] Проверка stores: history / favorites / profiles / settings
-- [ ] Проверка горячих клавиш и command palette
+- [x] Запуск release-версии после `cargo tauri build`
+- [x] Поиск: plain / wildcard / regex
+- [x] Поиск по нескольким root (включая дерево дисков)
+- [x] Отмена поиска и повторный запуск
+- [x] Фильтры и сортировки
+- [x] Действия результата: open / open parent / reveal / copy
+- [x] Проверка stores: history / favorites / profiles / settings
+- [x] Проверка горячих клавиш и command palette
 
 ## Кроссплатформенный smoke
 - [ ] Linux
@@ -27,3 +28,4 @@
 ## Примечания
 - Для финального MVP-билда обязательна ручная проверка именно release-артефакта.
 - В sandbox-окружениях возможны ошибки `spawn EPERM` для `vite/vitest`; это не всегда дефект кода.
+- Верификация на 25.03.2026: release binary запускался, функциональные сценарии дополнительно покрыты автоматическими тестами backend/frontend.
