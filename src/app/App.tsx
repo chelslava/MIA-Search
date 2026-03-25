@@ -638,8 +638,12 @@ export function App() {
         }
         unlisten.push(...handlers);
       })
-      .catch(() => {
-        setStatus(tr("app.status.eventsError", "Ошибка подписки событий"));
+      .catch((error) => {
+        setStatus(
+          tr("app.status.eventsError", "Ошибка подписки событий: {{message}}", {
+            message: String(error)
+          })
+        );
       });
 
     return () => {
