@@ -206,6 +206,9 @@ export function App() {
   const [checkedPaths, setCheckedPaths] = useState(0);
   const [searchStartedAt, setSearchStartedAt] = useState<number | null>(null);
   const [elapsedMs, setElapsedMs] = useState<number | null>(null);
+  const [nowMs, setNowMs] = useState<number>(Date.now());
+  const [ttfrMs, setTtfrMs] = useState<number | null>(null);
+  const [searchErrorCount, setSearchErrorCount] = useState(0);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [history, setHistory] = useState<HistorySnapshot>({ queries: [], opened_paths: [] });
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -720,6 +723,8 @@ export function App() {
     setIsSearching(true);
     setSearchStartedAt(Date.now());
     setElapsedMs(null);
+    setTtfrMs(null);
+    setSearchErrorCount(0);
     incrementalSearchRef.current = { request, results: [] };
     bufferedBatchRef.current = [];
     pendingCheckedDeltaRef.current = 0;
@@ -946,6 +951,14 @@ export function App() {
   }, [activeSearchId]);
 
   useEffect(() => {
+    if (!isSearching) return;
+    const timer = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 500);
+    return () => window.clearInterval(timer);
+  }, [isSearching]);
+
+  useEffect(() => {
     searchStartedAtRef.current = searchStartedAt;
   }, [searchStartedAt]);
 
@@ -1025,6 +1038,9 @@ export function App() {
         if (payload.search_id !== activeSearchIdRef.current) {
           return;
         }
+        if (searchStartedAtRef.current !== null && ttfrMs === null) {
+          setTtfrMs(Date.now() - searchStartedAtRef.current);
+        }
         bufferedBatchRef.current.push(...payload.results);
         pendingCheckedDeltaRef.current += payload.results.length;
         scheduleResultsFlush();
@@ -1101,6 +1117,7 @@ export function App() {
         }
         setStatus(tr("app.status.error", "Ошибка: {{message}}", { message: payload.message }));
         setIsSearching(false);
+        setSearchErrorCount((prev) => prev + 1);
         if (pendingCheckedDeltaRef.current > 0) {
           const checkedDelta = pendingCheckedDeltaRef.current;
           pendingCheckedDeltaRef.current = 0;
@@ -1136,7 +1153,7 @@ export function App() {
       mounted = false;
       unlisten.forEach((fn) => fn());
     };
-  }, [tr]);
+  }, [tr, ttfrMs]);
 
   useEffect(() => {
     if (!liveSearch) return;
@@ -1345,15 +1362,25 @@ export function App() {
   }, []);
 
   const statusText = useMemo(() => {
+    const effectiveElapsedMs =
+      elapsedMs !== null ? elapsedMs : isSearching && searchStartedAt !== null ? nowMs - searchStartedAt : null;
     const elapsed =
-      elapsedMs === null
+      effectiveElapsedMs === null
         ? "-"
-        : tr("app.status.elapsedSeconds", "{{value}} сек", { value: (elapsedMs / 1000).toFixed(2) });
+        : tr("app.status.elapsedSeconds", "{{value}} сек", { value: (effectiveElapsedMs / 1000).toFixed(2) });
+    const throughput =
+      effectiveElapsedMs && effectiveElapsedMs > 0
+        ? `${(checkedPaths / Math.max(effectiveElapsedMs / 1000, 0.001)).toFixed(1)}/s`
+        : "-";
+    const ttfr =
+      ttfrMs === null
+        ? "-"
+        : tr("app.status.elapsedSeconds", "{{value}} сек", { value: (ttfrMs / 1000).toFixed(2) });
     const warning = limitReached
       ? tr("app.status.limitWarning", "Показано только {{count}} результатов", { count: results.length })
       : "";
-    return { elapsed, warning };
-  }, [elapsedMs, limitReached, results.length, tr]);
+    return { elapsed, warning, ttfr, throughput, errors: String(searchErrorCount) };
+  }, [checkedPaths, elapsedMs, isSearching, limitReached, nowMs, results.length, searchErrorCount, searchStartedAt, tr, ttfrMs]);
   return (
     <>
       <main className="app">

@@ -21,6 +21,15 @@ export function StatusBar({ resultsCount, status, statusText, checkedPaths, acti
         {tr("app.statusbar.checked", "Проверено: {{count}}", { count: checkedPaths })}
       </span>
       <span className="rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] px-1.5 py-0.5 whitespace-nowrap text-[var(--text)]">
+        {tr("app.statusbar.ttfr", "TTFR: {{value}}", { value: statusText.ttfr })}
+      </span>
+      <span className="rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] px-1.5 py-0.5 whitespace-nowrap text-[var(--text)]">
+        {tr("app.statusbar.throughput", "Скорость: {{value}}", { value: statusText.throughput })}
+      </span>
+      <span className="rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] px-1.5 py-0.5 whitespace-nowrap text-[var(--text)]">
+        {tr("app.statusbar.errors", "Ошибки: {{count}}", { count: statusText.errors })}
+      </span>
+      <span className="rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] px-1.5 py-0.5 whitespace-nowrap text-[var(--text)]">
         {tr("app.statusbar.searchId", "ID: {{id}}", { id: activeSearchId ?? "-" })}
       </span>
     </footer>

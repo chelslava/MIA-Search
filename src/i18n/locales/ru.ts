@@ -346,6 +346,9 @@ const ru = {
       status: "Статус: {{status}}",
       time: "Время: {{elapsed}}",
       checked: "Проверено: {{count}}",
+      ttfr: "TTFR: {{value}}",
+      throughput: "Скорость: {{value}}",
+      errors: "Ошибки: {{count}}",
       id: "ID: {{id}}",
       searchId: "ID: {{id}}",
       warningPrefix: "▲"

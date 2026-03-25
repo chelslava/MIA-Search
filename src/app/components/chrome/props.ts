@@ -127,6 +127,9 @@ export type SettingsPanelProps = {
 export type StatusText = {
   elapsed: string;
   warning: string | null;
+  ttfr: string;
+  throughput: string;
+  errors: string;
 };
 
 export type StatusBarProps = {

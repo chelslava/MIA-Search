@@ -346,6 +346,9 @@ const en = {
       status: "Status: {{status}}",
       time: "Time: {{elapsed}}",
       checked: "Checked: {{count}}",
+      ttfr: "TTFR: {{value}}",
+      throughput: "Throughput: {{value}}",
+      errors: "Errors: {{count}}",
       id: "ID: {{id}}",
       searchId: "ID: {{id}}",
       warningPrefix: "▲"
