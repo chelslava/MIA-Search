@@ -30,6 +30,7 @@ body {
   color: var(--text);
   font-size: 12px;
   min-width: 800px;
+  min-height: 720px;
 }
 
 button,

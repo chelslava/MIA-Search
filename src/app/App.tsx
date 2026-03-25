@@ -988,7 +988,7 @@ export function App() {
         <section
           className="layout"
           style={{
-            gridTemplateColumns: `${leftVisible ? `${leftWidth}px 6px` : "0px 0px"} 1fr ${rightVisible ? `6px ${rightWidth}px` : "0px 0px"}`
+            gridTemplateColumns: `${leftVisible ? `${leftWidth}px 2px` : "0px 0px"} 1fr ${rightVisible ? `2px ${rightWidth}px` : "0px 0px"}`
           }}
         >
           {leftVisible ? (
