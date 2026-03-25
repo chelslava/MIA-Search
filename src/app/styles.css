@@ -46,8 +46,8 @@ button {
   height: 100%;
   display: grid;
   grid-template-rows: auto auto 1fr auto;
-  gap: 6px;
-  padding: 6px;
+  gap: 4px;
+  padding: 4px;
   background: radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 10%, transparent), transparent 45%),
     var(--bg);
 }
