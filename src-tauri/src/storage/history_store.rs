@@ -65,3 +65,54 @@ fn trim_oldest<T>(items: &mut Vec<T>, limit: usize) {
     items.drain(0..drain_count);
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::storage::persistence::with_test_data_dir;
+
+  fn request(query: &str) -> SearchRequest {
+    SearchRequest {
+      query: query.to_string(),
+      ..SearchRequest::default()
+    }
+  }
+
+  #[test]
+  fn record_methods_and_limits_work() {
+    let mut store = HistoryStore::default();
+    store.record_query(request("one"));
+    store.record_query_with_limit(request("two"), 2);
+    store.record_query_with_limit(request("three"), 2);
+    assert_eq!(store.queries.len(), 2);
+    assert_eq!(store.queries[0].query, "two");
+    assert_eq!(store.queries[1].query, "three");
+
+    store.record_opened_path("a");
+    store.record_opened_path_with_limit("b", 1);
+    assert_eq!(store.opened_paths, vec!["b".to_string()]);
+  }
+
+  #[test]
+  fn trim_oldest_handles_zero_limit() {
+    let mut values = vec![1, 2, 3];
+    trim_oldest(&mut values, 0);
+    assert!(values.is_empty());
+  }
+
+  #[test]
+  fn history_store_persist_and_load_roundtrip() {
+    with_test_data_dir(|| {
+      let mut store = HistoryStore::default();
+      store.record_query(request("abc"));
+      store.record_opened_path("C:/tmp/file.txt");
+      store.persist().expect("persist");
+
+      let loaded = HistoryStore::load();
+      assert_eq!(loaded.queries.len(), 1);
+      assert_eq!(loaded.queries[0].query, "abc");
+      assert_eq!(loaded.opened_paths, vec!["C:/tmp/file.txt".to_string()]);
+      assert_eq!(loaded.snapshot().queries.len(), 1);
+    });
+  }
+}

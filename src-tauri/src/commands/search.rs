@@ -45,6 +45,12 @@ pub struct SearchErrorEvent {
   pub message: String,
 }
 
+enum SearchTerminalEvent {
+  Cancelled(SearchCancelledEvent),
+  Done(SearchDoneEvent),
+  Error(SearchErrorEvent),
+}
+
 #[tauri::command]
 pub fn search_start(
   app: AppHandle,
@@ -79,22 +85,15 @@ pub fn search_start(
       |_| {},
     );
 
-    match outcome {
-      Ok(summary) if summary.cancelled => {
-        let _ = app_handle.emit("search:cancelled", SearchCancelledEvent { search_id });
+    match terminal_event_from_stream(search_id, outcome) {
+      SearchTerminalEvent::Cancelled(payload) => {
+        let _ = app_handle.emit("search:cancelled", payload);
       }
-      Ok(summary) => {
-        let _ = app_handle.emit(
-          "search:done",
-          SearchDoneEvent {
-            search_id,
-            total_results: summary.total_results,
-            limit_reached: summary.limit_reached,
-          },
-        );
+      SearchTerminalEvent::Done(payload) => {
+        let _ = app_handle.emit("search:done", payload);
       }
-      Err(message) => {
-        let _ = app_handle.emit("search:error", SearchErrorEvent { search_id, message });
+      SearchTerminalEvent::Error(payload) => {
+        let _ = app_handle.emit("search:error", payload);
       }
     }
 
@@ -121,10 +120,80 @@ pub fn search_cancel(state: State<'_, AppState>) -> Result<SearchCancelResponse,
   let search_id = session.cancel();
   Ok(SearchCancelResponse {
     search_id,
-    status: if search_id.is_some() {
-      "cancelled".to_string()
-    } else {
-      "idle".to_string()
-    },
+    status: cancel_status_text(search_id),
   })
+}
+
+fn cancel_status_text(search_id: Option<u64>) -> String {
+  if search_id.is_some() {
+    "cancelled".to_string()
+  } else {
+    "idle".to_string()
+  }
+}
+
+fn terminal_event_from_stream(
+  search_id: u64,
+  outcome: Result<crate::core::search_service::SearchStreamSummary, String>,
+) -> SearchTerminalEvent {
+  match outcome {
+    Ok(summary) if summary.cancelled => SearchTerminalEvent::Cancelled(SearchCancelledEvent { search_id }),
+    Ok(summary) => SearchTerminalEvent::Done(SearchDoneEvent {
+      search_id,
+      total_results: summary.total_results,
+      limit_reached: summary.limit_reached,
+    }),
+    Err(message) => SearchTerminalEvent::Error(SearchErrorEvent { search_id, message }),
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::core::search_service::SearchStreamSummary;
+
+  #[test]
+  fn cancel_status_text_matches_expected_values() {
+    assert_eq!(cancel_status_text(Some(7)), "cancelled");
+    assert_eq!(cancel_status_text(None), "idle");
+  }
+
+  #[test]
+  fn terminal_event_from_stream_maps_all_outcomes() {
+    let cancelled = terminal_event_from_stream(
+      1,
+      Ok(SearchStreamSummary {
+        total_results: 0,
+        limit_reached: false,
+        cancelled: true,
+      }),
+    );
+    assert!(matches!(cancelled, SearchTerminalEvent::Cancelled(_)));
+
+    let done = terminal_event_from_stream(
+      2,
+      Ok(SearchStreamSummary {
+        total_results: 10,
+        limit_reached: true,
+        cancelled: false,
+      }),
+    );
+    match done {
+      SearchTerminalEvent::Done(payload) => {
+        assert_eq!(payload.search_id, 2);
+        assert_eq!(payload.total_results, 10);
+        assert!(payload.limit_reached);
+      }
+      _ => panic!("expected done event"),
+    }
+
+    let error = terminal_event_from_stream(3, Err("boom".to_string()));
+    match error {
+      SearchTerminalEvent::Error(payload) => {
+        assert_eq!(payload.search_id, 3);
+        assert_eq!(payload.message, "boom");
+      }
+      _ => panic!("expected error event"),
+    }
+  }
 }

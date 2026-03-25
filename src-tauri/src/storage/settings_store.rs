@@ -65,3 +65,40 @@ impl SettingsStore {
     persistence::save_json(SETTINGS_FILE, &self.value)
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::storage::persistence::with_test_data_dir;
+
+  #[test]
+  fn settings_default_has_expected_values() {
+    let defaults = SettingsSnapshot::default();
+    assert_eq!(defaults.theme, "system");
+    assert_eq!(defaults.language, "ru");
+    assert!(defaults.live_search);
+    assert_eq!(defaults.debounce_ms, 250);
+    assert_eq!(defaults.default_limit, Some(100));
+    assert!(defaults.keep_history);
+  }
+
+  #[test]
+  fn settings_replace_snapshot_and_persist_roundtrip() {
+    with_test_data_dir(|| {
+      let mut store = SettingsStore::default();
+      let mut next = SettingsSnapshot::default();
+      next.language = "en".to_string();
+      next.live_search = false;
+      next.max_history_entries = 42;
+      store.replace(next.clone());
+      assert_eq!(store.snapshot().language, "en");
+      assert!(!store.snapshot().live_search);
+      store.persist().expect("persist");
+
+      let loaded = SettingsStore::load();
+      assert_eq!(loaded.snapshot().language, "en");
+      assert!(!loaded.snapshot().live_search);
+      assert_eq!(loaded.snapshot().max_history_entries, 42);
+    });
+  }
+}

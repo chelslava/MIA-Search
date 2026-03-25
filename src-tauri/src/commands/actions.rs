@@ -138,11 +138,7 @@ pub fn actions_reveal_path(_state: State<'_, AppState>, path: String) -> Result<
 
 #[tauri::command]
 pub fn actions_open_parent(state: State<'_, AppState>, path: String) -> Result<ActionResponse, String> {
-  let parent = Path::new(&path)
-    .parent()
-    .and_then(|value| value.to_str())
-    .ok_or_else(|| format!("failed to resolve parent for path: {path}"))?
-    .to_string();
+  let parent = resolve_parent_path(&path)?;
 
   match platform::open_path::open_path(&parent) {
     Ok(()) => {
@@ -178,5 +174,57 @@ pub fn actions_copy_to_clipboard(_state: State<'_, AppState>, text: String) -> R
       success: false,
       message: Some(error),
     }),
+  }
+}
+
+fn resolve_parent_path(path: &str) -> Result<String, String> {
+  Path::new(path)
+    .parent()
+    .and_then(|value| value.to_str())
+    .ok_or_else(|| format!("failed to resolve parent for path: {path}"))
+    .map(|value| value.to_string())
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use std::fs::{create_dir_all, File};
+  use tempfile::tempdir;
+
+  #[test]
+  fn resolve_parent_path_handles_valid_and_invalid_input() {
+    let parent = resolve_parent_path("C:/dir/file.txt").expect("parent");
+    assert!(!parent.is_empty());
+
+    let error = resolve_parent_path("").unwrap_err();
+    assert!(error.contains("failed to resolve parent"));
+  }
+
+  #[test]
+  fn fs_list_children_returns_only_directories_sorted() {
+    let dir = tempdir().expect("tempdir");
+    let alpha = dir.path().join("Alpha");
+    let zeta = dir.path().join("zeta");
+    let file = dir.path().join("note.txt");
+    create_dir_all(&zeta).expect("mkdir zeta");
+    create_dir_all(&alpha).expect("mkdir alpha");
+    File::create(file).expect("create file");
+
+    let children = fs_list_children(dir.path().to_string_lossy().to_string()).expect("children");
+    let names: Vec<String> = children.iter().map(|item| item.name.clone()).collect();
+    assert_eq!(names, vec!["Alpha".to_string(), "zeta".to_string()]);
+    assert!(children.iter().all(|item| !item.path.ends_with("note.txt")));
+  }
+
+  #[test]
+  fn fs_list_children_returns_error_for_missing_path() {
+    let result = fs_list_children("Z:/this/path/should/not/exist".to_string());
+    assert!(result.is_err());
+  }
+
+  #[test]
+  fn fs_list_roots_returns_non_empty_list() {
+    let roots = fs_list_roots().expect("roots");
+    assert!(!roots.is_empty());
   }
 }

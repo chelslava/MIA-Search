@@ -66,3 +66,20 @@ fn main() {
     .run(tauri::generate_context!())
     .expect("failed to run tauri application");
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn app_state_bootstrap_initializes_stores_and_session() {
+    let state = AppState::bootstrap();
+    let snapshot = state
+      .search_session
+      .lock()
+      .expect("search lock")
+      .snapshot();
+    assert!(snapshot.active_search_id.is_none());
+    assert!(snapshot.last_request.is_none());
+  }
+}

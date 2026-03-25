@@ -61,3 +61,53 @@ impl ProfilesStore {
     persistence::save_json(PRESETS_FILE, &self.snapshot())
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use crate::storage::persistence::with_test_data_dir;
+
+  fn sample_profile() -> SearchProfile {
+    SearchProfile {
+      name: "default".to_string(),
+      ..SearchProfile::default()
+    }
+  }
+
+  #[test]
+  fn save_assigns_id_then_updates_existing() {
+    let mut store = ProfilesStore::default();
+    let saved = store.save(sample_profile());
+    assert!(saved.id.starts_with("profile-"));
+    assert_eq!(store.list().len(), 1);
+
+    let mut updated = saved.clone();
+    updated.name = "updated".to_string();
+    let saved_again = store.save(updated.clone());
+    assert_eq!(saved_again.id, saved.id);
+    assert_eq!(store.list().len(), 1);
+    assert_eq!(store.list()[0].name, "updated");
+  }
+
+  #[test]
+  fn delete_and_snapshot_work() {
+    let mut store = ProfilesStore::default();
+    let saved = store.save(sample_profile());
+    assert!(store.delete(&saved.id));
+    assert!(!store.delete("missing"));
+    assert!(store.snapshot().items.is_empty());
+  }
+
+  #[test]
+  fn profiles_store_persist_and_load_roundtrip() {
+    with_test_data_dir(|| {
+      let mut store = ProfilesStore::default();
+      let saved = store.save(sample_profile());
+      store.persist().expect("persist");
+
+      let loaded = ProfilesStore::load();
+      assert_eq!(loaded.list().len(), 1);
+      assert_eq!(loaded.list()[0].id, saved.id);
+    });
+  }
+}
