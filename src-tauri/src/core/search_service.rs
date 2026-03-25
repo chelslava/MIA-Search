@@ -6,7 +6,7 @@ use crate::core::models::{
 use crate::core::ranking::sort_results;
 use chrono::{DateTime, Utc};
 use regex::Regex;
-use rust_search::{similarity_sort, FileSize, FilterExt, SearchBuilder};
+use rust_search::{FileSize, FilterExt, SearchBuilder};
 use std::collections::HashSet;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -135,6 +135,7 @@ enum QueryMatcher {
   MatchAll,
   Plain {
     query: String,
+    query_lower: Option<String>,
     ignore_case: bool,
   },
   Regex {
@@ -146,14 +147,18 @@ impl QueryMatcher {
   fn matches(&self, path: &str) -> bool {
     match self {
       Self::MatchAll => true,
-      Self::Plain { query, ignore_case } => {
+      Self::Plain {
+        query,
+        query_lower,
+        ignore_case,
+      } => {
         let name = Path::new(path)
           .file_name()
           .and_then(|value| value.to_str())
           .unwrap_or(path);
         if *ignore_case {
-          let lower_query = query.to_lowercase();
-          name.to_lowercase().contains(&lower_query) || path.to_lowercase().contains(&lower_query)
+          let query_lower = query_lower.as_deref().unwrap_or(query);
+          name.to_lowercase().contains(query_lower) || path.to_lowercase().contains(query_lower)
         } else {
           name.contains(query) || path.contains(query)
         }
@@ -289,14 +294,8 @@ impl SearchService {
   }
 }
 
-fn collect_paths(builder: SearchBuilder, query: &str) -> Vec<String> {
-  let mut paths: Vec<String> = builder.build().collect();
-  if query.is_empty() {
-    paths.sort();
-  } else {
-    similarity_sort(&mut paths, query);
-  }
-  paths
+fn collect_paths(builder: SearchBuilder, _query: &str) -> Vec<String> {
+  builder.build().collect()
 }
 
 fn build_query_matcher(mode: &MatchMode, query: &str, ignore_case: bool) -> Result<QueryMatcher, String> {
@@ -307,6 +306,7 @@ fn build_query_matcher(mode: &MatchMode, query: &str, ignore_case: bool) -> Resu
   match mode {
     MatchMode::Plain => Ok(QueryMatcher::Plain {
       query: query.to_string(),
+      query_lower: ignore_case.then(|| query.to_lowercase()),
       ignore_case,
     }),
     MatchMode::Regex => {
@@ -474,6 +474,7 @@ mod tests {
   use std::path::Path;
   use std::sync::atomic::AtomicBool;
   use std::sync::Arc;
+  use std::time::Instant;
   use tempfile::tempdir;
 
   fn write_file(path: &Path, contents: &str) {
@@ -659,5 +660,74 @@ mod tests {
     let roots = vec!["C:/data".to_string(), "D:/logs".to_string()];
     let resolved = resolve_source_root(&roots, "D:/logs/archive/app.log");
     assert_eq!(resolved.as_deref(), Some("D:/logs"));
+  }
+
+  fn build_perf_dataset(root: &Path, dirs: usize, files_per_dir: usize) {
+    for dir_idx in 0..dirs {
+      let dir = root.join(format!("dir_{dir_idx:02}"));
+      fs::create_dir_all(&dir).expect("failed to create perf directory");
+      for file_idx in 0..files_per_dir {
+        let name = if file_idx % 5 == 0 {
+          format!("report_{dir_idx:02}_{file_idx:04}.xlsx")
+        } else {
+          format!("file_{dir_idx:02}_{file_idx:04}.txt")
+        };
+        write_file(&dir.join(name), "x");
+      }
+    }
+  }
+
+  #[test]
+  #[ignore = "performance smoke test"]
+  fn perf_smoke_plain_mode_release_like() {
+    let root = tempdir().expect("root");
+    build_perf_dataset(root.path(), 20, 500);
+
+    let mut request = request_for_roots(vec![root.path().to_string_lossy().to_string()]);
+    request.options.max_depth = None;
+    request.query = "report".to_string();
+    request.options.match_mode = MatchMode::Plain;
+    request.options.sort_mode = SortMode::Relevance;
+    request.options.limit = Some(1000);
+
+    let started = Instant::now();
+    let execution = SearchService::execute(&request);
+    let elapsed = started.elapsed();
+
+    println!(
+      "PERF plain: items={} limit_reached={} elapsed_ms={}",
+      execution.items.len(),
+      execution.limit_reached,
+      elapsed.as_millis()
+    );
+
+    assert!(elapsed.as_millis() > 0);
+  }
+
+  #[test]
+  #[ignore = "performance smoke test"]
+  fn perf_smoke_wildcard_mode_release_like() {
+    let root = tempdir().expect("root");
+    build_perf_dataset(root.path(), 20, 500);
+
+    let mut request = request_for_roots(vec![root.path().to_string_lossy().to_string()]);
+    request.options.max_depth = None;
+    request.query = "*.xls*".to_string();
+    request.options.match_mode = MatchMode::Wildcard;
+    request.options.sort_mode = SortMode::Relevance;
+    request.options.limit = Some(1000);
+
+    let started = Instant::now();
+    let execution = SearchService::execute(&request);
+    let elapsed = started.elapsed();
+
+    println!(
+      "PERF wildcard: items={} limit_reached={} elapsed_ms={}",
+      execution.items.len(),
+      execution.limit_reached,
+      elapsed.as_millis()
+    );
+
+    assert!(elapsed.as_millis() > 0);
   }
 }
