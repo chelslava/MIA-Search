@@ -396,8 +396,10 @@ fn build_builder(request: &SearchRequest, default_root: &str, ext_override: Opti
   if let Some(depth) = request.options.max_depth {
     builder = builder.depth(depth);
   }
-  if let Some(limit) = request.options.limit {
-    builder = builder.limit(limit);
+  if request.options.match_mode == MatchMode::Plain {
+    if let Some(limit) = request.options.limit {
+      builder = builder.limit(limit);
+    }
   }
   if request.options.strict {
     builder = builder.strict();
