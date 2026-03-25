@@ -10,9 +10,6 @@ type ResultsWorkspaceProps = {
   setDisplayMode: (mode: DisplayMode) => void;
   sortMode: SortMode;
   setSortMode: (mode: SortMode) => void;
-  isSearching: boolean;
-  onCancelSearch: () => void;
-  onSearch: () => void;
   chips: FilterChip[];
   onClearAllFilters: () => void;
   results: SearchResultItem[];
@@ -37,9 +34,6 @@ export function ResultsWorkspace({
   setDisplayMode,
   sortMode,
   setSortMode,
-  isSearching,
-  onCancelSearch,
-  onSearch,
   chips,
   onClearAllFilters,
   results,
@@ -93,15 +87,6 @@ export function ResultsWorkspace({
             <option value="Modified">{t("app.labels.sortModified", "По дате изменения")}</option>
             <option value="Type">{t("app.labels.sortType", "По типу")}</option>
           </Select>
-          {isSearching ? (
-            <Button type="button" variant="secondary" onClick={onCancelSearch} className="whitespace-nowrap">
-              {t("app.labels.cancelSearch", "Отменить поиск")}
-            </Button>
-          ) : (
-            <Button type="button" onClick={onSearch} className="whitespace-nowrap">
-              {t("app.labels.search", "Поиск")}
-            </Button>
-          )}
         </div>
       </div>
 

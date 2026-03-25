@@ -56,9 +56,9 @@ button {
   min-height: 0;
   position: relative;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
   gap: 0;
-  padding: 0 0 32px 0;
+  padding: 0;
   overflow: hidden;
   background: radial-gradient(circle at top right, color-mix(in srgb, var(--accent) 10%, transparent), transparent 45%),
     var(--bg);
@@ -80,10 +80,6 @@ button {
   max-height: 32px;
   height: 32px;
   width: 100%;
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
   z-index: 30;
   overflow-x: auto;
   overflow-y: hidden;

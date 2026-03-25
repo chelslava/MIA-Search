@@ -1102,9 +1102,6 @@ export function App() {
             setDisplayMode={setDisplayMode}
             sortMode={sortMode}
             setSortMode={setSortMode}
-            isSearching={isSearching}
-            onCancelSearch={() => void handleCancel()}
-            onSearch={() => void handleSearch()}
             chips={chips}
             onClearAllFilters={clearAllFilters}
             results={results}
