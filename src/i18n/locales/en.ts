@@ -182,7 +182,12 @@ const en = {
       newPath: {
         placeholder: "New path"
       },
-      addPath: "Add path"
+      addPath: "Add path",
+      pickPath: "Choose...",
+      removePath: "Remove path"
+    },
+    computer: {
+      summary: "This PC"
     },
     profiles: {
       summary: "Search profiles",
@@ -311,7 +316,8 @@ const en = {
       profileDeleteFailed: "Failed to delete profile",
       historyCleared: "History cleared",
       historyClearFailed: "Failed to clear history",
-      themeNameRequired: "Enter a theme name"
+      themeNameRequired: "Enter a theme name",
+      pickFolderFailed: "Failed to choose folder"
     },
     statusbar: {
       found: "Found: {{count}} items",

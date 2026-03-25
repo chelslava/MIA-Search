@@ -182,7 +182,12 @@ const ru = {
       newPath: {
         placeholder: "Новый путь"
       },
-      addPath: "Добавить путь"
+      addPath: "Добавить путь",
+      pickPath: "Выбрать...",
+      removePath: "Удалить путь"
+    },
+    computer: {
+      summary: "Этот компьютер"
     },
     profiles: {
       summary: "Профили поиска",
@@ -311,7 +316,8 @@ const ru = {
       profileDeleteFailed: "Не удалось удалить профиль",
       historyCleared: "История очищена",
       historyClearFailed: "Не удалось очистить историю",
-      themeNameRequired: "Введите имя темы"
+      themeNameRequired: "Введите имя темы",
+      pickFolderFailed: "Не удалось выбрать папку"
     },
     statusbar: {
       found: "Найдено: {{count}} элементов",

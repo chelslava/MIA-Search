@@ -1,4 +1,5 @@
 use crate::{commands::history::record_opened_path_if_enabled, platform, AppState};
+use rfd::FileDialog;
 use serde::{Deserialize, Serialize};
 use std::{fs, path::Path};
 use tauri::State;
@@ -85,6 +86,15 @@ pub fn fs_list_children(path: String) -> Result<Vec<FsTreeNode>, String> {
 
   children.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
   Ok(children)
+}
+
+#[tauri::command]
+pub fn fs_pick_folder() -> Result<Option<String>, String> {
+  Ok(
+    FileDialog::new()
+      .pick_folder()
+      .map(|path_buf| path_buf.to_string_lossy().to_string()),
+  )
 }
 
 #[tauri::command]

@@ -11,6 +11,7 @@ import {
   favoritesList,
   favoritesRemove,
   fsListChildren,
+  fsPickFolder,
   fsListRoots,
   historyClear,
   historyList,
@@ -61,7 +62,7 @@ export function App() {
   const [query, setQuery] = useState("");
   const [roots, setRoots] = useState<RootItem[]>(defaultRoots);
   const [newRoot, setNewRoot] = useState("");
-  const [primaryRoot, setPrimaryRoot] = useState(".");
+  const [primaryRoot, setPrimaryRoot] = useState(defaultRootPath);
   const [strict, setStrict] = useState(false);
   const [ignoreCase, setIgnoreCase] = useState(true);
   const [includeHidden, setIncludeHidden] = useState(false);
@@ -374,6 +375,20 @@ export function App() {
     setPrimaryRoot(path);
   }
 
+  function handleRemoveRoot(path: string): void {
+    setRoots((previous) => {
+      const next = previous.filter((item) => item.path !== path);
+      if (next.length === 0) {
+        setPrimaryRoot(defaultRootPath);
+        return [{ path: defaultRootPath, enabled: true }];
+      }
+      if (!next.some((item) => item.path === primaryRoot)) {
+        setPrimaryRoot(next[0]?.path ?? defaultRootPath);
+      }
+      return next;
+    });
+  }
+
   async function refreshPersistenceData(): Promise<void> {
     if (!tauriRuntimeAvailable) return;
     try {
@@ -422,7 +437,7 @@ export function App() {
     setQuery(req.query);
     const profileRoots = req.roots.length > 0 ? req.roots.map((path) => ({ path, enabled: true })) : defaultRoots;
     setRoots(profileRoots);
-    setPrimaryRoot(profileRoots[0]?.path ?? ".");
+    setPrimaryRoot(profileRoots[0]?.path ?? defaultRootPath);
     setExtensionsRaw(req.extensions.join(","));
     setStrict(req.options.strict);
     setIgnoreCase(req.options.ignore_case);
@@ -538,6 +553,22 @@ export function App() {
   function handleAddRoot(): void {
     upsertRoot(newRoot);
     setNewRoot("");
+  }
+
+  async function handlePickRootPath(): Promise<void> {
+    if (!tauriRuntimeAvailable) {
+      setStatus(tr("app.status.tauriUnavailable", "Tauri runtime не обнаружен"));
+      return;
+    }
+    try {
+      const selected = await fsPickFolder();
+      if (!selected) return;
+      upsertRoot(selected);
+      setPrimaryRoot(selected);
+      setNewRoot(selected);
+    } catch {
+      pushToast(tr("app.toast.pickFolderFailed", "Не удалось выбрать папку"), "error");
+    }
   }
 
   async function handleAddFavorite(path: string): Promise<void> {
@@ -975,6 +1006,8 @@ export function App() {
               onSelectTreeRoot={handleSelectTreeRoot}
               onNewRootChange={setNewRoot}
               onAddRoot={handleAddRoot}
+              onPickRootPath={() => void handlePickRootPath()}
+              onRemoveRoot={handleRemoveRoot}
               onRootEnabledChange={(path, enabled) =>
                 setRoots((previous) =>
                   previous.map((item) => (item.path === path ? { ...item, enabled } : item))

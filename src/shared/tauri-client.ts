@@ -101,3 +101,8 @@ export async function fsListRoots(): Promise<FsTreeNode[]> {
 export async function fsListChildren(path: string): Promise<FsTreeNode[]> {
   return invoke<FsTreeNode[]>("fs_list_children", { path });
 }
+
+export async function fsPickFolder(): Promise<string | null> {
+  const selected = await invoke<string | null>("fs_pick_folder");
+  return selected ?? null;
+}

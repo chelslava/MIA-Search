@@ -23,6 +23,8 @@ export type LeftSidebarProps = {
   onSelectTreeRoot: (path: string) => void;
   onNewRootChange: (value: string) => void;
   onAddRoot: () => void;
+  onPickRootPath: () => void | Promise<void>;
+  onRemoveRoot: (path: string) => void;
   onRootEnabledChange: (path: string, enabled: boolean) => void;
   onRootContextMenu: (state: Extract<ContextMenuState, { type: "root" }>) => void;
   onNewProfileNameChange: (value: string) => void;
@@ -50,39 +52,39 @@ function TreeBranch({
   onSelectTreeRoot: (path: string) => void;
 }) {
   return (
-    <ul className="space-y-1">
+    <ul className="space-y-0.5">
       {nodes.map((node) => {
         const expanded = expandedTree.includes(node.path);
         const children = treeChildren[node.path] ?? [];
         return (
           <li key={node.path}>
             <div
-              className="flex items-center gap-1 rounded-md px-1 py-0.5 hover:bg-[var(--surface)]"
-              style={{ paddingLeft: `${level * 10 + 2}px` }}
+              className="flex items-center gap-0.5 rounded-sm px-0.5 py-0 hover:bg-[var(--surface)]"
+              style={{ paddingLeft: `${level * 8 + 1}px` }}
             >
               {node.has_children ? (
                 <Button
                   type="button"
                   size="icon"
                   variant="ghost"
-                  className="h-5 w-5 rounded-md"
+                  className="h-4 w-4 rounded-sm p-0 text-[10px]"
                   onClick={() => onToggleTreeExpand(node.path)}
                   aria-label={expanded ? "collapse" : "expand"}
                 >
                   {expanded ? "▾" : "▸"}
                 </Button>
               ) : (
-                <span className="inline-block h-5 w-5" />
+                <span className="inline-block h-4 w-4" />
               )}
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-6 min-w-0 flex-1 justify-start px-1.5 text-left font-normal"
+                className="h-4 min-w-0 flex-1 justify-start rounded-sm px-0.5 text-left text-[11px] font-normal leading-none"
                 onClick={() => onSelectTreeRoot(node.path)}
                 title={node.path}
               >
-                <span className="mr-1 inline-flex w-4 justify-center" aria-hidden="true">
+                <span className="mr-0.5 inline-flex w-3 justify-center text-[10px]" aria-hidden="true">
                   {node.is_drive ? "💽" : "📁"}
                 </span>
                 <span className="block min-w-0 flex-1 truncate text-left">{node.name}</span>
@@ -122,6 +124,8 @@ export function LeftSidebar({
   onSelectTreeRoot,
   onNewRootChange,
   onAddRoot,
+  onPickRootPath,
+  onRemoveRoot,
   onRootEnabledChange,
   onRootContextMenu,
   onNewProfileNameChange,
@@ -134,7 +138,7 @@ export function LeftSidebar({
 }: LeftSidebarProps) {
   return (
     <aside
-      className="left-panel space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-3 text-[var(--text)] shadow-sm"
+      className="left-panel space-y-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2 text-[var(--text)] shadow-sm"
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => {
         event.preventDefault();
@@ -142,32 +146,35 @@ export function LeftSidebar({
         if (text) onDropRootPath(text.replace("file://", "").trim());
       }}
     >
-      <details open className="rounded-lg border border-[var(--border)] bg-[var(--surface-alt)] p-2">
-        <summary className="cursor-pointer list-none select-none rounded-md px-1.5 py-1 text-xs font-semibold text-[var(--text)] transition-colors hover:bg-[var(--surface)]">
+      <details open className="rounded-md border border-[var(--border)] bg-[var(--surface-alt)] p-1.5">
+        <summary className="cursor-pointer list-none select-none rounded-sm px-1 py-0.5 text-[11px] font-semibold text-[var(--text)] transition-colors hover:bg-[var(--surface)]">
           {tr("app.roots.summary", "Корневые пути")}
         </summary>
-        <div className="mt-2 space-y-2">
-          <strong className="block text-xs font-medium text-[var(--text)]">
+        <div className="mt-1.5 space-y-1.5">
+          <strong className="block text-[11px] font-medium text-[var(--text)]">
             {tr("app.roots.primary", "Основной: {{path}}", { path: primaryRoot })}
           </strong>
-          <div className="flex flex-col gap-1.5 sm:flex-row">
+          <div className="flex flex-col gap-1 sm:flex-row">
             <Input
               value={newRoot}
               onChange={(event) => onNewRootChange(event.target.value)}
               placeholder={tr("app.roots.newPath.placeholder", "Новый путь")}
             />
-            <Button type="button" variant="secondary" size="sm" onClick={onAddRoot} className="shrink-0">
+            <Button type="button" variant="secondary" size="sm" onClick={onAddRoot} className="h-7 shrink-0 px-2 text-[11px]">
               {tr("app.roots.addPath", "Добавить путь")}
             </Button>
+            <Button type="button" variant="secondary" size="sm" onClick={() => void onPickRootPath()} className="h-7 shrink-0 px-2 text-[11px]">
+              {tr("app.roots.pickPath", "Выбрать...")}
+            </Button>
           </div>
-          <ul className="space-y-1.5">
+          <ul className="space-y-1">
             {roots.map((root, index) => {
               const switchId = `root-enabled-${index}`;
 
               return (
                 <li
                   key={root.path}
-                  className="flex items-center gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5"
+                  className="flex items-center gap-1 rounded-sm border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1"
                   onContextMenu={(event) => {
                     event.preventDefault();
                     onRootContextMenu({ type: "root", x: event.clientX, y: event.clientY, path: root.path });
@@ -178,9 +185,20 @@ export function LeftSidebar({
                     checked={root.enabled}
                     onCheckedChange={(checked) => onRootEnabledChange(root.path, checked)}
                   />
-                  <label htmlFor={switchId} className="min-w-0 cursor-pointer flex-1 truncate text-xs">
+                  <label htmlFor={switchId} className="min-w-0 cursor-pointer flex-1 truncate text-[11px] leading-none">
                     {root.path}
                   </label>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-5 w-5 rounded-sm text-[11px]"
+                    onClick={() => onRemoveRoot(root.path)}
+                    aria-label={tr("app.roots.removePath", "Удалить путь")}
+                    title={tr("app.roots.removePath", "Удалить путь")}
+                  >
+                    ✕
+                  </Button>
                 </li>
               );
             })}
@@ -188,11 +206,11 @@ export function LeftSidebar({
         </div>
       </details>
 
-      <details open className="rounded-lg border border-[var(--border)] bg-[var(--surface-alt)] p-2">
-        <summary className="cursor-pointer list-none select-none rounded-md px-1.5 py-1 text-xs font-semibold text-[var(--text)] transition-colors hover:bg-[var(--surface)]">
+      <details open className="rounded-md border border-[var(--border)] bg-[var(--surface-alt)] p-1.5">
+        <summary className="cursor-pointer list-none select-none rounded-sm px-1 py-0.5 text-[11px] font-semibold text-[var(--text)] transition-colors hover:bg-[var(--surface)]">
           {tr("app.computer.summary", "Этот компьютер")}
         </summary>
-        <div className="mt-2 max-h-64 overflow-auto rounded-md border border-[var(--border)] bg-[var(--surface)] p-1.5">
+        <div className="mt-1.5 max-h-64 overflow-auto rounded-sm border border-[var(--border)] bg-[var(--surface)] p-0.5">
           <TreeBranch
             nodes={computerRoots}
             level={0}
@@ -204,32 +222,32 @@ export function LeftSidebar({
         </div>
       </details>
 
-      <details open className="rounded-lg border border-[var(--border)] bg-[var(--surface-alt)] p-2">
-        <summary className="cursor-pointer list-none select-none rounded-md px-1.5 py-1 text-xs font-semibold text-[var(--text)] transition-colors hover:bg-[var(--surface)]">
+      <details open className="rounded-md border border-[var(--border)] bg-[var(--surface-alt)] p-1.5">
+        <summary className="cursor-pointer list-none select-none rounded-sm px-1 py-0.5 text-[11px] font-semibold text-[var(--text)] transition-colors hover:bg-[var(--surface)]">
           {tr("app.profiles.summary", "Профили поиска")}
         </summary>
-        <div className="mt-2 space-y-2">
-          <div className="flex flex-col gap-1.5 sm:flex-row">
+        <div className="mt-1.5 space-y-1.5">
+          <div className="flex flex-col gap-1 sm:flex-row">
             <Input
               value={newProfileName}
               onChange={(event) => onNewProfileNameChange(event.target.value)}
               placeholder={tr("app.profiles.name.placeholder", "Имя профиля")}
             />
-            <Button type="button" variant="secondary" size="sm" onClick={onSaveProfile} className="shrink-0">
+            <Button type="button" variant="secondary" size="sm" onClick={onSaveProfile} className="h-7 shrink-0 px-2 text-[11px]">
               {tr("app.profiles.save", "Сохранить")}
             </Button>
           </div>
-          <ul className="space-y-1.5">
+          <ul className="space-y-1">
             {profiles.map((profile) => (
               <li
                 key={profile.id}
-                className="flex items-center justify-between gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5"
+                className="flex items-center justify-between gap-1 rounded-sm border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1"
               >
                 <Button
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="min-w-0 flex-1 justify-start px-1.5 text-left font-normal text-xs"
+                  className="min-w-0 flex-1 justify-start px-1 text-left text-[11px] font-normal"
                   onClick={() => onApplyProfile(profile)}
                 >
                   <span className="truncate">📁 {profile.name}</span>
@@ -238,7 +256,7 @@ export function LeftSidebar({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-6 w-6 shrink-0 rounded-full"
+                  className="h-5 w-5 shrink-0 rounded-sm text-[11px]"
                   onClick={() => void onDeleteProfile(profile.id)}
                   aria-label={tr("app.profiles.delete", "Удалить профиль")}
                 >
@@ -250,24 +268,24 @@ export function LeftSidebar({
         </div>
       </details>
 
-      <section className="rounded-lg border border-[var(--border)] bg-[var(--surface-alt)] p-2">
-        <Button type="button" variant="ghost" size="sm" className="w-full justify-between px-1.5 font-semibold text-xs" onClick={onToggleHistoryOpen}>
+      <section className="rounded-md border border-[var(--border)] bg-[var(--surface-alt)] p-1.5">
+        <Button type="button" variant="ghost" size="sm" className="h-6 w-full justify-between px-1 text-[11px] font-semibold" onClick={onToggleHistoryOpen}>
           {tr("app.history.summary", "История поиска")}
           <span>{historyOpen ? "▾" : "▸"}</span>
         </Button>
         {historyOpen ? (
-          <div className="mt-2 space-y-2">
-            <Button type="button" variant="ghost" size="sm" className="w-full justify-start px-1.5 font-normal text-xs" onClick={() => void onClearHistory()}>
+          <div className="mt-1.5 space-y-1.5">
+            <Button type="button" variant="ghost" size="sm" className="h-6 w-full justify-start px-1 text-[11px] font-normal" onClick={() => void onClearHistory()}>
               {tr("app.history.clear", "Очистить историю")}
             </Button>
-            <ul className="space-y-1.5">
+            <ul className="space-y-1">
               {history.queries.slice(0, 10).map((item, index) => (
-                <li key={`${item.query}-${index}`} className="rounded-md border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5">
+                <li key={`${item.query}-${index}`} className="rounded-sm border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1">
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="min-w-0 w-full justify-start px-1.5 text-left font-normal text-xs"
+                    className="h-5 min-w-0 w-full justify-start px-1 text-left text-[11px] font-normal"
                     onClick={() => onSelectHistoryQuery(item.query)}
                   >
                     <span className="truncate">{item.query || tr("app.history.emptyQuery", "(пустой запрос)")}</span>
