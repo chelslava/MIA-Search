@@ -251,7 +251,9 @@ export function App() {
 
   const visibleRows = useMemo(() => {
     const safeHeight = Math.max(200, listHeight);
-    const startIndex = Math.max(0, Math.floor(scrollTop / rowHeight));
+    const rawStart = Math.max(0, Math.floor(scrollTop / rowHeight));
+    const maxStart = Math.max(0, results.length - 1);
+    const startIndex = Math.min(rawStart, maxStart);
     const count = Math.ceil(safeHeight / rowHeight) + 8;
     const endIndex = Math.min(results.length, startIndex + count);
     return {
@@ -398,6 +400,7 @@ export function App() {
       return;
     }
     setResults([]);
+    setScrollTop(0);
     setSelectedPath(null);
     setCheckedPaths(0);
     setLimitReached(false);
