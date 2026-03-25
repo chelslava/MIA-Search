@@ -57,3 +57,4 @@ cargo llvm-cov --summary-only
 - [Руководство пользователя](docs/user_guide.md)
 - [Release Notes v0.1.0](docs/release_notes_v0.1.0.md)
 - [Release Ops Playbook](docs/release_ops_playbook.md)
+- [Support Triage SLA](docs/support_triage_sla.md)
