@@ -10,6 +10,8 @@ import {
   favoritesAdd,
   favoritesList,
   favoritesRemove,
+  fsListChildren,
+  fsListRoots,
   historyClear,
   historyList,
   onSearchBatch,
@@ -24,6 +26,7 @@ import {
 } from "../shared/tauri-client";
 import type {
   EntryKind,
+  FsTreeNode,
   HistorySnapshot,
   SearchProfile,
   SearchResultItem,
@@ -46,7 +49,9 @@ import { applyThemeColors, builtInThemes, darkenHex, tintHex } from "./theme";
 import type { ContextMenuState, DisplayMode, FilterChip, RootItem, ThemePreset } from "./types";
 import "./styles.css";
 
-const defaultRoots: RootItem[] = [{ path: ".", enabled: true }];
+const defaultRootPath =
+  typeof navigator !== "undefined" && /windows/i.test(navigator.userAgent) ? "C:\\" : "/";
+const defaultRoots: RootItem[] = [{ path: defaultRootPath, enabled: true }];
 const rowHeight = 34;
 
 export function App() {
@@ -88,7 +93,11 @@ export function App() {
   const [elapsedMs, setElapsedMs] = useState<number | null>(null);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [history, setHistory] = useState<HistorySnapshot>({ queries: [], opened_paths: [] });
+  const [historyOpen, setHistoryOpen] = useState(false);
   const [profiles, setProfiles] = useState<SearchProfile[]>([]);
+  const [computerRoots, setComputerRoots] = useState<FsTreeNode[]>([]);
+  const [treeChildren, setTreeChildren] = useState<Record<string, FsTreeNode[]>>({});
+  const [expandedTree, setExpandedTree] = useState<string[]>([]);
   const [newProfileName, setNewProfileName] = useState("");
   const [displayMode, setDisplayMode] = useState<DisplayMode>("table");
   const [leftVisible, setLeftVisible] = useState(true);
@@ -322,6 +331,47 @@ export function App() {
     setIncludeHidden(false);
     setLimitMode("500");
     setCustomLimit(500);
+  }
+
+  async function loadComputerRoots(): Promise<void> {
+    if (!tauriRuntimeAvailable) return;
+    try {
+      const rootsFromFs = await fsListRoots();
+      setComputerRoots(rootsFromFs);
+      if (rootsFromFs.length > 0 && roots.length === 1 && roots[0]?.path === defaultRootPath) {
+        const next = rootsFromFs[0].path;
+        setPrimaryRoot(next);
+        setRoots([{ path: next, enabled: true }]);
+      }
+    } catch {
+      // keep UI usable without filesystem tree
+    }
+  }
+
+  async function loadTreeChildren(path: string): Promise<void> {
+    if (!tauriRuntimeAvailable) return;
+    if (treeChildren[path]) return;
+    try {
+      const children = await fsListChildren(path);
+      setTreeChildren((previous) => ({ ...previous, [path]: children }));
+    } catch {
+      setTreeChildren((previous) => ({ ...previous, [path]: [] }));
+    }
+  }
+
+  function handleToggleTreeExpand(path: string): void {
+    setExpandedTree((previous) => {
+      if (previous.includes(path)) {
+        return previous.filter((item) => item !== path);
+      }
+      void loadTreeChildren(path);
+      return previous.concat(path);
+    });
+  }
+
+  function handleSelectTreeRoot(path: string): void {
+    upsertRoot(path);
+    setPrimaryRoot(path);
   }
 
   async function refreshPersistenceData(): Promise<void> {
@@ -594,6 +644,10 @@ export function App() {
 
   useEffect(() => {
     void refreshPersistenceData();
+  }, []);
+
+  useEffect(() => {
+    void loadComputerRoots();
   }, []);
 
   useEffect(() => {
@@ -910,9 +964,15 @@ export function App() {
               primaryRoot={primaryRoot}
               newRoot={newRoot}
               newProfileName={newProfileName}
-              favorites={favorites}
               history={history}
               profiles={profiles}
+              computerRoots={computerRoots}
+              treeChildren={treeChildren}
+              expandedTree={expandedTree}
+              historyOpen={historyOpen}
+              onToggleHistoryOpen={() => setHistoryOpen((prev) => !prev)}
+              onToggleTreeExpand={handleToggleTreeExpand}
+              onSelectTreeRoot={handleSelectTreeRoot}
               onNewRootChange={setNewRoot}
               onAddRoot={handleAddRoot}
               onRootEnabledChange={(path, enabled) =>
@@ -925,8 +985,6 @@ export function App() {
               onSaveProfile={() => void handleSaveProfile()}
               onApplyProfile={applyProfile}
               onDeleteProfile={(profileId) => void handleDeleteProfile(profileId)}
-              onOpenFavorite={(path) => void handleOpenPath(path)}
-              onRemoveFavorite={(path) => void handleRemoveFavorite(path)}
               onClearHistory={() => void handleClearHistory()}
               onSelectHistoryQuery={setQuery}
               onDropRootPath={upsertRoot}

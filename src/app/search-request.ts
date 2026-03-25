@@ -35,6 +35,8 @@ const sizeUnitMultipliers: Record<string, number> = {
 };
 
 export function buildSearchRequest(input: BuildSearchRequestInput): SearchRequest {
+  const fallbackRoot =
+    typeof navigator !== "undefined" && /windows/i.test(navigator.userAgent) ? "C:\\" : "/";
   const createdAfterIso = input.createdFilterEnabled ? toIsoOrNull(input.createdAfter) : null;
   const createdBeforeIso = input.createdFilterEnabled ? toIsoOrNull(input.createdBefore) : null;
   const modifiedAfterIso = input.modifiedFilterEnabled ? toIsoOrNull(input.modifiedAfter) : null;
@@ -42,7 +44,7 @@ export function buildSearchRequest(input: BuildSearchRequestInput): SearchReques
 
   return {
     query: input.query,
-    roots: input.enabledRoots.length > 0 ? input.enabledRoots : [input.primaryRoot || "."],
+    roots: input.enabledRoots.length > 0 ? input.enabledRoots : [input.primaryRoot || fallbackRoot],
     extensions: input.extensionsRaw
       .split(",")
       .map((value) => value.trim().replace(/^\./, ""))

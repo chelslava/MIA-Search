@@ -1,6 +1,7 @@
 import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
+  FsTreeNode,
   HistorySnapshot,
   SearchBatchEvent,
   SearchCancelResponse,
@@ -91,4 +92,12 @@ export async function actionRevealPath(path: string): Promise<void> {
 
 export async function actionCopyToClipboard(text: string): Promise<void> {
   await invoke("actions_copy_to_clipboard", { text });
+}
+
+export async function fsListRoots(): Promise<FsTreeNode[]> {
+  return invoke<FsTreeNode[]>("fs_list_roots");
+}
+
+export async function fsListChildren(path: string): Promise<FsTreeNode[]> {
+  return invoke<FsTreeNode[]>("fs_list_children", { path });
 }

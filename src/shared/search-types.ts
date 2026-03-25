@@ -94,3 +94,10 @@ export interface HistorySnapshot {
   queries: SearchRequest[];
   opened_paths: string[];
 }
+
+export interface FsTreeNode {
+  name: string;
+  path: string;
+  is_drive: boolean;
+  has_children: boolean;
+}

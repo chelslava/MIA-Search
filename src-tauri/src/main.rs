@@ -58,7 +58,9 @@ fn main() {
       actions::actions_open_path,
       actions::actions_open_parent,
       actions::actions_reveal_path,
-      actions::actions_copy_to_clipboard
+      actions::actions_copy_to_clipboard,
+      actions::fs_list_roots,
+      actions::fs_list_children
     ])
     .run(tauri::generate_context!())
     .expect("failed to run tauri application");

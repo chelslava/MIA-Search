@@ -1,4 +1,4 @@
-import type { HistorySnapshot, SearchProfile } from "../../../shared/search-types";
+import type { FsTreeNode, HistorySnapshot, SearchProfile } from "../../../shared/search-types";
 import type { ContextMenuState, RootItem } from "../../types";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
@@ -12,9 +12,15 @@ export type LeftSidebarProps = {
   primaryRoot: string;
   newRoot: string;
   newProfileName: string;
-  favorites: string[];
   history: HistorySnapshot;
   profiles: SearchProfile[];
+  computerRoots: FsTreeNode[];
+  treeChildren: Record<string, FsTreeNode[]>;
+  expandedTree: string[];
+  historyOpen: boolean;
+  onToggleHistoryOpen: () => void;
+  onToggleTreeExpand: (path: string) => void;
+  onSelectTreeRoot: (path: string) => void;
   onNewRootChange: (value: string) => void;
   onAddRoot: () => void;
   onRootEnabledChange: (path: string, enabled: boolean) => void;
@@ -23,12 +29,75 @@ export type LeftSidebarProps = {
   onSaveProfile: () => void;
   onApplyProfile: (profile: SearchProfile) => void;
   onDeleteProfile: (profileId: string) => void | Promise<void>;
-  onOpenFavorite: (path: string) => void | Promise<void>;
-  onRemoveFavorite: (path: string) => void | Promise<void>;
   onClearHistory: () => void | Promise<void>;
   onSelectHistoryQuery: (query: string) => void;
   onDropRootPath: (path: string) => void;
 };
+
+function TreeBranch({
+  nodes,
+  level,
+  expandedTree,
+  treeChildren,
+  onToggleTreeExpand,
+  onSelectTreeRoot
+}: {
+  nodes: FsTreeNode[];
+  level: number;
+  expandedTree: string[];
+  treeChildren: Record<string, FsTreeNode[]>;
+  onToggleTreeExpand: (path: string) => void;
+  onSelectTreeRoot: (path: string) => void;
+}) {
+  return (
+    <ul className="space-y-1">
+      {nodes.map((node) => {
+        const expanded = expandedTree.includes(node.path);
+        const children = treeChildren[node.path] ?? [];
+        return (
+          <li key={node.path}>
+            <div className="flex items-center gap-1 rounded-md px-1 py-1 hover:bg-[var(--surface)]" style={{ paddingLeft: `${level * 10 + 4}px` }}>
+              {node.has_children ? (
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="ghost"
+                  className="h-6 w-6 rounded-md"
+                  onClick={() => onToggleTreeExpand(node.path)}
+                  aria-label={expanded ? "collapse" : "expand"}
+                >
+                  {expanded ? "▾" : "▸"}
+                </Button>
+              ) : (
+                <span className="inline-block h-6 w-6" />
+              )}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 min-w-0 flex-1 justify-start truncate px-2 text-left font-normal"
+                onClick={() => onSelectTreeRoot(node.path)}
+                title={node.path}
+              >
+                {node.is_drive ? "💽" : "📁"} {node.name}
+              </Button>
+            </div>
+            {expanded && children.length > 0 ? (
+              <TreeBranch
+                nodes={children}
+                level={level + 1}
+                expandedTree={expandedTree}
+                treeChildren={treeChildren}
+                onToggleTreeExpand={onToggleTreeExpand}
+                onSelectTreeRoot={onSelectTreeRoot}
+              />
+            ) : null}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
 
 export function LeftSidebar({
   tr,
@@ -36,9 +105,15 @@ export function LeftSidebar({
   primaryRoot,
   newRoot,
   newProfileName,
-  favorites,
   history,
   profiles,
+  computerRoots,
+  treeChildren,
+  expandedTree,
+  historyOpen,
+  onToggleHistoryOpen,
+  onToggleTreeExpand,
+  onSelectTreeRoot,
   onNewRootChange,
   onAddRoot,
   onRootEnabledChange,
@@ -47,8 +122,6 @@ export function LeftSidebar({
   onSaveProfile,
   onApplyProfile,
   onDeleteProfile,
-  onOpenFavorite,
-  onRemoveFavorite,
   onClearHistory,
   onSelectHistoryQuery,
   onDropRootPath
@@ -111,6 +184,22 @@ export function LeftSidebar({
 
       <details open className="rounded-xl border border-[var(--border)] bg-[var(--surface-alt)] p-3">
         <summary className="cursor-pointer list-none select-none rounded-lg px-2 py-1 text-sm font-semibold text-[var(--text)] transition-colors hover:bg-[var(--surface)]">
+          {tr("app.computer.summary", "Этот компьютер")}
+        </summary>
+        <div className="mt-3 max-h-72 overflow-auto rounded-lg border border-[var(--border)] bg-[var(--surface)] p-2">
+          <TreeBranch
+            nodes={computerRoots}
+            level={0}
+            expandedTree={expandedTree}
+            treeChildren={treeChildren}
+            onToggleTreeExpand={onToggleTreeExpand}
+            onSelectTreeRoot={onSelectTreeRoot}
+          />
+        </div>
+      </details>
+
+      <details open className="rounded-xl border border-[var(--border)] bg-[var(--surface-alt)] p-3">
+        <summary className="cursor-pointer list-none select-none rounded-lg px-2 py-1 text-sm font-semibold text-[var(--text)] transition-colors hover:bg-[var(--surface)]">
           {tr("app.profiles.summary", "Профили поиска")}
         </summary>
         <div className="mt-3 space-y-3">
@@ -155,67 +244,34 @@ export function LeftSidebar({
         </div>
       </details>
 
-      <details open className="rounded-xl border border-[var(--border)] bg-[var(--surface-alt)] p-3">
-        <summary className="cursor-pointer list-none select-none rounded-lg px-2 py-1 text-sm font-semibold text-[var(--text)] transition-colors hover:bg-[var(--surface)]">
-          {tr("app.favorites.summary", "Избранное")}
-        </summary>
-        <div className="mt-3 space-y-3">
-          <ul className="space-y-2">
-            {favorites.map((path) => (
-              <li
-                key={path}
-                className="flex items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
-              >
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="min-w-0 flex-1 justify-start px-2 text-left font-normal"
-                  onClick={() => void onOpenFavorite(path)}
-                >
-                  <span className="truncate">⭐ {path}</span>
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 shrink-0 rounded-full"
-                  onClick={() => void onRemoveFavorite(path)}
-                  aria-label={tr("app.favorites.remove", "Удалить из избранного")}
-                >
-                  ✕
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </details>
-
-      <details open className="rounded-xl border border-[var(--border)] bg-[var(--surface-alt)] p-3">
-        <summary className="cursor-pointer list-none select-none rounded-lg px-2 py-1 text-sm font-semibold text-[var(--text)] transition-colors hover:bg-[var(--surface)]">
+      <section className="rounded-xl border border-[var(--border)] bg-[var(--surface-alt)] p-3">
+        <Button type="button" variant="ghost" className="w-full justify-between px-2 font-semibold" onClick={onToggleHistoryOpen}>
           {tr("app.history.summary", "История поиска")}
-        </summary>
-        <div className="mt-3 space-y-3">
-          <Button type="button" variant="ghost" className="w-full justify-start px-2 font-normal" onClick={() => void onClearHistory()}>
-            {tr("app.history.clear", "Очистить историю")}
-          </Button>
-          <ul className="space-y-2">
-            {history.queries.slice(0, 10).map((item, index) => (
-              <li key={`${item.query}-${index}`} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="min-w-0 w-full justify-start px-2 text-left font-normal"
-                  onClick={() => onSelectHistoryQuery(item.query)}
-                >
-                  <span className="truncate">{item.query || tr("app.history.emptyQuery", "(пустой запрос)")}</span>
-                </Button>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </details>
+          <span>{historyOpen ? "▾" : "▸"}</span>
+        </Button>
+        {historyOpen ? (
+          <div className="mt-3 space-y-3">
+            <Button type="button" variant="ghost" className="w-full justify-start px-2 font-normal" onClick={() => void onClearHistory()}>
+              {tr("app.history.clear", "Очистить историю")}
+            </Button>
+            <ul className="space-y-2">
+              {history.queries.slice(0, 10).map((item, index) => (
+                <li key={`${item.query}-${index}`} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="min-w-0 w-full justify-start px-2 text-left font-normal"
+                    onClick={() => onSelectHistoryQuery(item.query)}
+                  >
+                    <span className="truncate">{item.query || tr("app.history.emptyQuery", "(пустой запрос)")}</span>
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </section>
     </aside>
   );
 }
