@@ -74,26 +74,34 @@ pub fn search_start(
       &request,
       cancel_flag,
       |results| {
-        let _ = app_handle.emit(
-          "search:batch",
-          SearchBatchEvent {
-            search_id,
-            results,
-          },
-        );
+        if is_active_search(&app_handle, search_id) {
+          let _ = app_handle.emit(
+            "search:batch",
+            SearchBatchEvent {
+              search_id,
+              results,
+            },
+          );
+        }
       },
       |_| {},
     );
 
     match terminal_event_from_stream(search_id, outcome) {
       SearchTerminalEvent::Cancelled(payload) => {
-        let _ = app_handle.emit("search:cancelled", payload);
+        if is_active_search(&app_handle, search_id) {
+          let _ = app_handle.emit("search:cancelled", payload);
+        }
       }
       SearchTerminalEvent::Done(payload) => {
-        let _ = app_handle.emit("search:done", payload);
+        if is_active_search(&app_handle, search_id) {
+          let _ = app_handle.emit("search:done", payload);
+        }
       }
       SearchTerminalEvent::Error(payload) => {
-        let _ = app_handle.emit("search:error", payload);
+        if is_active_search(&app_handle, search_id) {
+          let _ = app_handle.emit("search:error", payload);
+        }
       }
     }
 
@@ -109,6 +117,15 @@ pub fn search_start(
     search_id,
     status: "accepted".to_string(),
   })
+}
+
+fn is_active_search(app_handle: &AppHandle, search_id: u64) -> bool {
+  let managed_state = app_handle.state::<AppState>();
+  managed_state
+    .search_session
+    .lock()
+    .map(|session| session.is_active_search(search_id))
+    .unwrap_or(false)
 }
 
 #[tauri::command]

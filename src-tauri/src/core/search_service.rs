@@ -126,6 +126,10 @@ impl SearchSession {
       },
     }
   }
+
+  pub fn is_active_search(&self, search_id: u64) -> bool {
+    self.active_search_id == Some(search_id)
+  }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -209,7 +213,7 @@ impl SearchService {
     let mut limit_reached = false;
     let mut total_results = 0usize;
     let mut seen_paths = HashSet::new();
-    let mut all_items = Vec::new();
+    let mut batch = Vec::with_capacity(BATCH_SIZE);
 
     let extensions: Vec<String> = request
       .extensions
@@ -218,17 +222,15 @@ impl SearchService {
       .filter(|ext| !ext.is_empty())
       .collect();
 
-    let search_batches: Vec<Vec<String>> = if extensions.is_empty() {
-      vec![collect_paths(build_builder(request, &root, None), &query)]
+    let extension_overrides: Vec<Option<&str>> = if extensions.is_empty() {
+      vec![None]
     } else {
-      extensions
-        .iter()
-        .map(|ext| collect_paths(build_builder(request, &root, Some(ext.as_str())), &query))
-        .collect()
+      extensions.iter().map(|ext| Some(ext.as_str())).collect()
     };
 
-    for paths in search_batches {
-      for path in paths {
+    for ext_override in extension_overrides {
+      let builder = build_builder(request, &root, ext_override);
+      for path in builder.build() {
         if cancel_flag.load(Ordering::Relaxed) {
           on_limit(limit_reached);
           return Ok(SearchStreamSummary {
@@ -247,8 +249,26 @@ impl SearchService {
         }
 
         let source_root = resolve_source_root(&request.roots, &path).unwrap_or_else(|| root.clone());
-        all_items.push(MetadataService::enrich_path(&path, source_root));
+        let mut item = MetadataService::enrich_path(&path, source_root);
+        if matches!(request.options.sort_mode, SortMode::Relevance) && !query.is_empty() {
+          item.score = score_relevance(&item.name, &query);
+        }
+
+        batch.push(item);
         total_results = total_results.saturating_add(1);
+
+        if batch.len() >= BATCH_SIZE {
+          if cancel_flag.load(Ordering::Relaxed) {
+            on_limit(limit_reached);
+            return Ok(SearchStreamSummary {
+              total_results,
+              limit_reached,
+              cancelled: true,
+            });
+          }
+          sort_stream_batch(&mut batch, &request.options.sort_mode, &query);
+          on_batch(std::mem::take(&mut batch));
+        }
 
         if let Some(limit) = request.options.limit {
           if total_results >= limit {
@@ -262,10 +282,7 @@ impl SearchService {
       }
     }
 
-    apply_sorting(&mut all_items, &request.options.sort_mode, &query);
-
-    let mut batch = Vec::with_capacity(BATCH_SIZE);
-    for item in all_items {
+    if !batch.is_empty() {
       if cancel_flag.load(Ordering::Relaxed) {
         on_limit(limit_reached);
         return Ok(SearchStreamSummary {
@@ -274,13 +291,7 @@ impl SearchService {
           cancelled: true,
         });
       }
-      batch.push(item);
-      if batch.len() >= BATCH_SIZE {
-        on_batch(std::mem::take(&mut batch));
-      }
-    }
-
-    if !batch.is_empty() {
+      sort_stream_batch(&mut batch, &request.options.sort_mode, &query);
       on_batch(batch);
     }
 
@@ -292,10 +303,6 @@ impl SearchService {
       cancelled: false,
     })
   }
-}
-
-fn collect_paths(builder: SearchBuilder, _query: &str) -> Vec<String> {
-  builder.build().collect()
 }
 
 fn build_query_matcher(mode: &MatchMode, query: &str, ignore_case: bool) -> Result<QueryMatcher, String> {
@@ -339,18 +346,10 @@ fn build_query_matcher(mode: &MatchMode, query: &str, ignore_case: bool) -> Resu
   }
 }
 
-fn apply_sorting(items: &mut [SearchResultItem], mode: &SortMode, query: &str) {
+fn sort_stream_batch(items: &mut [SearchResultItem], mode: &SortMode, query: &str) {
   match mode {
-    SortMode::Relevance => {
-      if query.is_empty() {
-        items.sort_by(|left, right| left.name.cmp(&right.name));
-      } else {
-        for item in items.iter_mut() {
-          item.score = score_relevance(&item.name, query);
-        }
-        sort_results(items, mode);
-      }
-    }
+    SortMode::Relevance if query.is_empty() => items.sort_by(|left, right| left.name.cmp(&right.name)),
+    SortMode::Relevance => sort_results(items, mode),
     _ => sort_results(items, mode),
   }
 }

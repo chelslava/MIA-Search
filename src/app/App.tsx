@@ -55,6 +55,29 @@ const defaultRootPath =
 const defaultRoots: RootItem[] = [{ path: defaultRootPath, enabled: true }];
 const rowHeight = 34;
 
+function compareSearchItems(left: SearchResultItem, right: SearchResultItem, mode: SortMode): number {
+  switch (mode) {
+    case "Name":
+      return left.name.localeCompare(right.name, undefined, { sensitivity: "base" });
+    case "Size":
+      return (right.size ?? -1) - (left.size ?? -1);
+    case "Modified":
+      return new Date(right.modified_at ?? 0).getTime() - new Date(left.modified_at ?? 0).getTime();
+    case "Type":
+      return (left.extension ?? "").localeCompare(right.extension ?? "", undefined, { sensitivity: "base" });
+    case "Relevance":
+    default: {
+      const scoreDiff = (right.score ?? 0) - (left.score ?? 0);
+      if (scoreDiff !== 0) return scoreDiff;
+      return left.name.localeCompare(right.name, undefined, { sensitivity: "base" });
+    }
+  }
+}
+
+function sortResultsForMode(items: SearchResultItem[], mode: SortMode): SearchResultItem[] {
+  return [...items].sort((left, right) => compareSearchItems(left, right, mode));
+}
+
 export function App() {
   const { t, i18n } = useTranslation();
   const tr = (key: string, defaultValue: string, values?: Record<string, unknown>) =>
@@ -132,6 +155,9 @@ export function App() {
   const [scrollTop, setScrollTop] = useState(0);
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const resultPaneRef = useRef<HTMLDivElement | null>(null);
+  const activeSearchIdRef = useRef<number | null>(null);
+  const searchStartedAtRef = useRef<number | null>(null);
+  const sortModeRef = useRef<SortMode>("Relevance");
   const themeOptions = useMemo(() => {
     const systemTheme: ThemePreset = {
       id: "system",
@@ -673,6 +699,19 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    activeSearchIdRef.current = activeSearchId;
+  }, [activeSearchId]);
+
+  useEffect(() => {
+    searchStartedAtRef.current = searchStartedAt;
+  }, [searchStartedAt]);
+
+  useEffect(() => {
+    sortModeRef.current = sortMode;
+    setResults((prev) => sortResultsForMode(prev, sortMode));
+  }, [sortMode]);
+
+  useEffect(() => {
     void refreshPersistenceData();
   }, []);
 
@@ -688,33 +727,45 @@ export function App() {
 
     Promise.all([
       onSearchBatch((payload) => {
-        setResults((prev) => prev.concat(payload.results));
+        if (payload.search_id !== activeSearchIdRef.current) {
+          return;
+        }
+        setResults((prev) => sortResultsForMode(prev.concat(payload.results), sortModeRef.current));
         setCheckedPaths((prev) => prev + payload.results.length);
       }),
       onSearchDone((payload) => {
+        if (payload.search_id !== activeSearchIdRef.current) {
+          return;
+        }
         setStatus(tr("app.status.ready", "Готово"));
         setLimitReached(payload.limit_reached);
         setIsSearching(false);
         setActiveSearchId(null);
-        if (searchStartedAt !== null) {
-          setElapsedMs(Date.now() - searchStartedAt);
+        if (searchStartedAtRef.current !== null) {
+          setElapsedMs(Date.now() - searchStartedAtRef.current);
         }
         void refreshPersistenceData();
       }),
-      onSearchCancelled(() => {
+      onSearchCancelled((payload) => {
+        if (payload.search_id !== activeSearchIdRef.current) {
+          return;
+        }
         setStatus(tr("app.status.stopped", "Остановлено"));
         setIsSearching(false);
         setActiveSearchId(null);
-        if (searchStartedAt !== null) {
-          setElapsedMs(Date.now() - searchStartedAt);
+        if (searchStartedAtRef.current !== null) {
+          setElapsedMs(Date.now() - searchStartedAtRef.current);
         }
       }),
       onSearchError((payload) => {
+        if (payload.search_id !== activeSearchIdRef.current) {
+          return;
+        }
         setStatus(tr("app.status.error", "Ошибка: {{message}}", { message: payload.message }));
         setIsSearching(false);
         setActiveSearchId(null);
-        if (searchStartedAt !== null) {
-          setElapsedMs(Date.now() - searchStartedAt);
+        if (searchStartedAtRef.current !== null) {
+          setElapsedMs(Date.now() - searchStartedAtRef.current);
         }
       })
     ])
@@ -737,7 +788,7 @@ export function App() {
       mounted = false;
       unlisten.forEach((fn) => fn());
     };
-  }, [searchStartedAt]);
+  }, [tr]);
 
   useEffect(() => {
     if (!liveSearch) return;
