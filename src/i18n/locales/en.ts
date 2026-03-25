@@ -100,7 +100,9 @@ const en = {
       rightPanel: "Right panel"
     },
     search: {
-      placeholder: "Search files and folders..."
+      placeholder: "Search files and folders...",
+      commandHints:
+        "Commands: /wc *.rs  /re ^main.*\\.ts$  /plain text  /files /folders  ext:rs,md  /case /nocase"
     },
     actions: {
       searchTop: "🔎 Search",

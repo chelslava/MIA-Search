@@ -100,7 +100,9 @@ const ru = {
       rightPanel: "Правая панель"
     },
     search: {
-      placeholder: "Поиск файлов и папок..."
+      placeholder: "Поиск файлов и папок...",
+      commandHints:
+        "Команды: /wc *.rs  /re ^main.*\\.ts$  /plain текст  /files /folders  ext:rs,md  /case /nocase"
     },
     actions: {
       searchTop: "🔎 Поиск",
