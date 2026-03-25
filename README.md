@@ -52,11 +52,8 @@ cargo llvm-cov --summary-only
 
 ## Документация
 - [Roadmap](docs/roadmap.md)
-- [MVP Backlog](docs/mvp_backlog.md)
-- [Implementation Tasks](docs/implementation_tasks.md)
-- [Progress Log](docs/progress_log.md)
+- [План реализации](docs/implementation_plan.md)
 - [Release Smoke Checklist](docs/release_smoke_checklist.md)
-- [User Guide (MVP)](docs/user_guide.md)
+- [Руководство пользователя](docs/user_guide.md)
 - [Release Notes v0.1.0](docs/release_notes_v0.1.0.md)
-- [MVP And Growth Plan](docs/mvp_and_growth_plan.md)
 - [Release Ops Playbook](docs/release_ops_playbook.md)
