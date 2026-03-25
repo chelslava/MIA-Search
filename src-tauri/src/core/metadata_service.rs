@@ -51,3 +51,48 @@ impl MetadataService {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+  use std::fs;
+  use tempfile::tempdir;
+
+  #[test]
+  fn enrich_path_reads_file_metadata_and_extension() {
+    let dir = tempdir().expect("tempdir");
+    let file_path = dir.path().join("report.txt");
+    fs::write(&file_path, "hello world").expect("write file");
+
+    let item = MetadataService::enrich_path(&file_path, dir.path());
+
+    assert_eq!(item.name, "report.txt");
+    assert!(item.is_file);
+    assert!(!item.is_dir);
+    assert_eq!(item.extension.as_deref(), Some("txt"));
+    assert_eq!(item.source_root, dir.path().to_string_lossy().to_string());
+    assert!(item.size.is_some());
+  }
+
+  #[test]
+  fn enrich_path_marks_hidden_by_name_prefix() {
+    let dir = tempdir().expect("tempdir");
+    let file_path = dir.path().join(".secret");
+    fs::write(&file_path, "x").expect("write hidden");
+
+    let item = MetadataService::enrich_path(&file_path, dir.path());
+    assert!(item.hidden);
+  }
+
+  #[test]
+  fn enrich_path_handles_missing_path_without_panic() {
+    let dir = tempdir().expect("tempdir");
+    let missing = dir.path().join("missing.bin");
+
+    let item = MetadataService::enrich_path(&missing, dir.path());
+    assert_eq!(item.name, "missing.bin");
+    assert!(!item.is_file);
+    assert!(!item.is_dir);
+    assert_eq!(item.size, None);
+  }
+}

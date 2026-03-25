@@ -472,6 +472,8 @@ mod tests {
   use std::collections::HashSet;
   use std::fs;
   use std::path::Path;
+  use std::sync::atomic::AtomicBool;
+  use std::sync::Arc;
   use tempfile::tempdir;
 
   fn write_file(path: &Path, contents: &str) {
@@ -565,5 +567,97 @@ mod tests {
 
     assert!(names.contains("top.txt"));
     assert!(!execution.items.iter().any(|item| item.full_path.ends_with("nested/deep.txt")));
+  }
+
+  #[test]
+  fn query_matcher_plain_respects_case_flag() {
+    let case_sensitive =
+      build_query_matcher(&MatchMode::Plain, "Report", false).expect("plain matcher should compile");
+    let ignore_case =
+      build_query_matcher(&MatchMode::Plain, "report", true).expect("plain matcher should compile");
+
+    assert!(case_sensitive.matches("C:/Work/Report.txt"));
+    assert!(!case_sensitive.matches("C:/Work/report.txt"));
+    assert!(ignore_case.matches("C:/Work/REPORT.txt"));
+  }
+
+  #[test]
+  fn query_matcher_wildcard_handles_xls_pattern() {
+    let matcher =
+      build_query_matcher(&MatchMode::Wildcard, "*.xls*", true).expect("wildcard matcher should compile");
+    assert!(matcher.matches("D:/Docs/annual.XLSX"));
+    assert!(!matcher.matches("D:/Docs/annual.txt"));
+  }
+
+  #[test]
+  fn query_matcher_regex_invalid_pattern_returns_error() {
+    let result = build_query_matcher(&MatchMode::Regex, "[", false);
+    assert!(result.is_err());
+  }
+
+  #[test]
+  fn stream_returns_error_for_invalid_regex_query() {
+    let mut request = SearchRequest::default();
+    request.query = "[".to_string();
+    request.roots = vec![".".to_string()];
+    request.options.match_mode = MatchMode::Regex;
+
+    let result = SearchService::stream(
+      &request,
+      Arc::new(AtomicBool::new(false)),
+      |_batch| {},
+      |_limit| {},
+    );
+    assert!(result.is_err());
+  }
+
+  #[test]
+  fn stream_wildcard_finds_xls_when_regex_mode_not_used() {
+    let root = tempdir().expect("root");
+    write_file(&root.path().join("report.xlsm"), "xls");
+    write_file(&root.path().join("notes.txt"), "txt");
+
+    let mut request = request_for_roots(vec![root.path().to_string_lossy().to_string()]);
+    request.query = "*.xls*".to_string();
+    request.options.match_mode = MatchMode::Wildcard;
+    request.options.sort_mode = SortMode::Name;
+    request.options.limit = Some(100);
+
+    let execution = SearchService::execute(&request);
+    let names: Vec<String> = execution.items.iter().map(|item| item.name.clone()).collect();
+
+    assert!(names.iter().any(|name| name == "report.xlsm"));
+    assert!(!names.iter().any(|name| name == "notes.txt"));
+  }
+
+  #[test]
+  fn search_session_lifecycle_updates_snapshot() {
+    let mut session = SearchSession::default();
+    let request = SearchRequest::default();
+
+    let started = session.start(request.clone());
+    let snapshot_active = session.snapshot();
+    assert_eq!(snapshot_active.active_search_id, Some(started.search_id));
+    assert!(matches!(snapshot_active.status, CommandStatus::Accepted));
+    assert!(snapshot_active.last_request.is_some());
+
+    let cancelled = session.cancel();
+    assert_eq!(cancelled, Some(started.search_id));
+    let snapshot_idle = session.snapshot();
+    assert!(snapshot_idle.active_search_id.is_none());
+    assert!(matches!(snapshot_idle.status, CommandStatus::Idle));
+  }
+
+  #[test]
+  fn parse_rfc3339_system_time_handles_valid_and_invalid_values() {
+    assert!(parse_rfc3339_system_time("2026-03-25T12:00:00Z").is_some());
+    assert!(parse_rfc3339_system_time("not-a-date").is_none());
+  }
+
+  #[test]
+  fn resolve_source_root_returns_matching_root() {
+    let roots = vec!["C:/data".to_string(), "D:/logs".to_string()];
+    let resolved = resolve_source_root(&roots, "D:/logs/archive/app.log");
+    assert_eq!(resolved.as_deref(), Some("D:/logs"));
   }
 }

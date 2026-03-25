@@ -223,3 +223,86 @@ impl Default for SearchProfile {
     }
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn enum_defaults_match_expected_values() {
+    assert_eq!(EntryKind::default(), EntryKind::Any);
+    assert_eq!(MatchMode::default(), MatchMode::Plain);
+    assert_eq!(SortMode::default(), SortMode::Relevance);
+  }
+
+  #[test]
+  fn search_options_default_populates_expected_fields() {
+    let options = SearchOptions::default();
+
+    assert_eq!(options.max_depth, None);
+    assert_eq!(options.limit, Some(100));
+    assert!(!options.strict);
+    assert!(!options.ignore_case);
+    assert!(!options.include_hidden);
+    assert_eq!(options.entry_kind, EntryKind::Any);
+    assert_eq!(options.match_mode, MatchMode::Plain);
+    assert!(options.size_filter.is_none());
+    assert!(options.created_filter.is_none());
+    assert!(options.modified_filter.is_none());
+    assert_eq!(options.sort_mode, SortMode::Relevance);
+  }
+
+  #[test]
+  fn search_filter_request_session_and_profile_defaults_are_empty() {
+    let filter = SearchFilter::default();
+    let request = SearchRequest::default();
+    let session = SearchSessionSnapshot::default();
+    let profile = SearchProfile::default();
+    let item = SearchResultItem::default();
+
+    assert!(filter.extension.is_none());
+    assert!(filter.size_filter.is_none());
+    assert!(filter.created_filter.is_none());
+    assert!(filter.modified_filter.is_none());
+
+    assert_eq!(request.query, "");
+    assert!(request.roots.is_empty());
+    assert!(request.extensions.is_empty());
+    assert_eq!(request.options.max_depth, SearchOptions::default().max_depth);
+    assert_eq!(request.options.limit, SearchOptions::default().limit);
+    assert_eq!(request.options.strict, SearchOptions::default().strict);
+    assert_eq!(request.options.ignore_case, SearchOptions::default().ignore_case);
+    assert_eq!(request.options.include_hidden, SearchOptions::default().include_hidden);
+    assert_eq!(request.options.entry_kind, SearchOptions::default().entry_kind);
+    assert_eq!(request.options.match_mode, SearchOptions::default().match_mode);
+    assert!(request.options.size_filter.is_none());
+    assert!(request.options.created_filter.is_none());
+    assert!(request.options.modified_filter.is_none());
+    assert_eq!(request.options.sort_mode, SearchOptions::default().sort_mode);
+
+    assert_eq!(session.active_search_id, None);
+    assert!(session.last_request.is_none());
+    assert_eq!(session.status, CommandStatus::Idle);
+
+    assert_eq!(profile.id, "");
+    assert_eq!(profile.name, "");
+    assert_eq!(profile.request.query, SearchRequest::default().query);
+    assert_eq!(profile.request.roots, SearchRequest::default().roots);
+    assert_eq!(profile.request.extensions, SearchRequest::default().extensions);
+    assert_eq!(profile.request.options.limit, SearchRequest::default().options.limit);
+    assert!(!profile.pinned);
+
+    assert_eq!(item.name, "");
+    assert_eq!(item.full_path, "");
+    assert_eq!(item.parent_path, "");
+    assert!(!item.is_file);
+    assert!(!item.is_dir);
+    assert!(item.extension.is_none());
+    assert!(item.size.is_none());
+    assert!(item.created_at.is_none());
+    assert!(item.modified_at.is_none());
+    assert!(!item.hidden);
+    assert!(item.score.is_none());
+    assert_eq!(item.source_root, "");
+  }
+}
