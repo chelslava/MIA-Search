@@ -22,6 +22,19 @@ pub enum SortMode {
   Type,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum MatchMode {
+  Plain,
+  Wildcard,
+  Regex,
+}
+
+impl Default for MatchMode {
+  fn default() -> Self {
+    Self::Plain
+  }
+}
+
 impl Default for SortMode {
   fn default() -> Self {
     Self::Relevance
@@ -76,6 +89,8 @@ pub struct SearchOptions {
   pub ignore_case: bool,
   pub include_hidden: bool,
   pub entry_kind: EntryKind,
+  #[serde(default)]
+  pub match_mode: MatchMode,
   pub size_filter: Option<SizeFilter>,
   pub created_filter: Option<DateFilter>,
   pub modified_filter: Option<DateFilter>,
@@ -91,6 +106,7 @@ impl Default for SearchOptions {
       ignore_case: false,
       include_hidden: false,
       entry_kind: EntryKind::Any,
+      match_mode: MatchMode::Plain,
       size_filter: None,
       created_filter: None,
       modified_filter: None,

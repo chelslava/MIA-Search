@@ -1,6 +1,7 @@
 export type EntryKind = "Any" | "File" | "Directory";
 
 export type SortMode = "Relevance" | "Name" | "Size" | "Modified" | "Type";
+export type MatchMode = "Plain" | "Wildcard" | "Regex";
 
 export type SizeComparison = "Smaller" | "Equal" | "Greater";
 
@@ -25,6 +26,7 @@ export interface SearchOptions {
   ignore_case: boolean;
   include_hidden: boolean;
   entry_kind: EntryKind;
+  match_mode: MatchMode;
   size_filter: SizeFilter | null;
   created_filter: DateFilter | null;
   modified_filter: DateFilter | null;

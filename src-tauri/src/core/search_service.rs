@@ -1,13 +1,14 @@
 use crate::core::metadata_service::MetadataService;
 use crate::core::models::{
-  CommandStatus, DateComparison, EntryKind, SearchRequest, SearchResultItem, SearchSessionSnapshot, SortMode,
-  SizeComparison,
+  CommandStatus, DateComparison, EntryKind, MatchMode, SearchRequest, SearchResultItem, SearchSessionSnapshot,
+  SortMode, SizeComparison,
 };
 use crate::core::ranking::sort_results;
 use chrono::{DateTime, Utc};
+use regex::Regex;
 use rust_search::{similarity_sort, FileSize, FilterExt, SearchBuilder};
-use std::path::Path;
 use std::collections::HashSet;
+use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::SystemTime;
@@ -20,6 +21,7 @@ impl PartialEq for crate::core::models::SearchOptions {
       && self.ignore_case == other.ignore_case
       && self.include_hidden == other.include_hidden
       && self.entry_kind == other.entry_kind
+      && self.match_mode == other.match_mode
       && self.sort_mode == other.sort_mode
       && option_size_filter_eq(&self.size_filter, &other.size_filter)
       && option_date_filter_eq(&self.created_filter, &other.created_filter)
@@ -129,6 +131,38 @@ impl SearchSession {
 #[derive(Debug, Clone, Default)]
 pub struct SearchService;
 
+enum QueryMatcher {
+  MatchAll,
+  Plain {
+    query: String,
+    ignore_case: bool,
+  },
+  Regex {
+    regex: Regex,
+  },
+}
+
+impl QueryMatcher {
+  fn matches(&self, path: &str) -> bool {
+    match self {
+      Self::MatchAll => true,
+      Self::Plain { query, ignore_case } => {
+        let name = Path::new(path)
+          .file_name()
+          .and_then(|value| value.to_str())
+          .unwrap_or(path);
+        if *ignore_case {
+          let lower_query = query.to_lowercase();
+          name.to_lowercase().contains(&lower_query) || path.to_lowercase().contains(&lower_query)
+        } else {
+          name.contains(query) || path.contains(query)
+        }
+      }
+      Self::Regex { regex } => regex.is_match(path),
+    }
+  }
+}
+
 impl SearchService {
   pub fn execute(request: &SearchRequest) -> SearchExecution {
     let mut all_items = Vec::new();
@@ -166,6 +200,7 @@ impl SearchService {
       .cloned()
       .unwrap_or_else(|| ".".to_string());
     let query = request.query.trim().to_string();
+    let matcher = build_query_matcher(&request.options.match_mode, &query, request.options.ignore_case)?;
     let mut limit_reached = false;
     let mut total_results = 0usize;
     let mut seen_paths = HashSet::new();
@@ -196,6 +231,10 @@ impl SearchService {
             limit_reached,
             cancelled: true,
           });
+        }
+
+        if !matcher.matches(&path) {
+          continue;
         }
 
         if !seen_paths.insert(path.clone()) {
@@ -260,6 +299,46 @@ fn collect_paths(builder: SearchBuilder, query: &str) -> Vec<String> {
   paths
 }
 
+fn build_query_matcher(mode: &MatchMode, query: &str, ignore_case: bool) -> Result<QueryMatcher, String> {
+  if query.is_empty() {
+    return Ok(QueryMatcher::MatchAll);
+  }
+
+  match mode {
+    MatchMode::Plain => Ok(QueryMatcher::Plain {
+      query: query.to_string(),
+      ignore_case,
+    }),
+    MatchMode::Regex => {
+      let pattern = if ignore_case {
+        format!("(?i){query}")
+      } else {
+        query.to_string()
+      };
+      let regex = Regex::new(&pattern).map_err(|error| format!("regex parse error: {error}"))?;
+      Ok(QueryMatcher::Regex { regex })
+    }
+    MatchMode::Wildcard => {
+      let mut pattern = String::from("^");
+      for ch in query.chars() {
+        match ch {
+          '*' => pattern.push_str(".*"),
+          '?' => pattern.push('.'),
+          _ => pattern.push_str(&regex::escape(&ch.to_string())),
+        }
+      }
+      pattern.push('$');
+      let pattern = if ignore_case {
+        format!("(?i){pattern}")
+      } else {
+        pattern
+      };
+      let regex = Regex::new(&pattern).map_err(|error| format!("wildcard parse error: {error}"))?;
+      Ok(QueryMatcher::Regex { regex })
+    }
+  }
+}
+
 fn apply_sorting(items: &mut [SearchResultItem], mode: &SortMode, query: &str) {
   match mode {
     SortMode::Relevance => {
@@ -304,7 +383,7 @@ fn build_builder(request: &SearchRequest, default_root: &str, ext_override: Opti
   }
 
   let query = request.query.trim();
-  if !query.is_empty() {
+  if !query.is_empty() && request.options.match_mode == MatchMode::Plain {
     builder = builder.search_input(query);
   }
 
