@@ -24,7 +24,7 @@ pub struct IndexStatusResponse {
 }
 
 struct RebuildFlagGuard<'a> {
-  flag: &'a std::sync::atomic::AtomicBool,
+  flag: &'a AtomicBool,
 }
 
 impl Drop for RebuildFlagGuard<'_> {
@@ -33,15 +33,16 @@ impl Drop for RebuildFlagGuard<'_> {
   }
 }
 
-#[tauri::command]
-pub fn index_rebuild(state: State<'_, AppState>, roots: Vec<String>) -> Result<IndexRebuildResponse, String> {
-  state
-    .index_rebuild_in_progress
+fn acquire_rebuild_guard<'a>(flag: &'a AtomicBool) -> Result<RebuildFlagGuard<'a>, String> {
+  flag
     .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
     .map_err(|_| "index rebuild already in progress".to_string())?;
-  let _guard = RebuildFlagGuard {
-    flag: &state.index_rebuild_in_progress,
-  };
+  Ok(RebuildFlagGuard { flag })
+}
+
+#[tauri::command]
+pub fn index_rebuild(state: State<'_, AppState>, roots: Vec<String>) -> Result<IndexRebuildResponse, String> {
+  let _guard = acquire_rebuild_guard(&state.index_rebuild_in_progress)?;
 
   let cancel = Arc::new(AtomicBool::new(false));
   let (snapshot, summary) = IndexService::rebuild(&roots, cancel)?;
@@ -118,5 +119,27 @@ mod tests {
     let snapshot = IndexSnapshot::default();
     let status = status_from_snapshot(&snapshot, true);
     assert_eq!(status.status, "in_progress");
+  }
+
+  #[test]
+  fn acquire_rebuild_guard_rejects_parallel_attempts() {
+    let flag = AtomicBool::new(false);
+    let _first = acquire_rebuild_guard(&flag).expect("first acquire");
+    match acquire_rebuild_guard(&flag) {
+      Ok(_) => panic!("second acquire should fail"),
+      Err(message) => assert_eq!(message, "index rebuild already in progress"),
+    };
+  }
+
+  #[test]
+  fn acquire_rebuild_guard_releases_flag_on_drop() {
+    let flag = AtomicBool::new(false);
+    {
+      let _guard = acquire_rebuild_guard(&flag).expect("acquire");
+      assert!(flag.load(Ordering::Acquire));
+    }
+    assert!(!flag.load(Ordering::Acquire));
+    let again = acquire_rebuild_guard(&flag);
+    assert!(again.is_ok());
   }
 }
