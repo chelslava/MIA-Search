@@ -951,6 +951,10 @@ export function App() {
           onCancelSearch={() => void handleCancel()}
           liveSearch={liveSearch}
           onLiveSearchChange={setLiveSearch}
+          includeHidden={includeHidden}
+          onIncludeHiddenChange={setIncludeHidden}
+          extensionFilter={extensionsRaw}
+          onExtensionFilterChange={setExtensionsRaw}
           onToggleFilters={() => setFiltersOpen((prev) => !prev)}
           themeId={themeId}
           onThemeChange={setThemeId}

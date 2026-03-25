@@ -19,6 +19,10 @@ export type TopBarProps = {
   onCancelSearch: () => void;
   liveSearch: boolean;
   onLiveSearchChange: (value: boolean) => void;
+  includeHidden: boolean;
+  onIncludeHiddenChange: (value: boolean) => void;
+  extensionFilter: string;
+  onExtensionFilterChange: (value: string) => void;
   onToggleFilters: () => void;
   themeId: string;
   onThemeChange: (value: string) => void;

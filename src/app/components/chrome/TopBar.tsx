@@ -16,6 +16,10 @@ export function TopBar({
   onCancelSearch,
   liveSearch,
   onLiveSearchChange,
+  includeHidden,
+  onIncludeHiddenChange,
+  extensionFilter,
+  onExtensionFilterChange,
   onToggleFilters,
   themeId,
   onThemeChange,
@@ -219,7 +223,7 @@ export function TopBar({
           ⫸
         </Button>
       </div>
-      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-1 pl-8 pr-1">
+      <div className="grid grid-cols-[auto_13rem_auto_minmax(0,1fr)] items-center gap-1 pl-8 pr-1">
         <div className="min-w-0 overflow-x-auto">
           <div className="flex min-w-max items-center gap-0.5">
             {commandButtons.map((item) => (
@@ -241,6 +245,22 @@ export function TopBar({
             ))}
           </div>
         </div>
+        <Input
+          value={extensionFilter}
+          onChange={(event) => onExtensionFilterChange(event.target.value)}
+          placeholder={tr("app.filters.extensions.placeholder", "rs, txt, md")}
+          title={tr("app.search.extensionFilter", "Фильтр расширений")}
+          className="h-6 px-1.5 text-[11px]"
+        />
+        <label className="inline-flex items-center gap-1 text-[11px] text-[var(--text)]">
+          <input
+            type="checkbox"
+            checked={includeHidden}
+            onChange={(event) => onIncludeHiddenChange(event.target.checked)}
+            className="h-3.5 w-3.5 accent-[var(--accent)]"
+          />
+          <span>{tr("app.filters.modes.hidden", "Включать скрытые")}</span>
+        </label>
         <div className="truncate text-[10px] leading-tight text-[var(--muted)]">
           {activeHint || defaultHint}
         </div>
