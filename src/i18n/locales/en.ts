@@ -102,7 +102,25 @@ const en = {
     search: {
       placeholder: "Search files and folders...",
       commandHints:
-        "Commands: /wc *.rs  /re ^main.*\\.ts$  /plain text  /files /folders  ext:rs,md  /case /nocase"
+        "Commands: /wc *.rs  /re ^main.*\\.ts$  /plain text  /files /folders  ext:rs,md  /case /nocase",
+      commandQuickHintDefault: "Quick commands: click a token button and search immediately",
+      quickButtons: {
+        wc: "WC",
+        re: "RE",
+        plain: "PLAIN",
+        files: "FILES",
+        folders: "DIRS",
+        case: "Aa"
+      },
+      quickHints: {
+        wc: "Wildcard mode: * and ?",
+        re: "Regex mode: regular expressions",
+        reDisabled: "Regex is disabled in settings",
+        plain: "Plain text search",
+        files: "Search files only",
+        folders: "Search folders only",
+        case: "Case sensitive"
+      }
     },
     actions: {
       searchTop: "🔎 Search",

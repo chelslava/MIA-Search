@@ -102,7 +102,25 @@ const ru = {
     search: {
       placeholder: "Поиск файлов и папок...",
       commandHints:
-        "Команды: /wc *.rs  /re ^main.*\\.ts$  /plain текст  /files /folders  ext:rs,md  /case /nocase"
+        "Команды: /wc *.rs  /re ^main.*\\.ts$  /plain текст  /files /folders  ext:rs,md  /case /nocase",
+      commandQuickHintDefault: "Быстрые команды: вставьте токен кнопкой и сразу ищите",
+      quickButtons: {
+        wc: "WC",
+        re: "RE",
+        plain: "PLAIN",
+        files: "FILES",
+        folders: "DIRS",
+        case: "Aa"
+      },
+      quickHints: {
+        wc: "Wildcard режим: * и ?",
+        re: "Regex режим: регулярные выражения",
+        reDisabled: "Regex отключен в настройках",
+        plain: "Обычный текстовый поиск",
+        files: "Искать только файлы",
+        folders: "Искать только папки",
+        case: "С учетом регистра"
+      }
     },
     actions: {
       searchTop: "🔎 Поиск",

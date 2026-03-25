@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import type { TopBarProps } from "./props";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
@@ -7,6 +8,7 @@ import { Switch } from "../../../components/ui/switch";
 export function TopBar({
   query,
   onQueryChange,
+  regexEnabled,
   onClearQuery,
   searchInputRef,
   isSearching,
@@ -24,6 +26,88 @@ export function TopBar({
   onToggleRightPanel,
   tr
 }: TopBarProps) {
+  const [activeHint, setActiveHint] = useState<string>("");
+
+  const defaultHint = tr(
+    "app.search.commandQuickHintDefault",
+    "Быстрые команды: вставьте токен кнопкой и сразу ищите"
+  );
+
+  function normalizeSpaces(value: string): string {
+    return value.replace(/\s+/g, " ").trim();
+  }
+
+  function addToken(token: string): void {
+    const current = normalizeSpaces(query);
+    const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const tokenRegex = new RegExp(`(?:^|\\s)${escaped}(?:\\s|$)`, "i");
+    if (tokenRegex.test(current)) {
+      searchInputRef.current?.focus();
+      return;
+    }
+    onQueryChange(current ? `${current} ${token}` : token);
+    searchInputRef.current?.focus();
+  }
+
+  function setModeToken(token: string): void {
+    const current = normalizeSpaces(query);
+    const cleared = normalizeSpaces(
+      current.replace(/(^|\s)(\/re|\/regex|\/wc|\/wildcard|\/plain)\b/gi, " ")
+    );
+    onQueryChange(cleared ? `${cleared} ${token}` : token);
+    searchInputRef.current?.focus();
+  }
+
+  const commandButtons = useMemo(
+    () => [
+      {
+        id: "wc",
+        label: tr("app.search.quickButtons.wc", "WC"),
+        hint: tr("app.search.quickHints.wc", "Wildcard режим: * и ?"),
+        onClick: () => setModeToken("/wc"),
+        disabled: false
+      },
+      {
+        id: "re",
+        label: tr("app.search.quickButtons.re", "RE"),
+        hint: regexEnabled
+          ? tr("app.search.quickHints.re", "Regex режим: регулярные выражения")
+          : tr("app.search.quickHints.reDisabled", "Regex отключен в настройках"),
+        onClick: () => setModeToken("/re"),
+        disabled: !regexEnabled
+      },
+      {
+        id: "plain",
+        label: tr("app.search.quickButtons.plain", "PLAIN"),
+        hint: tr("app.search.quickHints.plain", "Обычный текстовый поиск"),
+        onClick: () => setModeToken("/plain"),
+        disabled: false
+      },
+      {
+        id: "files",
+        label: tr("app.search.quickButtons.files", "FILES"),
+        hint: tr("app.search.quickHints.files", "Искать только файлы"),
+        onClick: () => addToken("/files"),
+        disabled: false
+      },
+      {
+        id: "folders",
+        label: tr("app.search.quickButtons.folders", "DIRS"),
+        hint: tr("app.search.quickHints.folders", "Искать только папки"),
+        onClick: () => addToken("/folders"),
+        disabled: false
+      },
+      {
+        id: "case",
+        label: tr("app.search.quickButtons.case", "Aa"),
+        hint: tr("app.search.quickHints.case", "С учетом регистра"),
+        onClick: () => addToken("/case"),
+        disabled: false
+      }
+    ],
+    [query, regexEnabled, tr]
+  );
+
   return (
     <header className="topbar grid gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2 shadow-[0_10px_30px_rgba(0,0,0,0.12)] backdrop-blur-sm">
       <div className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto_auto_auto_auto_auto_auto] items-center gap-2">
@@ -135,11 +219,31 @@ export function TopBar({
           ⫸
         </Button>
       </div>
-      <div className="min-w-0 pl-10 pr-1 text-[11px] leading-tight text-[var(--muted)]">
-        {tr(
-          "app.search.commandHints",
-          "Команды: /wc *.rs  /re ^main.*\\.ts$  /plain текст  /files /folders  ext:rs,md  /case /nocase"
-        )}
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 pl-10 pr-1">
+        <div className="min-w-0 overflow-x-auto">
+          <div className="flex min-w-max items-center gap-1">
+            {commandButtons.map((item) => (
+              <Button
+                key={item.id}
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-5 rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-1.5 text-[10px] leading-none"
+                onMouseEnter={() => setActiveHint(item.hint)}
+                onFocus={() => setActiveHint(item.hint)}
+                onMouseLeave={() => setActiveHint("")}
+                onBlur={() => setActiveHint("")}
+                onClick={item.onClick}
+                disabled={item.disabled}
+              >
+                {item.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+        <div className="truncate text-[10px] leading-tight text-[var(--muted)]">
+          {activeHint || defaultHint}
+        </div>
       </div>
     </header>
   );

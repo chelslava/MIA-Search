@@ -11,6 +11,7 @@ export type LimitMode = "100" | "500" | "1000" | "custom" | "none";
 export type TopBarProps = {
   query: string;
   onQueryChange: (value: string) => void;
+  regexEnabled: boolean;
   onClearQuery: () => void;
   searchInputRef: RefObject<HTMLInputElement | null>;
   isSearching: boolean;

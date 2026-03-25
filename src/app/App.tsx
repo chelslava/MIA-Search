@@ -892,6 +892,7 @@ export function App() {
         <TopBar
           query={query}
           onQueryChange={setQuery}
+          regexEnabled={regexEnabled}
           onClearQuery={() => setQuery("")}
           searchInputRef={searchInputRef}
           isSearching={isSearching}
