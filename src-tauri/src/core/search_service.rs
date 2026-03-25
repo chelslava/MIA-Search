@@ -8,9 +8,11 @@ use chrono::{DateTime, Utc};
 use regex::Regex;
 use rust_search::{FileSize, FilterExt, SearchBuilder};
 use std::collections::HashSet;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::sync::mpsc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::thread;
 use std::time::SystemTime;
 
 impl PartialEq for crate::core::models::SearchOptions {
@@ -89,7 +91,7 @@ impl SearchSession {
     self.last_request = Some(request);
 
     if let Some(flag) = &self.active_cancel_flag {
-      flag.store(true, Ordering::Relaxed);
+      flag.store(true, Ordering::Release);
     }
     let cancel_flag = Arc::new(AtomicBool::new(false));
     self.active_cancel_flag = Some(cancel_flag.clone());
@@ -102,7 +104,7 @@ impl SearchSession {
 
   pub fn cancel(&mut self) -> Option<u64> {
     if let Some(flag) = &self.active_cancel_flag {
-      flag.store(true, Ordering::Relaxed);
+      flag.store(true, Ordering::Release);
     }
     self.active_cancel_flag = None;
     self.active_search_id.take()
@@ -203,87 +205,108 @@ impl SearchService {
     F: FnMut(Vec<SearchResultItem>),
     G: FnMut(bool),
   {
-    let root = request
-      .roots
-      .first()
-      .cloned()
-      .unwrap_or_else(|| ".".to_string());
+    let roots = normalized_roots(request);
+    let roots_for_source = prepare_source_roots(&roots);
+    let default_root = roots.first().cloned().unwrap_or_else(|| ".".to_string());
     let query = request.query.trim().to_string();
     let matcher = build_query_matcher(&request.options.match_mode, &query, request.options.ignore_case)?;
+    if request.options.limit == Some(0) {
+      on_limit(true);
+      return Ok(SearchStreamSummary {
+        total_results: 0,
+        limit_reached: true,
+        cancelled: false,
+      });
+    }
     let mut limit_reached = false;
     let mut total_results = 0usize;
     let mut seen_paths = HashSet::new();
     let mut batch = Vec::with_capacity(BATCH_SIZE);
+    let tasks = build_scan_tasks(request, &roots);
+    let (tx, rx) = mpsc::channel::<String>();
+    let mut workers = Vec::with_capacity(tasks.len());
 
-    let extensions: Vec<String> = request
-      .extensions
-      .iter()
-      .map(|ext| ext.trim().trim_start_matches('.').to_string())
-      .filter(|ext| !ext.is_empty())
-      .collect();
-
-    let extension_overrides: Vec<Option<&str>> = if extensions.is_empty() {
-      vec![None]
-    } else {
-      extensions.iter().map(|ext| Some(ext.as_str())).collect()
-    };
-
-    for ext_override in extension_overrides {
-      let builder = build_builder(request, &root, ext_override);
-      for path in builder.build() {
-        if cancel_flag.load(Ordering::Relaxed) {
-          on_limit(limit_reached);
-          return Ok(SearchStreamSummary {
-            total_results,
-            limit_reached,
-            cancelled: true,
-          });
-        }
-
-        if !matcher.matches(&path) {
-          continue;
-        }
-
-        if !seen_paths.insert(path.clone()) {
-          continue;
-        }
-
-        let source_root = resolve_source_root(&request.roots, &path).unwrap_or_else(|| root.clone());
-        let mut item = MetadataService::enrich_path(&path, source_root);
-        if matches!(request.options.sort_mode, SortMode::Relevance) && !query.is_empty() {
-          item.score = score_relevance(&item.name, &query);
-        }
-
-        batch.push(item);
-        total_results = total_results.saturating_add(1);
-
-        if batch.len() >= BATCH_SIZE {
-          if cancel_flag.load(Ordering::Relaxed) {
-            on_limit(limit_reached);
-            return Ok(SearchStreamSummary {
-              total_results,
-              limit_reached,
-              cancelled: true,
-            });
+    for (task_root, task_ext) in tasks {
+      let worker_tx = tx.clone();
+      let worker_request = request.clone();
+      let worker_cancel = cancel_flag.clone();
+      workers.push(thread::spawn(move || {
+        let builder = build_builder(&worker_request, &task_root, task_ext.as_deref());
+        for path in builder.build() {
+          if worker_cancel.load(Ordering::Acquire) {
+            break;
           }
-          sort_stream_batch(&mut batch, &request.options.sort_mode, &query);
-          on_batch(std::mem::take(&mut batch));
-        }
-
-        if let Some(limit) = request.options.limit {
-          if total_results >= limit {
-            limit_reached = true;
+          if worker_tx.send(path).is_err() {
             break;
           }
         }
-      }
-      if limit_reached {
+      }));
+    }
+    drop(tx);
+
+    for path in rx {
+      if cancel_flag.load(Ordering::Acquire) && !limit_reached {
         break;
+      }
+
+      if !matcher.matches(&path) {
+        continue;
+      }
+
+      let dedup_key = dedup_path_key(&path);
+      if !seen_paths.insert(dedup_key) {
+        continue;
+      }
+
+      if let Some(limit) = request.options.limit {
+        if total_results >= limit {
+          limit_reached = true;
+          cancel_flag.store(true, Ordering::Release);
+          break;
+        }
+      }
+
+      let source_root = resolve_source_root(&roots_for_source, &path).unwrap_or_else(|| default_root.clone());
+      let mut item = MetadataService::enrich_path(&path, source_root);
+      if matches!(request.options.sort_mode, SortMode::Relevance) && !query.is_empty() {
+        item.score = score_relevance(&item.name, &query);
+      }
+
+      batch.push(item);
+      total_results = total_results.saturating_add(1);
+
+      if batch.len() >= BATCH_SIZE {
+        if cancel_flag.load(Ordering::Acquire) && !limit_reached {
+          break;
+        }
+        sort_stream_batch(&mut batch, &request.options.sort_mode, &query);
+        on_batch(std::mem::take(&mut batch));
+      }
+
+      if let Some(limit) = request.options.limit {
+        if total_results >= limit {
+          limit_reached = true;
+          cancel_flag.store(true, Ordering::Release);
+          break;
+        }
       }
     }
 
+    for handle in workers {
+      let _ = handle.join();
+    }
+
+    if cancel_flag.load(Ordering::Acquire) && !limit_reached {
+      on_limit(limit_reached);
+      return Ok(SearchStreamSummary {
+        total_results,
+        limit_reached,
+        cancelled: true,
+      });
+    }
+
     if !batch.is_empty() {
-      if cancel_flag.load(Ordering::Relaxed) {
+      if cancel_flag.load(Ordering::Acquire) && !limit_reached {
         on_limit(limit_reached);
         return Ok(SearchStreamSummary {
           total_results,
@@ -371,15 +394,49 @@ fn score_relevance(name: &str, query: &str) -> Option<f64> {
   }
 }
 
+fn normalized_roots(request: &SearchRequest) -> Vec<String> {
+  let roots: Vec<String> = request
+    .roots
+    .iter()
+    .map(|root| root.trim().to_string())
+    .filter(|root| !root.is_empty())
+    .collect();
+  if roots.is_empty() {
+    vec![".".to_string()]
+  } else {
+    roots
+  }
+}
+
+fn normalized_extensions(request: &SearchRequest) -> Vec<String> {
+  request
+    .extensions
+    .iter()
+    .map(|ext| ext.trim().trim_start_matches('.').to_string())
+    .filter(|ext| !ext.is_empty())
+    .collect()
+}
+
+fn build_scan_tasks(request: &SearchRequest, roots: &[String]) -> Vec<(String, Option<String>)> {
+  let extensions = normalized_extensions(request);
+  if extensions.is_empty() {
+    roots.iter().cloned().map(|root| (root, None)).collect()
+  } else {
+    roots
+      .iter()
+      .flat_map(|root| {
+        extensions
+          .iter()
+          .cloned()
+          .map(|ext| (root.clone(), Some(ext)))
+          .collect::<Vec<(String, Option<String>)>>()
+      })
+      .collect()
+  }
+}
+
 fn build_builder(request: &SearchRequest, default_root: &str, ext_override: Option<&str>) -> SearchBuilder {
   let mut builder = SearchBuilder::default().location(default_root);
-
-  if request.roots.len() > 1 {
-    let more_locations: Vec<String> = request.roots.iter().skip(1).cloned().collect();
-    if !more_locations.is_empty() {
-      builder = builder.more_locations(more_locations);
-    }
-  }
 
   let query = request.query.trim();
   if !query.is_empty() && request.options.match_mode == MatchMode::Plain {
@@ -457,12 +514,44 @@ fn parse_rfc3339_system_time(value: &str) -> Option<SystemTime> {
   Some(dt_utc.into())
 }
 
-fn resolve_source_root(roots: &[String], path: &str) -> Option<String> {
-  let path = Path::new(path);
+fn prepare_source_roots(roots: &[String]) -> Vec<(String, PathBuf, usize)> {
   roots
     .iter()
-    .find(|root| path.starts_with(root.as_str()))
     .cloned()
+    .map(|root| {
+      let absolute = absolutize_path(Path::new(&root));
+      let specificity = absolute.components().count();
+      (root, absolute, specificity)
+    })
+    .collect()
+}
+
+fn absolutize_path(path: &Path) -> PathBuf {
+  if path.is_absolute() {
+    path.to_path_buf()
+  } else {
+    std::env::current_dir().map(|cwd| cwd.join(path)).unwrap_or_else(|_| path.to_path_buf())
+  }
+}
+
+fn dedup_path_key(path: &str) -> String {
+  #[cfg(windows)]
+  {
+    path.replace('\\', "/").to_lowercase()
+  }
+  #[cfg(not(windows))]
+  {
+    path.to_string()
+  }
+}
+
+fn resolve_source_root(roots: &[(String, PathBuf, usize)], path: &str) -> Option<String> {
+  let absolute_path = absolutize_path(Path::new(path));
+  roots
+    .iter()
+    .filter(|(_, root_path, _)| absolute_path.starts_with(root_path))
+    .max_by_key(|(_, _, specificity)| *specificity)
+    .map(|(root, _, _)| root.clone())
 }
 
 #[cfg(test)]
@@ -657,8 +746,32 @@ mod tests {
   #[test]
   fn resolve_source_root_returns_matching_root() {
     let roots = vec!["C:/data".to_string(), "D:/logs".to_string()];
-    let resolved = resolve_source_root(&roots, "D:/logs/archive/app.log");
+    let prepared = prepare_source_roots(&roots);
+    let resolved = resolve_source_root(&prepared, "D:/logs/archive/app.log");
     assert_eq!(resolved.as_deref(), Some("D:/logs"));
+  }
+
+  #[test]
+  fn resolve_source_root_prefers_most_specific_root() {
+    let roots = vec!["C:/data".to_string(), "C:/data/project".to_string()];
+    let prepared = prepare_source_roots(&roots);
+    let resolved = resolve_source_root(&prepared, "C:/data/project/src/main.rs");
+    assert_eq!(resolved.as_deref(), Some("C:/data/project"));
+  }
+
+  #[test]
+  fn limit_zero_returns_no_items_and_marks_limit_reached() {
+    let root = tempdir().expect("root");
+    write_file(&root.path().join("one.txt"), "1");
+    write_file(&root.path().join("two.txt"), "2");
+
+    let mut request = request_for_roots(vec![root.path().to_string_lossy().to_string()]);
+    request.options.limit = Some(0);
+    request.options.sort_mode = SortMode::Name;
+
+    let execution = SearchService::execute(&request);
+    assert!(execution.items.is_empty());
+    assert!(execution.limit_reached);
   }
 
   fn build_perf_dataset(root: &Path, dirs: usize, files_per_dir: usize) {
