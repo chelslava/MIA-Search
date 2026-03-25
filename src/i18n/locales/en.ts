@@ -5,6 +5,7 @@ const en = {
       search: "Search",
       cancelSearch: "Cancel search",
       clear: "Clear",
+      live: "Live",
       liveSearch: "Live search",
       filters: "Filters",
       commandPalette: "Command palette",
@@ -63,6 +64,22 @@ const en = {
       resultSize: "Size",
       modifiedAt: "Modified date",
       type: "Type",
+      viewTable: "Table",
+      viewCompact: "Compact",
+      viewCards: "Cards",
+      sortRelevance: "By relevance",
+      sortName: "By name",
+      sortSize: "By size",
+      sortModified: "By modified date",
+      sortType: "By type",
+      resetAllFilters: "Clear all filters",
+      dir: "Folder",
+      colIcon: "Icon",
+      colName: "Name",
+      colPath: "Full path",
+      colSize: "Size",
+      colModified: "Modified date",
+      colType: "Type",
       searchModeTable: "Table",
       searchModeCompact: "Compact",
       searchModeCards: "Cards",
@@ -72,6 +89,168 @@ const en = {
       sortByModified: "By modified date",
       sortByType: "By type",
       clearFilters: "Clear all filters"
+    },
+    tooltips: {
+      leftPanel: "Left panel",
+      clear: "Clear",
+      liveSearch: "Live search",
+      filters: "Filters",
+      commandPalette: "Command palette",
+      settings: "Settings",
+      rightPanel: "Right panel"
+    },
+    search: {
+      placeholder: "Search files and folders..."
+    },
+    actions: {
+      searchTop: "🔎 Search",
+      search: "Search",
+      cancelSearch: "Cancel search"
+    },
+    filters: {
+      ariaLabel: "Advanced filters",
+      kind: {
+        legend: "Item type",
+        any: "Files and folders",
+        file: "Files only",
+        directory: "Folders only"
+      },
+      extensions: {
+        legend: "Extensions",
+        placeholder: "rs, txt, md",
+        hint: "Separate values with commas"
+      },
+      depth: {
+        legend: "Depth",
+        unlimited: "Unlimited"
+      },
+      size: {
+        legend: "Size",
+        enabled: "Enable",
+        comparison: {
+          greater: "greater than",
+          smaller: "smaller than",
+          equal: "equal to"
+        }
+      },
+      modified: {
+        legend: "Modified date",
+        enabled: "Enable"
+      },
+      created: {
+        legend: "Created date",
+        enabled: "Enable"
+      },
+      modes: {
+        legend: "Modes",
+        strict: "Strict mode",
+        ignoreCase: "Case insensitive",
+        hidden: "Include hidden"
+      },
+      limit: {
+        legend: "Result limit",
+        custom: "Custom",
+        none: "No limit"
+      },
+      apply: "Apply",
+      resetAll: "Reset all",
+      resetAllFilters: "Clear all filters"
+    },
+    settings: {
+      ariaLabel: "Settings",
+      general: "General",
+      language: {
+        ru: "Russian",
+        en: "English"
+      },
+      liveSearchDefault: "Live search by default",
+      debounce: "Debounce (ms)",
+      customTheme: "Custom theme",
+      themeName: {
+        placeholder: "Theme name"
+      },
+      themeBg: "Background",
+      themeText: "Text",
+      themeAccent: "Accent",
+      createTheme: "Create theme"
+    },
+    roots: {
+      summary: "Root paths",
+      primary: "Primary: {{path}}",
+      newPath: {
+        placeholder: "New path"
+      },
+      addPath: "Add path"
+    },
+    profiles: {
+      summary: "Search profiles",
+      name: {
+        placeholder: "Profile name"
+      },
+      save: "Save"
+    },
+    favorites: {
+      summary: "Favorites"
+    },
+    history: {
+      summary: "Search history",
+      clear: "Clear history",
+      emptyQuery: "(empty query)"
+    },
+    viewModes: {
+      table: "Table",
+      compact: "Compact",
+      cards: "Cards"
+    },
+    sort: {
+      relevance: "By relevance",
+      name: "By name",
+      size: "By size",
+      modified: "By modified date",
+      type: "By type"
+    },
+    common: {
+      unnamed: "Untitled",
+      folder: "Folder",
+      file: "File",
+      yes: "Yes",
+      no: "No"
+    },
+    results: {
+      columns: {
+        icon: "Icon",
+        name: "Name",
+        path: "Full path",
+        size: "Size",
+        modified: "Modified date",
+        type: "Type"
+      }
+    },
+    details: {
+      title: "Details",
+      fullPath: "Full path",
+      copy: "Copy",
+      size: "Size",
+      created: "Created date",
+      modified: "Modified date",
+      hidden: "Hidden",
+      sourceRoot: "Source root",
+      open: "Open",
+      openParent: "Open parent folder",
+      reveal: "Show in file manager",
+      copyPath: "Copy path",
+      addFavorite: "Add to favorites",
+      empty: "Select an item from the results list."
+    },
+    context: {
+      open: "Open",
+      openParent: "Open parent folder",
+      reveal: "Show in file manager",
+      copyPath: "Copy full path",
+      copyName: "Copy name",
+      addFavorite: "Add to favorites",
+      makePrimary: "Set as primary",
+      delete: "Remove"
     },
     themes: {
       system: "System"
@@ -137,7 +316,9 @@ const en = {
       status: "Status: {{status}}",
       time: "Time: {{elapsed}}",
       checked: "Checked: {{count}}",
-      id: "ID: {{id}}"
+      id: "ID: {{id}}",
+      searchId: "ID: {{id}}",
+      warningPrefix: "▲"
     }
   },
   commandPalette: {

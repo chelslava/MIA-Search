@@ -5,6 +5,7 @@ const ru = {
       search: "Поиск",
       cancelSearch: "Отменить поиск",
       clear: "Очистить",
+      live: "Live",
       liveSearch: "Live search",
       filters: "Фильтры",
       commandPalette: "Командная палитра",
@@ -63,6 +64,22 @@ const ru = {
       resultSize: "Размер",
       modifiedAt: "Дата изменения",
       type: "Тип",
+      viewTable: "Таблица",
+      viewCompact: "Компактно",
+      viewCards: "Карточки",
+      sortRelevance: "По релевантности",
+      sortName: "По имени",
+      sortSize: "По размеру",
+      sortModified: "По дате изменения",
+      sortType: "По типу",
+      resetAllFilters: "Сбросить все фильтры",
+      dir: "Папка",
+      colIcon: "Иконка",
+      colName: "Имя",
+      colPath: "Полный путь",
+      colSize: "Размер",
+      colModified: "Дата изменения",
+      colType: "Тип",
       searchModeTable: "Таблица",
       searchModeCompact: "Компактно",
       searchModeCards: "Карточки",
@@ -72,6 +89,168 @@ const ru = {
       sortByModified: "По дате изменения",
       sortByType: "По типу",
       clearFilters: "Сбросить все фильтры"
+    },
+    tooltips: {
+      leftPanel: "Левая панель",
+      clear: "Очистить",
+      liveSearch: "Live search",
+      filters: "Фильтры",
+      commandPalette: "Командная палитра",
+      settings: "Настройки",
+      rightPanel: "Правая панель"
+    },
+    search: {
+      placeholder: "Поиск файлов и папок..."
+    },
+    actions: {
+      searchTop: "🔎 Поиск",
+      search: "Поиск",
+      cancelSearch: "Отменить поиск"
+    },
+    filters: {
+      ariaLabel: "Расширенные фильтры",
+      kind: {
+        legend: "Тип элементов",
+        any: "Файлы и папки",
+        file: "Только файлы",
+        directory: "Только папки"
+      },
+      extensions: {
+        legend: "Расширения",
+        placeholder: "rs, txt, md",
+        hint: "Разделяйте значения запятыми"
+      },
+      depth: {
+        legend: "Глубина",
+        unlimited: "Без ограничений"
+      },
+      size: {
+        legend: "Размер",
+        enabled: "Учитывать",
+        comparison: {
+          greater: "больше",
+          smaller: "меньше",
+          equal: "равно"
+        }
+      },
+      modified: {
+        legend: "Дата изменения",
+        enabled: "Учитывать"
+      },
+      created: {
+        legend: "Дата создания",
+        enabled: "Учитывать"
+      },
+      modes: {
+        legend: "Режимы",
+        strict: "Строгий режим",
+        ignoreCase: "Игнорировать регистр",
+        hidden: "Включать скрытые"
+      },
+      limit: {
+        legend: "Лимит результатов",
+        custom: "Пользовательский",
+        none: "Без лимита"
+      },
+      apply: "Применить",
+      resetAll: "Сбросить все",
+      resetAllFilters: "Сбросить все фильтры"
+    },
+    settings: {
+      ariaLabel: "Настройки",
+      general: "Общие",
+      language: {
+        ru: "Русский",
+        en: "English"
+      },
+      liveSearchDefault: "Live search по умолчанию",
+      debounce: "Debounce (мс)",
+      customTheme: "Пользовательская тема",
+      themeName: {
+        placeholder: "Имя темы"
+      },
+      themeBg: "Фон",
+      themeText: "Текст",
+      themeAccent: "Акцент",
+      createTheme: "Создать тему"
+    },
+    roots: {
+      summary: "Корневые пути",
+      primary: "Основной: {{path}}",
+      newPath: {
+        placeholder: "Новый путь"
+      },
+      addPath: "Добавить путь"
+    },
+    profiles: {
+      summary: "Профили поиска",
+      name: {
+        placeholder: "Имя профиля"
+      },
+      save: "Сохранить"
+    },
+    favorites: {
+      summary: "Избранное"
+    },
+    history: {
+      summary: "История поиска",
+      clear: "Очистить историю",
+      emptyQuery: "(пустой запрос)"
+    },
+    viewModes: {
+      table: "Таблица",
+      compact: "Компактно",
+      cards: "Карточки"
+    },
+    sort: {
+      relevance: "По релевантности",
+      name: "По имени",
+      size: "По размеру",
+      modified: "По дате изменения",
+      type: "По типу"
+    },
+    common: {
+      unnamed: "Без имени",
+      folder: "Папка",
+      file: "Файл",
+      yes: "Да",
+      no: "Нет"
+    },
+    results: {
+      columns: {
+        icon: "Иконка",
+        name: "Имя",
+        path: "Полный путь",
+        size: "Размер",
+        modified: "Дата изменения",
+        type: "Тип"
+      }
+    },
+    details: {
+      title: "Детали",
+      fullPath: "Полный путь",
+      copy: "Копия",
+      size: "Размер",
+      created: "Дата создания",
+      modified: "Дата изменения",
+      hidden: "Скрытый",
+      sourceRoot: "Корневой источник",
+      open: "Открыть",
+      openParent: "Открыть родительскую папку",
+      reveal: "Показать в файловом менеджере",
+      copyPath: "Копировать путь",
+      addFavorite: "Добавить в избранное",
+      empty: "Выберите элемент в списке результатов."
+    },
+    context: {
+      open: "Открыть",
+      openParent: "Открыть родительскую папку",
+      reveal: "Показать в файловом менеджере",
+      copyPath: "Копировать полный путь",
+      copyName: "Копировать имя",
+      addFavorite: "Добавить в избранное",
+      makePrimary: "Сделать основным",
+      delete: "Удалить"
     },
     themes: {
       system: "Системная"
@@ -137,7 +316,9 @@ const ru = {
       status: "Статус: {{status}}",
       time: "Время: {{elapsed}}",
       checked: "Проверено: {{count}}",
-      id: "ID: {{id}}"
+      id: "ID: {{id}}",
+      searchId: "ID: {{id}}",
+      warningPrefix: "▲"
     }
   },
   commandPalette: {

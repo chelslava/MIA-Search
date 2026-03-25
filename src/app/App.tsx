@@ -32,6 +32,14 @@ import type {
 } from "../shared/search-types";
 import { CommandPalette, type CommandPaletteAction } from "../widgets/CommandPalette";
 import { ToastHost, type ToastItem } from "../widgets/ToastHost";
+import { AppContextMenu } from "./components/chrome/AppContextMenu";
+import { FiltersPanel } from "./components/chrome/FiltersPanel";
+import { SettingsPanel } from "./components/chrome/SettingsPanel";
+import { StatusBar } from "./components/chrome/StatusBar";
+import { TopBar } from "./components/chrome/TopBar";
+import { ResultsWorkspace } from "./components/results/ResultsWorkspace";
+import { DetailsSidebar } from "./components/sidebars/DetailsSidebar";
+import { LeftSidebar } from "./components/sidebars/LeftSidebar";
 import { formatBytes, formatDate } from "./formatters";
 import { buildSearchRequest } from "./search-request";
 import { applyThemeColors, builtInThemes, darkenHex, tintHex } from "./theme";
@@ -789,137 +797,97 @@ export function App() {
   return (
     <>
       <main className="app">
-        <header className="topbar">
-          <button className="icon-btn" type="button" onClick={() => setLeftVisible((prev) => !prev)} title={tr("app.tooltips.leftPanel", "Левая панель")}>☰</button>
-          <input
-            ref={searchInputRef}
-            className="search-input"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder={tr("app.search.placeholder", "Поиск файлов и папок...")}
-          />
-          {query ? <button className="icon-btn" type="button" onClick={() => setQuery("")} title={tr("app.tooltips.clear", "Очистить")}>✕</button> : null}
-          {isSearching ? (
-            <button className="primary-btn" type="button" onClick={() => void handleCancel()}>{tr("app.actions.cancelSearch", "Отменить поиск")}</button>
-          ) : (
-            <button className="primary-btn" type="button" onClick={() => void handleSearch()}>{tr("app.actions.searchTop", "🔎 Поиск")}</button>
-          )}
-          <label className="toggle" title={tr("app.tooltips.liveSearch", "Live search")}>
-            <input type="checkbox" checked={liveSearch} onChange={(event) => setLiveSearch(event.target.checked)} />
-            <span>{tr("app.labels.live", "Live")}</span>
-          </label>
-          <button className="icon-btn" type="button" onClick={() => setFiltersOpen((prev) => !prev)} title={tr("app.tooltips.filters", "Фильтры")}>⏷</button>
-          <select className="theme-select" value={themeId} onChange={(event) => setThemeId(event.target.value)}>
-            {themeOptions.map((theme) => (
-              <option value={theme.id} key={theme.id}>🎨 {theme.name}</option>
-            ))}
-          </select>
-          <button className="icon-btn" type="button" onClick={() => setPaletteOpen(true)} title={tr("app.tooltips.commandPalette", "Командная палитра")}>⌘K</button>
-          <button className="icon-btn" type="button" onClick={() => setSettingsOpen((prev) => !prev)} title={tr("app.tooltips.settings", "Настройки")}>⚙</button>
-          <button className="icon-btn" type="button" onClick={() => setRightVisible((prev) => !prev)} title={tr("app.tooltips.rightPanel", "Правая панель")}>⫸</button>
-        </header>
+        <TopBar
+          query={query}
+          onQueryChange={setQuery}
+          onClearQuery={() => setQuery("")}
+          searchInputRef={searchInputRef}
+          isSearching={isSearching}
+          onSearch={() => void handleSearch()}
+          onCancelSearch={() => void handleCancel()}
+          liveSearch={liveSearch}
+          onLiveSearchChange={setLiveSearch}
+          onToggleFilters={() => setFiltersOpen((prev) => !prev)}
+          themeId={themeId}
+          onThemeChange={setThemeId}
+          themeOptions={themeOptions}
+          onOpenCommandPalette={() => setPaletteOpen(true)}
+          onToggleSettings={() => setSettingsOpen((prev) => !prev)}
+          onToggleLeftPanel={() => setLeftVisible((prev) => !prev)}
+          onToggleRightPanel={() => setRightVisible((prev) => !prev)}
+          tr={tr}
+        />
 
         {isSearching ? <div className="progress-line" /> : null}
 
         {filtersOpen ? (
-          <section className="filters-panel" aria-label={tr("app.filters.ariaLabel", "Расширенные фильтры")}>
-            <div className="filter-grid">
-              <fieldset>
-                <legend>{tr("app.filters.kind.legend", "Тип элементов")}</legend>
-                <label><input type="radio" checked={entryKind === "Any"} onChange={() => setEntryKind("Any")} /> {tr("app.filters.kind.any", "Файлы и папки")}</label>
-                <label><input type="radio" checked={entryKind === "File"} onChange={() => setEntryKind("File")} /> {tr("app.filters.kind.file", "Только файлы")}</label>
-                <label><input type="radio" checked={entryKind === "Directory"} onChange={() => setEntryKind("Directory")} /> {tr("app.filters.kind.directory", "Только папки")}</label>
-              </fieldset>
-              <fieldset>
-                <legend>{tr("app.filters.extensions.legend", "Расширения")}</legend>
-                <input value={extensionsRaw} onChange={(event) => setExtensionsRaw(event.target.value)} placeholder={tr("app.filters.extensions.placeholder", "rs, txt, md")} />
-                <small>{tr("app.filters.extensions.hint", "Разделяйте значения запятыми")}</small>
-              </fieldset>
-              <fieldset>
-                <legend>{tr("app.filters.depth.legend", "Глубина")}</legend>
-                <label><input type="checkbox" checked={maxDepthUnlimited} onChange={(event) => setMaxDepthUnlimited(event.target.checked)} /> {tr("app.filters.depth.unlimited", "Без ограничений")}</label>
-                <input type="range" min={0} max={10} value={maxDepth} disabled={maxDepthUnlimited} onChange={(event) => setMaxDepth(Number(event.target.value))} />
-                <input type="number" min={0} max={10} value={maxDepth} disabled={maxDepthUnlimited} onChange={(event) => setMaxDepth(Number(event.target.value))} />
-              </fieldset>
-              <fieldset>
-                <legend>{tr("app.filters.size.legend", "Размер")}</legend>
-                <label><input type="checkbox" checked={sizeFilterEnabled} onChange={(event) => setSizeFilterEnabled(event.target.checked)} /> {tr("app.filters.size.enabled", "Учитывать")}</label>
-                <div className="inline-row">
-                  <select value={sizeComparison} disabled={!sizeFilterEnabled} onChange={(event) => setSizeComparison(event.target.value as SizeComparison)}>
-                    <option value="Greater">{tr("app.filters.size.comparison.greater", "больше")}</option><option value="Smaller">{tr("app.filters.size.comparison.smaller", "меньше")}</option><option value="Equal">{tr("app.filters.size.comparison.equal", "равно")}</option>
-                  </select>
-                  <input type="number" min={0} value={sizeValue} disabled={!sizeFilterEnabled} onChange={(event) => setSizeValue(Math.max(0, Number(event.target.value) || 0))} />
-                  <select value={sizeUnit} disabled={!sizeFilterEnabled} onChange={(event) => setSizeUnit(event.target.value as "B" | "KB" | "MB" | "GB" | "TB")}>
-                    <option value="B">B</option><option value="KB">KB</option><option value="MB">MB</option><option value="GB">GB</option><option value="TB">TB</option>
-                  </select>
-                </div>
-              </fieldset>
-              <fieldset>
-                <legend>{tr("app.filters.modified.legend", "Дата изменения")}</legend>
-                <label><input type="checkbox" checked={modifiedFilterEnabled} onChange={(event) => setModifiedFilterEnabled(event.target.checked)} /> {tr("app.filters.modified.enabled", "Учитывать")}</label>
-                <div className="inline-row">
-                  <input type="datetime-local" disabled={!modifiedFilterEnabled} value={modifiedAfter} onChange={(event) => setModifiedAfter(event.target.value)} />
-                  <input type="datetime-local" disabled={!modifiedFilterEnabled} value={modifiedBefore} onChange={(event) => setModifiedBefore(event.target.value)} />
-                </div>
-              </fieldset>
-              <fieldset>
-                <legend>{tr("app.filters.created.legend", "Дата создания")}</legend>
-                <label><input type="checkbox" checked={createdFilterEnabled} onChange={(event) => setCreatedFilterEnabled(event.target.checked)} /> {tr("app.filters.created.enabled", "Учитывать")}</label>
-                <div className="inline-row">
-                  <input type="datetime-local" disabled={!createdFilterEnabled} value={createdAfter} onChange={(event) => setCreatedAfter(event.target.value)} />
-                  <input type="datetime-local" disabled={!createdFilterEnabled} value={createdBefore} onChange={(event) => setCreatedBefore(event.target.value)} />
-                </div>
-              </fieldset>
-              <fieldset>
-                <legend>{tr("app.filters.modes.legend", "Режимы")}</legend>
-                <label><input type="checkbox" checked={strict} onChange={(event) => setStrict(event.target.checked)} /> {tr("app.filters.modes.strict", "Строгий режим")}</label>
-                <label><input type="checkbox" checked={ignoreCase} onChange={(event) => setIgnoreCase(event.target.checked)} /> {tr("app.filters.modes.ignoreCase", "Игнорировать регистр")}</label>
-                <label><input type="checkbox" checked={includeHidden} onChange={(event) => setIncludeHidden(event.target.checked)} /> {tr("app.filters.modes.hidden", "Включать скрытые")}</label>
-              </fieldset>
-              <fieldset>
-                <legend>{tr("app.filters.limit.legend", "Лимит результатов")}</legend>
-                <label><input type="radio" checked={limitMode === "100"} onChange={() => setLimitMode("100")} /> 100</label>
-                <label><input type="radio" checked={limitMode === "500"} onChange={() => setLimitMode("500")} /> 500</label>
-                <label><input type="radio" checked={limitMode === "1000"} onChange={() => setLimitMode("1000")} /> 1000</label>
-                <label><input type="radio" checked={limitMode === "custom"} onChange={() => setLimitMode("custom")} /> {tr("app.filters.limit.custom", "Пользовательский")}</label>
-                <input type="number" min={1} disabled={limitMode !== "custom"} value={customLimit} onChange={(event) => setCustomLimit(Math.max(1, Number(event.target.value) || 1))} />
-                <label><input type="radio" checked={limitMode === "none"} onChange={() => setLimitMode("none")} /> {tr("app.filters.limit.none", "Без лимита")}</label>
-              </fieldset>
-            </div>
-            <div className="filters-actions">
-              <button className="primary-btn" type="button" onClick={() => { setFiltersOpen(false); void handleSearch(); }}>{tr("app.filters.apply", "Применить")}</button>
-              <button className="ghost-btn" type="button" onClick={clearAllFilters}>{tr("app.filters.resetAll", "Сбросить все")}</button>
-            </div>
-          </section>
+          <FiltersPanel
+            entryKind={entryKind}
+            onEntryKindChange={setEntryKind}
+            extensionsRaw={extensionsRaw}
+            onExtensionsRawChange={setExtensionsRaw}
+            maxDepthUnlimited={maxDepthUnlimited}
+            onMaxDepthUnlimitedChange={setMaxDepthUnlimited}
+            maxDepth={maxDepth}
+            onMaxDepthChange={setMaxDepth}
+            sizeFilterEnabled={sizeFilterEnabled}
+            onSizeFilterEnabledChange={setSizeFilterEnabled}
+            sizeComparison={sizeComparison}
+            onSizeComparisonChange={setSizeComparison}
+            sizeValue={sizeValue}
+            onSizeValueChange={setSizeValue}
+            sizeUnit={sizeUnit}
+            onSizeUnitChange={setSizeUnit}
+            modifiedFilterEnabled={modifiedFilterEnabled}
+            onModifiedFilterEnabledChange={setModifiedFilterEnabled}
+            modifiedAfter={modifiedAfter}
+            onModifiedAfterChange={setModifiedAfter}
+            modifiedBefore={modifiedBefore}
+            onModifiedBeforeChange={setModifiedBefore}
+            createdFilterEnabled={createdFilterEnabled}
+            onCreatedFilterEnabledChange={setCreatedFilterEnabled}
+            createdAfter={createdAfter}
+            onCreatedAfterChange={setCreatedAfter}
+            createdBefore={createdBefore}
+            onCreatedBeforeChange={setCreatedBefore}
+            strict={strict}
+            onStrictChange={setStrict}
+            ignoreCase={ignoreCase}
+            onIgnoreCaseChange={setIgnoreCase}
+            includeHidden={includeHidden}
+            onIncludeHiddenChange={setIncludeHidden}
+            limitMode={limitMode}
+            onLimitModeChange={setLimitMode}
+            customLimit={customLimit}
+            onCustomLimitChange={setCustomLimit}
+            onApply={() => {
+              setFiltersOpen(false);
+              void handleSearch();
+            }}
+            onResetAll={clearAllFilters}
+            tr={tr}
+          />
         ) : null}
 
         {settingsOpen ? (
-          <section className="settings-panel" aria-label={tr("app.settings.ariaLabel", "Настройки")}>
-            <div className="settings-grid">
-              <div>
-                <h4>{tr("app.settings.general", "Общие")}</h4>
-                <label>{tr("app.settings.language", "Язык")}
-                  <select value={language} onChange={(event) => void i18n.changeLanguage(event.target.value)}>
-                    <option value="ru">{tr("app.settings.language.ru", "Русский")}</option><option value="en">{tr("app.settings.language.en", "English")}</option>
-                  </select>
-                </label>
-                <label>{tr("app.settings.liveSearchDefault", "Live search по умолчанию")}
-                  <input type="checkbox" checked={liveSearch} onChange={(event) => setLiveSearch(event.target.checked)} />
-                </label>
-                <label>{tr("app.settings.debounce", "Debounce (мс)")}
-                  <input type="number" min={100} max={2000} value={debounceMs} onChange={(event) => setDebounceMs(Math.max(100, Number(event.target.value) || 300))} />
-                </label>
-              </div>
-              <div>
-                <h4>{tr("app.settings.customTheme", "Пользовательская тема")}</h4>
-                <input placeholder={tr("app.settings.themeName.placeholder", "Имя темы")} value={newThemeName} onChange={(event) => setNewThemeName(event.target.value)} />
-                <label>{tr("app.settings.themeBg", "Фон")} <input type="color" value={newThemeBg} onChange={(event) => setNewThemeBg(event.target.value)} /></label>
-                <label>{tr("app.settings.themeText", "Текст")} <input type="color" value={newThemeText} onChange={(event) => setNewThemeText(event.target.value)} /></label>
-                <label>{tr("app.settings.themeAccent", "Акцент")} <input type="color" value={newThemeAccent} onChange={(event) => setNewThemeAccent(event.target.value)} /></label>
-                <button className="primary-btn" type="button" onClick={createCustomTheme}>{tr("app.settings.createTheme", "Создать тему")}</button>
-              </div>
-            </div>
-          </section>
+          <SettingsPanel
+            language={language}
+            onLanguageChange={(value) => void i18n.changeLanguage(value)}
+            liveSearch={liveSearch}
+            onLiveSearchChange={setLiveSearch}
+            debounceMs={debounceMs}
+            onDebounceMsChange={setDebounceMs}
+            newThemeName={newThemeName}
+            onNewThemeNameChange={setNewThemeName}
+            newThemeBg={newThemeBg}
+            onNewThemeBgChange={setNewThemeBg}
+            newThemeText={newThemeText}
+            onNewThemeTextChange={setNewThemeText}
+            newThemeAccent={newThemeAccent}
+            onNewThemeAccentChange={setNewThemeAccent}
+            onCreateCustomTheme={createCustomTheme}
+            tr={tr}
+          />
         ) : null}
 
         <section
@@ -929,261 +897,98 @@ export function App() {
           }}
         >
           {leftVisible ? (
-            <aside
-              className="left-panel"
-              onDragOver={(event) => event.preventDefault()}
-              onDrop={(event) => {
-                event.preventDefault();
-                const text = event.dataTransfer.getData("text/plain") || event.dataTransfer.getData("text/uri-list");
-                if (text) upsertRoot(text.replace("file://", "").trim());
-              }}
-            >
-              <details open>
-                <summary>{tr("app.roots.summary", "Корневые пути")}</summary>
-                <div className="section-block">
-                  <strong>{tr("app.roots.primary", "Основной: {{path}}", { path: primaryRoot })}</strong>
-                  <div className="inline-row">
-                    <input value={newRoot} onChange={(event) => setNewRoot(event.target.value)} placeholder={tr("app.roots.newPath.placeholder", "Новый путь")} />
-                    <button type="button" onClick={handleAddRoot}>{tr("app.roots.addPath", "Добавить путь")}</button>
-                  </div>
-                  <ul className="list">
-                    {roots.map((root) => (
-                      <li
-                        key={root.path}
-                        onContextMenu={(event) => {
-                          event.preventDefault();
-                          setContextMenu({ type: "root", x: event.clientX, y: event.clientY, path: root.path });
-                        }}
-                      >
-                        <label>
-                          <input
-                            type="checkbox"
-                            checked={root.enabled}
-                            onChange={(event) =>
-                              setRoots((previous) =>
-                                previous.map((item) => (item.path === root.path ? { ...item, enabled: event.target.checked } : item))
-                              )
-                            }
-                          />
-                          <span>{root.path}</span>
-                        </label>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </details>
-
-              <details open>
-                <summary>{tr("app.profiles.summary", "Профили поиска")}</summary>
-                <div className="section-block">
-                  <div className="inline-row">
-                    <input value={newProfileName} onChange={(event) => setNewProfileName(event.target.value)} placeholder={tr("app.profiles.name.placeholder", "Имя профиля")} />
-                    <button type="button" onClick={() => void handleSaveProfile()}>{tr("app.profiles.save", "Сохранить")}</button>
-                  </div>
-                  <ul className="list">
-                    {profiles.map((profile) => (
-                      <li key={profile.id}>
-                        <button type="button" className="link-btn" onClick={() => applyProfile(profile)}>📁 {profile.name}</button>
-                        <button type="button" className="x-btn" onClick={() => void handleDeleteProfile(profile.id)}>✕</button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </details>
-
-              <details open>
-                <summary>{tr("app.favorites.summary", "Избранное")}</summary>
-                <div className="section-block">
-                  <ul className="list">
-                    {favorites.map((path) => (
-                      <li key={path}>
-                        <button type="button" className="link-btn" onClick={() => void handleOpenPath(path)}>⭐ {path}</button>
-                        <button type="button" className="x-btn" onClick={() => void handleRemoveFavorite(path)}>✕</button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </details>
-
-              <details open>
-                <summary>{tr("app.history.summary", "История поиска")}</summary>
-                <div className="section-block">
-                  <button type="button" className="ghost-btn" onClick={() => void handleClearHistory()}>{tr("app.history.clear", "Очистить историю")}</button>
-                  <ul className="list">
-                    {history.queries.slice(0, 10).map((item, index) => (
-                      <li key={`${item.query}-${index}`}>
-                        <button type="button" className="link-btn" onClick={() => setQuery(item.query)}>{item.query || tr("app.history.emptyQuery", "(пустой запрос)")}</button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </details>
-            </aside>
+            <LeftSidebar
+              tr={tr}
+              roots={roots}
+              primaryRoot={primaryRoot}
+              newRoot={newRoot}
+              newProfileName={newProfileName}
+              favorites={favorites}
+              history={history}
+              profiles={profiles}
+              onNewRootChange={setNewRoot}
+              onAddRoot={handleAddRoot}
+              onRootEnabledChange={(path, enabled) =>
+                setRoots((previous) =>
+                  previous.map((item) => (item.path === path ? { ...item, enabled } : item))
+                )
+              }
+              onRootContextMenu={setContextMenu}
+              onNewProfileNameChange={setNewProfileName}
+              onSaveProfile={() => void handleSaveProfile()}
+              onApplyProfile={applyProfile}
+              onDeleteProfile={(profileId) => void handleDeleteProfile(profileId)}
+              onOpenFavorite={(path) => void handleOpenPath(path)}
+              onRemoveFavorite={(path) => void handleRemoveFavorite(path)}
+              onClearHistory={() => void handleClearHistory()}
+              onSelectHistoryQuery={setQuery}
+              onDropRootPath={upsertRoot}
+            />
           ) : null}
 
           {leftVisible ? <div className="splitter" onMouseDown={() => { document.body.dataset.dragPanel = "left"; }} /> : null}
-          <section className="center-panel" ref={resultPaneRef}>
-            <div className="center-toolbar">
-              <div className="inline-row">
-                <button className={displayMode === "table" ? "mode-btn active" : "mode-btn"} type="button" onClick={() => setDisplayMode("table")}>{tr("app.viewModes.table", "Таблица")}</button>
-                <button className={displayMode === "compact" ? "mode-btn active" : "mode-btn"} type="button" onClick={() => setDisplayMode("compact")}>{tr("app.viewModes.compact", "Компактно")}</button>
-                <button className={displayMode === "cards" ? "mode-btn active" : "mode-btn"} type="button" onClick={() => setDisplayMode("cards")}>{tr("app.viewModes.cards", "Карточки")}</button>
-              </div>
-              <div className="inline-row">
-                <select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)}>
-                  <option value="Relevance">{tr("app.sort.relevance", "По релевантности")}</option>
-                  <option value="Name">{tr("app.sort.name", "По имени")}</option>
-                  <option value="Size">{tr("app.sort.size", "По размеру")}</option>
-                  <option value="Modified">{tr("app.sort.modified", "По дате изменения")}</option>
-                  <option value="Type">{tr("app.sort.type", "По типу")}</option>
-                </select>
-                {isSearching ? (
-                  <button className="primary-btn" type="button" onClick={() => void handleCancel()}>{tr("app.actions.cancelSearch", "Отменить поиск")}</button>
-                ) : (
-                  <button className="primary-btn" type="button" onClick={() => void handleSearch()}>{tr("app.actions.search", "Поиск")}</button>
-                )}
-              </div>
-            </div>
-
-            <div className="chips-row">
-              {chips.map((chip) => (
-                <button key={chip.id} className="chip" type="button" onClick={chip.remove}>{chip.label} ✕</button>
-              ))}
-              {chips.length > 0 ? <button className="ghost-btn" type="button" onClick={clearAllFilters}>{tr("app.filters.resetAllFilters", "Сбросить все фильтры")}</button> : null}
-            </div>
-
-            {displayMode === "cards" ? (
-              <div className="cards-grid" onScroll={(event) => setScrollTop((event.target as HTMLDivElement).scrollTop)}>
-                {results.map((item) => (
-                  <article
-                    key={item.full_path}
-                    className={selectedPath === item.full_path ? "result-card selected" : "result-card"}
-                    onClick={() => setSelectedPath(item.full_path)}
-                  >
-                    <div className="card-title">{item.is_dir ? "📁" : "📄"} {item.name || tr("app.common.unnamed", "Без имени")}</div>
-                    <div className="card-path">{item.full_path}</div>
-                    <div className="card-meta">{item.is_dir ? tr("app.common.folder", "Папка") : tr("app.common.file", "Файл")} • {formatBytes(item.size) || "-"}</div>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <div className={displayMode === "compact" ? "results-wrap compact" : "results-wrap"} onScroll={(event) => setScrollTop((event.target as HTMLDivElement).scrollTop)}>
-                <table className="results-table">
-                  <thead>
-                    <tr>
-                      <th>{tr("app.results.columns.icon", "Иконка")}</th>
-                      <th>{tr("app.results.columns.name", "Имя")}</th>
-                      <th>{tr("app.results.columns.path", "Полный путь")}</th>
-                      <th>{tr("app.results.columns.size", "Размер")}</th>
-                      <th>{tr("app.results.columns.modified", "Дата изменения")}</th>
-                      <th>{tr("app.results.columns.type", "Тип")}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visibleRows.topSpacer > 0 ? (
-                      <tr>
-                        <td colSpan={6} style={{ height: `${visibleRows.topSpacer}px`, padding: 0, borderBottom: "none" }} />
-                      </tr>
-                    ) : null}
-
-                    {visibleRows.items.map((item) => (
-                      <tr
-                        data-path={item.full_path}
-                        key={item.full_path}
-                        className={selectedPath === item.full_path ? "selected" : ""}
-                        onClick={() => setSelectedPath(item.full_path)}
-                        onContextMenu={(event) => {
-                          event.preventDefault();
-                          setContextMenu({ type: "result", x: event.clientX, y: event.clientY, item });
-                        }}
-                      >
-                        <td className={item.hidden ? "muted-40" : ""}>{item.is_dir ? "📁" : "📄"}</td>
-                        <td className={item.is_dir ? "name-cell dir" : "name-cell"}>{item.name || tr("app.common.unnamed", "Без имени")}</td>
-                        <td className="path-cell">{item.full_path}</td>
-                        <td>{item.is_dir ? "" : formatBytes(item.size)}</td>
-                        <td>{formatDate(item.modified_at)}</td>
-                        <td>{item.is_dir ? tr("app.common.folder", "Папка") : tr("app.common.file", "Файл")}</td>
-                      </tr>
-                    ))}
-
-                    {visibleRows.bottomSpacer > 0 ? (
-                      <tr>
-                        <td colSpan={6} style={{ height: `${visibleRows.bottomSpacer}px`, padding: 0, borderBottom: "none" }} />
-                      </tr>
-                    ) : null}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
+          <ResultsWorkspace
+            containerRef={resultPaneRef}
+            displayMode={displayMode}
+            setDisplayMode={setDisplayMode}
+            sortMode={sortMode}
+            setSortMode={setSortMode}
+            isSearching={isSearching}
+            onCancelSearch={() => void handleCancel()}
+            onSearch={() => void handleSearch()}
+            chips={chips}
+            onClearAllFilters={clearAllFilters}
+            results={results}
+            selectedPath={selectedPath}
+            onSelectPath={setSelectedPath}
+            onResultContextMenu={(event, item) => {
+              event.preventDefault();
+              setContextMenu({ type: "result", x: event.clientX, y: event.clientY, item });
+            }}
+            scrollTop={scrollTop}
+            setScrollTop={setScrollTop}
+            visibleRows={visibleRows}
+            formatBytes={formatBytes}
+            formatDate={formatDate}
+            t={tr}
+          />
 
           {rightVisible ? <div className="splitter" onMouseDown={() => { document.body.dataset.dragPanel = "right"; }} /> : null}
 
           {rightVisible ? (
-            <aside className="right-panel">
-              <h3>{tr("app.details.title", "Детали")}</h3>
-              {selectedResult ? (
-                <div className="detail-grid">
-                  <div className="detail-icon">{selectedResult.is_dir ? "📁" : "📄"}</div>
-                  <div><strong>{selectedResult.name || tr("app.common.unnamed", "Без имени")}</strong></div>
-                  <label>{tr("app.details.fullPath", "Полный путь")}</label>
-                  <div className="copy-row">
-                    <span className="truncate">{selectedResult.full_path}</span>
-                    <button type="button" onClick={() => void handleCopyPath(selectedResult.full_path)}>{tr("app.details.copy", "Копия")}</button>
-                  </div>
-                  <label>{tr("app.details.size", "Размер")}</label>
-                  <div>{selectedResult.is_dir ? "" : formatBytes(selectedResult.size)}</div>
-                  <label>{tr("app.details.created", "Дата создания")}</label>
-                  <div>{formatDate(selectedResult.created_at)}</div>
-                  <label>{tr("app.details.modified", "Дата изменения")}</label>
-                  <div>{formatDate(selectedResult.modified_at)}</div>
-                  <label>{tr("app.details.hidden", "Скрытый")}</label>
-                  <div>{selectedResult.hidden ? tr("app.common.yes", "Да") : tr("app.common.no", "Нет")}</div>
-                  <label>{tr("app.details.sourceRoot", "Корневой источник")}</label>
-                  <div>{selectedResult.source_root}</div>
-                  <div className="actions-stack">
-                    <button type="button" onClick={() => void handleOpenPath(selectedResult.full_path)}>{tr("app.details.open", "Открыть")}</button>
-                    <button type="button" onClick={() => void handleOpenParent(selectedResult.full_path)}>{tr("app.details.openParent", "Открыть родительскую папку")}</button>
-                    <button type="button" onClick={() => void handleRevealPath(selectedResult.full_path)}>{tr("app.details.reveal", "Показать в файловом менеджере")}</button>
-                    <button type="button" onClick={() => void handleCopyPath(selectedResult.full_path)}>{tr("app.details.copyPath", "Копировать путь")}</button>
-                    <button type="button" onClick={() => void handleAddFavorite(selectedResult.full_path)}>{tr("app.details.addFavorite", "Добавить в избранное")}</button>
-                  </div>
-                </div>
-              ) : (
-                <p className="muted">{tr("app.details.empty", "Выберите элемент в списке результатов.")}</p>
-              )}
-            </aside>
+            <DetailsSidebar
+              tr={tr}
+              selectedResult={selectedResult}
+              onCopyPath={(path) => void handleCopyPath(path)}
+              onOpenPath={(path) => void handleOpenPath(path)}
+              onOpenParent={(path) => void handleOpenParent(path)}
+              onRevealPath={(path) => void handleRevealPath(path)}
+              onAddFavorite={(path) => void handleAddFavorite(path)}
+            />
           ) : null}
         </section>
 
-        <footer className="statusbar">
-          <span>{tr("app.statusbar.found", "Найдено: {{count}} элементов", { count: results.length })}</span>
-          <span>{tr("app.statusbar.status", "Статус: {{status}}", { status })}</span>
-          <span>{tr("app.statusbar.time", "Время: {{elapsed}}", { elapsed: statusText.elapsed })}</span>
-          {statusText.warning ? <span className="warning">{tr("app.statusbar.warningPrefix", "▲")} {statusText.warning}</span> : null}
-          <span>{tr("app.statusbar.checked", "Проверено: {{count}}", { count: checkedPaths })}</span>
-          <span>{tr("app.statusbar.searchId", "ID: {{id}}", { id: activeSearchId ?? "-" })}</span>
-        </footer>
+        <StatusBar
+          resultsCount={results.length}
+          status={status}
+          statusText={statusText}
+          checkedPaths={checkedPaths}
+          activeSearchId={activeSearchId}
+          tr={tr}
+        />
 
-        {contextMenu ? (
-          <div className="context-menu" style={{ left: contextMenu.x, top: contextMenu.y }} role="menu">
-            {contextMenu.type === "result" ? (
-              <>
-                <button type="button" onClick={() => void handleOpenPath(contextMenu.item.full_path)}>{tr("app.context.open", "Открыть")}</button>
-                <button type="button" onClick={() => void handleOpenParent(contextMenu.item.full_path)}>{tr("app.context.openParent", "Открыть родительскую папку")}</button>
-                <button type="button" onClick={() => void handleRevealPath(contextMenu.item.full_path)}>{tr("app.context.reveal", "Показать в файловом менеджере")}</button>
-                <button type="button" onClick={() => void handleCopyPath(contextMenu.item.full_path)}>{tr("app.context.copyPath", "Копировать полный путь")}</button>
-                <button type="button" onClick={() => void handleCopyName(contextMenu.item.name)}>{tr("app.context.copyName", "Копировать имя")}</button>
-                <button type="button" onClick={() => void handleAddFavorite(contextMenu.item.full_path)}>{tr("app.context.addFavorite", "Добавить в избранное")}</button>
-              </>
-            ) : (
-              <>
-                <button type="button" onClick={() => setPrimaryRoot(contextMenu.path)}>{tr("app.context.makePrimary", "Сделать основным")}</button>
-                <button type="button" onClick={() => setRoots((previous) => previous.filter((item) => item.path !== contextMenu.path))}>{tr("app.context.delete", "Удалить")}</button>
-              </>
-            )}
-          </div>
-        ) : null}
+        <AppContextMenu
+          contextMenu={contextMenu}
+          onOpenPath={(path) => void handleOpenPath(path)}
+          onOpenParent={(path) => void handleOpenParent(path)}
+          onRevealPath={(path) => void handleRevealPath(path)}
+          onCopyPath={(path) => void handleCopyPath(path)}
+          onCopyName={(name) => void handleCopyName(name)}
+          onAddFavorite={(path) => void handleAddFavorite(path)}
+          onSetPrimaryRoot={setPrimaryRoot}
+          onDeleteRoot={(path) => setRoots((previous) => previous.filter((item) => item.path !== path))}
+          tr={tr}
+        />
       </main>
 
       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} actions={commandActions} />
