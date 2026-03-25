@@ -2,6 +2,7 @@ use crate::core::index_service::IndexService;
 use crate::storage::index_store::IndexSnapshot;
 use crate::AppState;
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use tauri::State;
@@ -22,8 +23,26 @@ pub struct IndexStatusResponse {
   pub updated_at: String,
 }
 
+struct RebuildFlagGuard<'a> {
+  flag: &'a std::sync::atomic::AtomicBool,
+}
+
+impl Drop for RebuildFlagGuard<'_> {
+  fn drop(&mut self) {
+    self.flag.store(false, Ordering::Release);
+  }
+}
+
 #[tauri::command]
 pub fn index_rebuild(state: State<'_, AppState>, roots: Vec<String>) -> Result<IndexRebuildResponse, String> {
+  state
+    .index_rebuild_in_progress
+    .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+    .map_err(|_| "index rebuild already in progress".to_string())?;
+  let _guard = RebuildFlagGuard {
+    flag: &state.index_rebuild_in_progress,
+  };
+
   let cancel = Arc::new(AtomicBool::new(false));
   let (snapshot, summary) = IndexService::rebuild(&roots, cancel)?;
 
@@ -47,18 +66,21 @@ pub fn index_rebuild(state: State<'_, AppState>, roots: Vec<String>) -> Result<I
 
 #[tauri::command]
 pub fn index_status(state: State<'_, AppState>) -> Result<IndexStatusResponse, String> {
+  let rebuild_in_progress = state.index_rebuild_in_progress.load(Ordering::Acquire);
   let snapshot = state
     .index
     .lock()
     .map_err(|_| "index store lock poisoned".to_string())?
     .snapshot();
 
-  Ok(status_from_snapshot(&snapshot))
+  Ok(status_from_snapshot(&snapshot, rebuild_in_progress))
 }
 
-fn status_from_snapshot(snapshot: &IndexSnapshot) -> IndexStatusResponse {
+fn status_from_snapshot(snapshot: &IndexSnapshot, rebuild_in_progress: bool) -> IndexStatusResponse {
   IndexStatusResponse {
-    status: if snapshot.entries.is_empty() {
+    status: if rebuild_in_progress {
+      "in_progress".to_string()
+    } else if snapshot.entries.is_empty() {
       "empty".to_string()
     } else {
       "ready".to_string()
@@ -76,7 +98,7 @@ mod tests {
   #[test]
   fn status_from_snapshot_reports_empty_and_ready() {
     let empty = IndexSnapshot::default();
-    let status_empty = status_from_snapshot(&empty);
+    let status_empty = status_from_snapshot(&empty, false);
     assert_eq!(status_empty.status, "empty");
 
     let ready = IndexSnapshot {
@@ -85,10 +107,16 @@ mod tests {
       roots: vec!["C:\\".to_string()],
       entries: vec![crate::core::models::SearchResultItem::default()],
     };
-    let status_ready = status_from_snapshot(&ready);
+    let status_ready = status_from_snapshot(&ready, false);
     assert_eq!(status_ready.status, "ready");
     assert_eq!(status_ready.entries, 1);
     assert_eq!(status_ready.roots, 1);
   }
-}
 
+  #[test]
+  fn status_from_snapshot_reports_in_progress() {
+    let snapshot = IndexSnapshot::default();
+    let status = status_from_snapshot(&snapshot, true);
+    assert_eq!(status.status, "in_progress");
+  }
+}

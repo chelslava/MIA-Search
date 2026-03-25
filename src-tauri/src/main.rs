@@ -7,6 +7,7 @@ mod storage;
 
 use commands::{actions, favorites, history, index, profiles, search, settings};
 use std::sync::Mutex;
+use std::sync::atomic::AtomicBool;
 use storage::{
   favorites_store::FavoritesStore,
   history_store::HistoryStore,
@@ -22,6 +23,7 @@ pub struct AppState {
   pub history: Mutex<HistoryStore>,
   pub favorites: Mutex<FavoritesStore>,
   pub index: Mutex<IndexStore>,
+  pub index_rebuild_in_progress: AtomicBool,
 }
 
 impl AppState {
@@ -33,6 +35,7 @@ impl AppState {
       history: Mutex::new(HistoryStore::load()),
       favorites: Mutex::new(FavoritesStore::load()),
       index: Mutex::new(IndexStore::load()),
+      index_rebuild_in_progress: AtomicBool::new(false),
     }
   }
 
