@@ -1,5 +1,8 @@
 import type { HistorySnapshot, SearchProfile } from "../../../shared/search-types";
 import type { ContextMenuState, RootItem } from "../../types";
+import { Button } from "../../../components/ui/button";
+import { Input } from "../../../components/ui/input";
+import { Switch } from "../../../components/ui/switch";
 
 export type TranslateFn = (key: string, defaultValue: string, values?: Record<string, unknown>) => string;
 
@@ -52,7 +55,7 @@ export function LeftSidebar({
 }: LeftSidebarProps) {
   return (
     <aside
-      className="left-panel"
+      className="left-panel space-y-4 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 text-[var(--text)] shadow-sm"
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => {
         event.preventDefault();
@@ -60,97 +63,154 @@ export function LeftSidebar({
         if (text) onDropRootPath(text.replace("file://", "").trim());
       }}
     >
-      <details open>
-        <summary>{tr("app.roots.summary", "Корневые пути")}</summary>
-        <div className="section-block">
-          <strong>{tr("app.roots.primary", "Основной: {{path}}", { path: primaryRoot })}</strong>
-          <div className="inline-row">
-            <input value={newRoot} onChange={(event) => onNewRootChange(event.target.value)} placeholder={tr("app.roots.newPath.placeholder", "Новый путь")} />
-            <button type="button" onClick={onAddRoot}>
+      <details open className="rounded-xl border border-[var(--border)] bg-[var(--surface-alt)] p-3">
+        <summary className="cursor-pointer list-none select-none rounded-lg px-2 py-1 text-sm font-semibold text-[var(--text)] transition-colors hover:bg-[var(--surface)]">
+          {tr("app.roots.summary", "Корневые пути")}
+        </summary>
+        <div className="mt-3 space-y-3">
+          <strong className="block text-sm font-medium text-[var(--text)]">
+            {tr("app.roots.primary", "Основной: {{path}}", { path: primaryRoot })}
+          </strong>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input
+              value={newRoot}
+              onChange={(event) => onNewRootChange(event.target.value)}
+              placeholder={tr("app.roots.newPath.placeholder", "Новый путь")}
+            />
+            <Button type="button" variant="secondary" onClick={onAddRoot} className="shrink-0">
               {tr("app.roots.addPath", "Добавить путь")}
-            </button>
+            </Button>
           </div>
-          <ul className="list">
-            {roots.map((root) => (
-              <li
-                key={root.path}
-                onContextMenu={(event) => {
-                  event.preventDefault();
-                  onRootContextMenu({ type: "root", x: event.clientX, y: event.clientY, path: root.path });
-                }}
-              >
-                <label>
-                  <input
-                    type="checkbox"
+          <ul className="space-y-2">
+            {roots.map((root, index) => {
+              const switchId = `root-enabled-${index}`;
+
+              return (
+                <li
+                  key={root.path}
+                  className="flex items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
+                  onContextMenu={(event) => {
+                    event.preventDefault();
+                    onRootContextMenu({ type: "root", x: event.clientX, y: event.clientY, path: root.path });
+                  }}
+                >
+                  <Switch
+                    id={switchId}
                     checked={root.enabled}
-                    onChange={(event) => onRootEnabledChange(root.path, event.target.checked)}
+                    onCheckedChange={(checked) => onRootEnabledChange(root.path, checked)}
                   />
-                  <span>{root.path}</span>
-                </label>
-              </li>
-            ))}
+                  <label htmlFor={switchId} className="min-w-0 cursor-pointer flex-1 truncate text-sm">
+                    {root.path}
+                  </label>
+                </li>
+              );
+            })}
           </ul>
         </div>
       </details>
 
-      <details open>
-        <summary>{tr("app.profiles.summary", "Профили поиска")}</summary>
-        <div className="section-block">
-          <div className="inline-row">
-            <input
+      <details open className="rounded-xl border border-[var(--border)] bg-[var(--surface-alt)] p-3">
+        <summary className="cursor-pointer list-none select-none rounded-lg px-2 py-1 text-sm font-semibold text-[var(--text)] transition-colors hover:bg-[var(--surface)]">
+          {tr("app.profiles.summary", "Профили поиска")}
+        </summary>
+        <div className="mt-3 space-y-3">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input
               value={newProfileName}
               onChange={(event) => onNewProfileNameChange(event.target.value)}
               placeholder={tr("app.profiles.name.placeholder", "Имя профиля")}
             />
-            <button type="button" onClick={onSaveProfile}>
+            <Button type="button" variant="secondary" onClick={onSaveProfile} className="shrink-0">
               {tr("app.profiles.save", "Сохранить")}
-            </button>
+            </Button>
           </div>
-          <ul className="list">
+          <ul className="space-y-2">
             {profiles.map((profile) => (
-              <li key={profile.id}>
-                <button type="button" className="link-btn" onClick={() => onApplyProfile(profile)}>
-                  📁 {profile.name}
-                </button>
-                <button type="button" className="x-btn" onClick={() => void onDeleteProfile(profile.id)}>
+              <li
+                key={profile.id}
+                className="flex items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
+              >
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="min-w-0 flex-1 justify-start px-2 text-left font-normal"
+                  onClick={() => onApplyProfile(profile)}
+                >
+                  <span className="truncate">📁 {profile.name}</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0 rounded-full"
+                  onClick={() => void onDeleteProfile(profile.id)}
+                  aria-label={tr("app.profiles.delete", "Удалить профиль")}
+                >
                   ✕
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
         </div>
       </details>
 
-      <details open>
-        <summary>{tr("app.favorites.summary", "Избранное")}</summary>
-        <div className="section-block">
-          <ul className="list">
+      <details open className="rounded-xl border border-[var(--border)] bg-[var(--surface-alt)] p-3">
+        <summary className="cursor-pointer list-none select-none rounded-lg px-2 py-1 text-sm font-semibold text-[var(--text)] transition-colors hover:bg-[var(--surface)]">
+          {tr("app.favorites.summary", "Избранное")}
+        </summary>
+        <div className="mt-3 space-y-3">
+          <ul className="space-y-2">
             {favorites.map((path) => (
-              <li key={path}>
-                <button type="button" className="link-btn" onClick={() => void onOpenFavorite(path)}>
-                  ⭐ {path}
-                </button>
-                <button type="button" className="x-btn" onClick={() => void onRemoveFavorite(path)}>
+              <li
+                key={path}
+                className="flex items-center justify-between gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2"
+              >
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="min-w-0 flex-1 justify-start px-2 text-left font-normal"
+                  onClick={() => void onOpenFavorite(path)}
+                >
+                  <span className="truncate">⭐ {path}</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 shrink-0 rounded-full"
+                  onClick={() => void onRemoveFavorite(path)}
+                  aria-label={tr("app.favorites.remove", "Удалить из избранного")}
+                >
                   ✕
-                </button>
+                </Button>
               </li>
             ))}
           </ul>
         </div>
       </details>
 
-      <details open>
-        <summary>{tr("app.history.summary", "История поиска")}</summary>
-        <div className="section-block">
-          <button type="button" className="ghost-btn" onClick={() => void onClearHistory()}>
+      <details open className="rounded-xl border border-[var(--border)] bg-[var(--surface-alt)] p-3">
+        <summary className="cursor-pointer list-none select-none rounded-lg px-2 py-1 text-sm font-semibold text-[var(--text)] transition-colors hover:bg-[var(--surface)]">
+          {tr("app.history.summary", "История поиска")}
+        </summary>
+        <div className="mt-3 space-y-3">
+          <Button type="button" variant="ghost" className="w-full justify-start px-2 font-normal" onClick={() => void onClearHistory()}>
             {tr("app.history.clear", "Очистить историю")}
-          </button>
-          <ul className="list">
+          </Button>
+          <ul className="space-y-2">
             {history.queries.slice(0, 10).map((item, index) => (
-              <li key={`${item.query}-${index}`}>
-                <button type="button" className="link-btn" onClick={() => onSelectHistoryQuery(item.query)}>
-                  {item.query || tr("app.history.emptyQuery", "(пустой запрос)")}
-                </button>
+              <li key={`${item.query}-${index}`} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] px-3 py-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="min-w-0 w-full justify-start px-2 text-left font-normal"
+                  onClick={() => onSelectHistoryQuery(item.query)}
+                >
+                  <span className="truncate">{item.query || tr("app.history.emptyQuery", "(пустой запрос)")}</span>
+                </Button>
               </li>
             ))}
           </ul>
