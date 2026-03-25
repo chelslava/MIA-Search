@@ -1,12 +1,12 @@
 # Release Ops Playbook (Go/No-Go + GitHub Release Template)
 
-Дата обновления: **25 марта 2026**
+Дата обновления: **26 марта 2026**
 
 ## 1. Назначение
 
-Единый операционный файл для команды релиза:
+Единый операционный файл для команды релиза `0.1.x`:
 - принять решение `Go/No-Go`;
-- выпустить релиз `v0.1.0` без пропусков шагов;
+- выпустить релиз без пропусков шагов;
 - использовать готовый шаблон публикации в GitHub Releases.
 
 ## 2. Роли на релиз
@@ -29,7 +29,7 @@
 - [ ] `cargo tauri build` успешно (Windows, NSIS bundle).
 
 ## B. Artifact Validation
-- [ ] Артефакт существует: `src-tauri/target/release/bundle/nsis/MIA Search_0.1.0_x64-setup.exe`.
+- [ ] Артефакт существует: `src-tauri/target/release/bundle/nsis/MIA Search_<version>_x64-setup.exe`.
 - [ ] Release binary запускается без краша.
 - [ ] Версия приложения совпадает с релизным тегом.
 
@@ -45,7 +45,7 @@
 ## D. Product/Docs Readiness
 - [ ] `README.md` актуален.
 - [ ] `docs/user_guide.md` актуален.
-- [ ] `docs/release_notes_v0.1.0.md` актуален.
+- [ ] release notes под текущий тег актуальны (`docs/github_release_<tag>.md`).
 - [ ] В changelog/release notes отражены известные ограничения.
 
 ## E. Go/No-Go Decision
@@ -60,8 +60,8 @@
 
 1. Выполнить checklist из раздела 3.
 2. Создать тег:
-   - `git tag v0.1.0`
-   - `git push origin v0.1.0`
+   - `git tag vX.Y.Z`
+   - `git push origin vX.Y.Z`
 3. Создать GitHub Release по шаблону ниже.
 4. Прикрепить артефакт `.exe` installer.
 5. Проверить опубликованную страницу релиза (ссылки, формат, вложения).
@@ -72,7 +72,7 @@
 Скопируйте блок ниже в форму GitHub Release.
 
 ```md
-# MIA Search v0.1.0 (MVP)
+# MIA Search vX.Y.Z
 
 Release date: {{YYYY-MM-DD}}
 
@@ -100,7 +100,7 @@ Release date: {{YYYY-MM-DD}}
 - Backend coverage: 81.14% Regions.
 
 ## Artifact
-- `MIA Search_0.1.0_x64-setup.exe`
+- `MIA Search_<version>_x64-setup.exe`
 
 ## Known Limitations
 - Linux/macOS release smoke and packaging are planned post-MVP.
@@ -113,7 +113,7 @@ Release date: {{YYYY-MM-DD}}
 
 ## Full Docs
 - User Guide: `docs/user_guide.md`
-- Release Notes: `docs/release_notes_v0.1.0.md`
+- Release Notes: `docs/github_release_<tag>.md`
 - Release Smoke Checklist: `docs/release_smoke_checklist.md`
 ```
 
