@@ -161,15 +161,23 @@ export function ResultsWorkspace({
           className="min-h-0 flex-1 overflow-auto rounded-md border border-[var(--border)] bg-[var(--surface-alt)]"
           onScroll={(event) => setScrollTop((event.currentTarget as HTMLDivElement).scrollTop)}
         >
-          <table className="w-full border-separate border-spacing-0 text-xs">
+          <table className="w-full table-fixed border-separate border-spacing-0 text-xs">
+            <colgroup>
+              <col style={{ width: "68px" }} />
+              <col style={{ width: "56%" }} />
+              <col style={{ width: "22%" }} />
+              <col style={{ width: "92px" }} />
+              <col style={{ width: "124px" }} />
+              <col style={{ width: "64px" }} />
+            </colgroup>
             <thead className="sticky top-0 z-10 bg-[var(--surface-alt)]">
               <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium">{t("app.labels.colIcon", "Иконка")}</th>
-                <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium">{t("app.labels.colName", "Имя")}</th>
-                <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium">{t("app.labels.colPath", "Полный путь")}</th>
-                <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium">{t("app.labels.colSize", "Размер")}</th>
-                <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium">{t("app.labels.colModified", "Дата изменения")}</th>
-                <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium">{t("app.labels.colType", "Тип")}</th>
+                <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium whitespace-nowrap">{t("app.labels.colIcon", "Иконка")}</th>
+                <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium whitespace-nowrap">{t("app.labels.colName", "Имя")}</th>
+                <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium whitespace-nowrap">{t("app.labels.colPath", "Полный путь")}</th>
+                <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium whitespace-nowrap">{t("app.labels.colSize", "Размер")}</th>
+                <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium whitespace-nowrap">{t("app.labels.colModified", "Дата изменения")}</th>
+                <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium whitespace-nowrap">{t("app.labels.colType", "Тип")}</th>
               </tr>
             </thead>
             <tbody>
@@ -191,20 +199,24 @@ export function ResultsWorkspace({
                   onClick={() => onSelectPath(item.full_path)}
                   onContextMenu={(event: MouseEvent<HTMLTableRowElement>) => onResultContextMenu(event, item)}
                 >
-                  <td className={`border-b border-[var(--border)] px-2 py-1.5 ${item.hidden ? "text-[var(--muted)] opacity-60" : ""}`}>
+                  <td className={`border-b border-[var(--border)] px-2 py-1.5 whitespace-nowrap ${item.hidden ? "text-[var(--muted)] opacity-60" : ""}`}>
                     {item.is_dir ? "📁" : "📄"}
                   </td>
                   <td className={`border-b border-[var(--border)] px-2 py-1.5 ${item.is_dir ? "font-medium text-[var(--text)]" : "text-[var(--text)]"}`}>
-                    {item.name || t("app.labels.noName", "Без имени")}
+                    <span className="block truncate" title={item.name || t("app.labels.noName", "Без имени")}>
+                      {item.name || t("app.labels.noName", "Без имени")}
+                    </span>
                   </td>
-                  <td className="max-w-0 truncate border-b border-[var(--border)] px-2 py-1.5 text-[var(--muted)]">{item.full_path}</td>
-                  <td className="border-b border-[var(--border)] px-2 py-1.5 text-[var(--text)]">
+                  <td className="max-w-0 truncate border-b border-[var(--border)] px-2 py-1.5 text-[var(--muted)]" title={item.full_path}>
+                    {item.full_path}
+                  </td>
+                  <td className="border-b border-[var(--border)] px-2 py-1.5 whitespace-nowrap text-[var(--text)]">
                     {item.is_dir ? "" : formatBytes(item.size)}
                   </td>
-                  <td className="border-b border-[var(--border)] px-2 py-1.5 text-[var(--text)]">
+                  <td className="border-b border-[var(--border)] px-2 py-1.5 whitespace-nowrap text-[var(--text)]">
                     {formatDate(item.modified_at)}
                   </td>
-                  <td className="border-b border-[var(--border)] px-2 py-1.5 text-[var(--text)]">
+                  <td className="border-b border-[var(--border)] px-2 py-1.5 whitespace-nowrap text-[var(--text)]">
                     {item.is_dir ? t("app.labels.dir", "Папка") : t("app.labels.file", "Файл")}
                   </td>
                 </tr>
