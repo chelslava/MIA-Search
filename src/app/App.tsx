@@ -727,6 +727,10 @@ export function App() {
 
     Promise.all([
       onSearchBatch((payload) => {
+        if (activeSearchIdRef.current === null) {
+          activeSearchIdRef.current = payload.search_id;
+          setActiveSearchId(payload.search_id);
+        }
         if (payload.search_id !== activeSearchIdRef.current) {
           return;
         }
@@ -734,6 +738,10 @@ export function App() {
         setCheckedPaths((prev) => prev + payload.results.length);
       }),
       onSearchDone((payload) => {
+        if (activeSearchIdRef.current === null) {
+          activeSearchIdRef.current = payload.search_id;
+          setActiveSearchId(payload.search_id);
+        }
         if (payload.search_id !== activeSearchIdRef.current) {
           return;
         }
@@ -747,6 +755,10 @@ export function App() {
         void refreshPersistenceData();
       }),
       onSearchCancelled((payload) => {
+        if (activeSearchIdRef.current === null) {
+          activeSearchIdRef.current = payload.search_id;
+          setActiveSearchId(payload.search_id);
+        }
         if (payload.search_id !== activeSearchIdRef.current) {
           return;
         }
@@ -758,6 +770,10 @@ export function App() {
         }
       }),
       onSearchError((payload) => {
+        if (activeSearchIdRef.current === null) {
+          activeSearchIdRef.current = payload.search_id;
+          setActiveSearchId(payload.search_id);
+        }
         if (payload.search_id !== activeSearchIdRef.current) {
           return;
         }
