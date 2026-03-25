@@ -63,6 +63,17 @@ button {
   overflow: auto;
 }
 
+.statusbar {
+  min-height: 38px;
+  max-height: 38px;
+  height: 38px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-wrap: nowrap;
+  align-content: center;
+  flex: 0 0 auto;
+}
+
 .search-input {
   min-width: 180px;
 }
