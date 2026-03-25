@@ -7,11 +7,11 @@ use crate::core::ranking::sort_results;
 use chrono::{DateTime, Utc};
 use regex::Regex;
 use rust_search::{FileSize, FilterExt, SearchBuilder};
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::SystemTime;
 
@@ -56,6 +56,7 @@ fn option_date_filter_eq(
 }
 
 const BATCH_SIZE: usize = 100;
+const MAX_SCAN_WORKERS: usize = 12;
 
 #[derive(Debug, Clone, Default)]
 pub struct SearchExecution {
@@ -223,21 +224,40 @@ impl SearchService {
     let mut seen_paths = HashSet::new();
     let mut batch = Vec::with_capacity(BATCH_SIZE);
     let tasks = build_scan_tasks(request, &roots);
+    let worker_count = compute_worker_count(tasks.len());
+    let request_ref = Arc::new(request.clone());
+    let task_queue = Arc::new(Mutex::new(VecDeque::from(tasks)));
     let (tx, rx) = mpsc::channel::<String>();
-    let mut workers = Vec::with_capacity(tasks.len());
+    let mut workers = Vec::with_capacity(worker_count);
 
-    for (task_root, task_ext) in tasks {
+    for _ in 0..worker_count {
       let worker_tx = tx.clone();
-      let worker_request = request.clone();
+      let worker_request = request_ref.clone();
+      let worker_queue = task_queue.clone();
       let worker_cancel = cancel_flag.clone();
       workers.push(thread::spawn(move || {
-        let builder = build_builder(&worker_request, &task_root, task_ext.as_deref());
-        for path in builder.build() {
+        loop {
           if worker_cancel.load(Ordering::Acquire) {
             break;
           }
-          if worker_tx.send(path).is_err() {
+
+          let next_task = worker_queue
+            .lock()
+            .ok()
+            .and_then(|mut queue| queue.pop_front());
+
+          let Some((task_root, task_ext)) = next_task else {
             break;
+          };
+
+          let builder = build_builder(&worker_request, &task_root, task_ext.as_deref());
+          for path in builder.build() {
+            if worker_cancel.load(Ordering::Acquire) {
+              break;
+            }
+            if worker_tx.send(path).is_err() {
+              break;
+            }
           }
         }
       }));
@@ -433,6 +453,17 @@ fn build_scan_tasks(request: &SearchRequest, roots: &[String]) -> Vec<(String, O
       })
       .collect()
   }
+}
+
+fn compute_worker_count(task_count: usize) -> usize {
+  if task_count == 0 {
+    return 1;
+  }
+  let system_parallelism = thread::available_parallelism()
+    .map(|value| value.get())
+    .unwrap_or(4);
+  let bounded_parallelism = system_parallelism.min(MAX_SCAN_WORKERS);
+  bounded_parallelism.max(1).min(task_count)
 }
 
 fn build_builder(request: &SearchRequest, default_root: &str, ext_override: Option<&str>) -> SearchBuilder {

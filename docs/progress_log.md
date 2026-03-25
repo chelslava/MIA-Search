@@ -12,6 +12,10 @@
 
 ### Выполнено
 - Исправлен wildcard-поиск при лимитах (`/wc *.xls*` и аналогичные сценарии).
+- Реализован параллельный поиск с потоковой выдачей:
+  - worker pool с ограничением числа потоков;
+  - безопасное объединение результатов через канал;
+  - корректная отмена и `search_id`-безопасность событий.
 - Существенно доработан компактный UI:
   - фиксированный status bar;
   - компактная левая панель с tree roots;
@@ -21,6 +25,7 @@
 - Расширены backend тесты по `core`, `commands`, `storage`, `platform`, `main`.
 - Достигнуто покрытие backend >80%:
   - `cargo llvm-cov --summary-only`: **TOTAL Regions Cover 81.14%**.
+- Проведены release perf-smoke прогоны (`plain`/`wildcard`) после перехода на streaming + parallel.
 
 ### Проверки
 - `cargo test`: 61 passed, 0 failed.

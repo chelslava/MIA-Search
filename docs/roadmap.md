@@ -6,7 +6,7 @@
 
 ### Что уже реализовано
 - Desktop-приложение на `Tauri 2 + React + TypeScript`.
-- Поисковое ядро на Rust (`rust_search`) с потоковой выдачей и отменой.
+- Поисковое ядро на Rust (`rust_search`) с потоковой выдачей, отменой и параллельным worker-pool сканированием.
 - Multi-root поиск, depth/limit, strict/ignore_case/include_hidden.
 - Режимы запроса: `plain`, `wildcard`, `regex` + inline-команды в строке поиска.
 - Фильтры (тип, расширения, размер, дата), сортировки, dedupe.
@@ -35,7 +35,7 @@ MVP считается готовым, когда:
 - [x] Исправить wildcard-поиск по нескольким root при лимитах.
 - [x] Поднять backend coverage до 80%+.
 - [ ] Добить edge-cases поиска (permission denied, пустые/битые пути, очень длинные пути).
-- [ ] Минимальный perf-прогон на «тяжёлых» root (оценка latency первого батча и общего времени).
+- [x] Минимальный perf-прогон на «тяжёлых» root (оценка latency первого батча и общего времени).
 
 ## Этап M2: Release Candidate (28-30 марта 2026)
 - [ ] Собрать и проверить `cargo tauri build` для Windows.
