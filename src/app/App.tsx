@@ -42,6 +42,9 @@ const defaultRoots: RootItem[] = [{ path: ".", enabled: true }];
 const rowHeight = 34;
 
 export function App() {
+  const { t, i18n } = useTranslation();
+  const tr = (key: string, defaultValue: string, values?: Record<string, unknown>) =>
+    t(key, { defaultValue, ...(values ?? {}) });
   const [query, setQuery] = useState("");
   const [roots, setRoots] = useState<RootItem[]>(defaultRoots);
   const [newRoot, setNewRoot] = useState("");
@@ -68,7 +71,7 @@ export function App() {
   const [customLimit, setCustomLimit] = useState(500);
   const [results, setResults] = useState<SearchResultItem[]>([]);
   const [selectedPath, setSelectedPath] = useState<string | null>(null);
-  const [status, setStatus] = useState("Готово");
+  const [status, setStatus] = useState(tr("app.status.ready", "Готово"));
   const [activeSearchId, setActiveSearchId] = useState<number | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [limitReached, setLimitReached] = useState(false);
@@ -106,7 +109,6 @@ export function App() {
   const [newThemeBg, setNewThemeBg] = useState("#1b1f2a");
   const [newThemeText, setNewThemeText] = useState("#e7edf8");
   const [newThemeAccent, setNewThemeAccent] = useState("#4a8cff");
-  const { i18n } = useTranslation();
   const language = i18n.resolvedLanguage === "en" ? "en" : "ru";
   const [listHeight, setListHeight] = useState(460);
   const [scrollTop, setScrollTop] = useState(0);
@@ -115,12 +117,12 @@ export function App() {
   const themeOptions = useMemo(() => {
     const systemTheme: ThemePreset = {
       id: "system",
-      name: "Системная",
+      name: tr("app.themes.system", "Системная"),
       colors: builtInThemes[0].colors,
       builtIn: true
     };
     return [systemTheme].concat(builtInThemes, customThemes);
-  }, [customThemes]);
+  }, [customThemes, tr]);
 
   const activeTheme = useMemo(() => {
     if (themeId === "system") {
@@ -153,34 +155,73 @@ export function App() {
     if (entryKind !== "Any") {
       items.push({
         id: "entry",
-        label: entryKind === "File" ? "Только файлы" : "Только папки",
+        label:
+          entryKind === "File"
+            ? tr("app.chips.filesOnly", "Только файлы")
+            : tr("app.chips.dirsOnly", "Только папки"),
         remove: () => setEntryKind("Any")
       });
     }
     if (extensionsRaw.trim()) {
-      items.push({ id: "ext", label: `Расширения: ${extensionsRaw}`, remove: () => setExtensionsRaw("") });
+      items.push({
+        id: "ext",
+        label: tr("app.chips.extensions", "Расширения: {{extensions}}", { extensions: extensionsRaw }),
+        remove: () => setExtensionsRaw("")
+      });
     }
     if (!maxDepthUnlimited) {
-      items.push({ id: "depth", label: `Глубина: ${maxDepth}`, remove: () => setMaxDepthUnlimited(true) });
+      items.push({
+        id: "depth",
+        label: tr("app.chips.depth", "Глубина: {{depth}}", { depth: maxDepth }),
+        remove: () => setMaxDepthUnlimited(true)
+      });
     }
     if (sizeFilterEnabled) {
       const signs: Record<SizeComparison, string> = { Greater: ">", Smaller: "<", Equal: "=" };
       items.push({
         id: "size",
-        label: `Размер ${signs[sizeComparison]} ${sizeValue} ${sizeUnit}`,
+        label: tr("app.chips.size", "Размер {{sign}} {{value}} {{unit}}", {
+          sign: signs[sizeComparison],
+          value: sizeValue,
+          unit: sizeUnit
+        }),
         remove: () => setSizeFilterEnabled(false)
       });
     }
     if (modifiedFilterEnabled) {
-      items.push({ id: "modified", label: "Дата изменения", remove: () => setModifiedFilterEnabled(false) });
+      items.push({
+        id: "modified",
+        label: tr("app.chips.modified", "Дата изменения"),
+        remove: () => setModifiedFilterEnabled(false)
+      });
     }
     if (createdFilterEnabled) {
-      items.push({ id: "created", label: "Дата создания", remove: () => setCreatedFilterEnabled(false) });
+      items.push({
+        id: "created",
+        label: tr("app.chips.created", "Дата создания"),
+        remove: () => setCreatedFilterEnabled(false)
+      });
     }
-    if (strict) items.push({ id: "strict", label: "Строгий режим", remove: () => setStrict(false) });
-    if (!ignoreCase) items.push({ id: "case", label: "С учетом регистра", remove: () => setIgnoreCase(true) });
-    if (includeHidden) items.push({ id: "hidden", label: "Скрытые", remove: () => setIncludeHidden(false) });
-    if (limit !== null) items.push({ id: "limit", label: `Лимит: ${limit}`, remove: () => setLimitMode("none") });
+    if (strict) {
+      items.push({ id: "strict", label: tr("app.chips.strict", "Строгий режим"), remove: () => setStrict(false) });
+    }
+    if (!ignoreCase) {
+      items.push({
+        id: "case",
+        label: tr("app.chips.caseSensitive", "С учетом регистра"),
+        remove: () => setIgnoreCase(true)
+      });
+    }
+    if (includeHidden) {
+      items.push({ id: "hidden", label: tr("app.chips.hidden", "Скрытые"), remove: () => setIncludeHidden(false) });
+    }
+    if (limit !== null) {
+      items.push({
+        id: "limit",
+        label: tr("app.chips.limit", "Лимит: {{limit}}", { limit }),
+        remove: () => setLimitMode("none")
+      });
+    }
     return items;
   }, [
     createdFilterEnabled,
@@ -196,7 +237,8 @@ export function App() {
     sizeFilterEnabled,
     sizeUnit,
     sizeValue,
-    strict
+    strict,
+    tr
   ]);
 
   const visibleRows = useMemo(() => {
@@ -215,18 +257,26 @@ export function App() {
 
   const commandActions = useMemo<CommandPaletteAction[]>(
     () => [
-      { id: "cmd-new", label: "> Новый поиск", run: () => void handleSearch() },
-      { id: "cmd-clear-history", label: "> Очистить историю", run: () => void handleClearHistory() },
+      { id: "cmd-new", label: tr("app.commands.newSearch", "> Новый поиск"), run: () => void handleSearch() },
+      {
+        id: "cmd-clear-history",
+        label: tr("app.commands.clearHistory", "> Очистить историю"),
+        run: () => void handleClearHistory()
+      },
       {
         id: "cmd-theme",
-        label: "> Переключить тему",
+        label: tr("app.commands.toggleTheme", "> Переключить тему"),
         run: () => setThemeId((prev) => (prev === "dark" ? "light" : "dark"))
       },
-      { id: "cmd-focus", label: "/ Фокус в строку поиска", run: () => searchInputRef.current?.focus() },
+      {
+        id: "cmd-focus",
+        label: tr("app.commands.focusSearch", "/ Фокус в строку поиска"),
+        run: () => searchInputRef.current?.focus()
+      },
       {
         id: "cmd-help",
-        label: "? Горячие клавиши",
-        run: () => pushToast("⌘K, ⌘F, Esc, F5, ↑/↓, Enter", "info")
+        label: tr("app.commands.help", "? Горячие клавиши"),
+        run: () => pushToast(tr("app.messages.hotkeys", "⌘K, ⌘F, Esc, F5, ↑/↓, Enter"), "info")
       },
       ...profiles.map((profile) => ({
         id: `profile-${profile.id}`,
@@ -234,7 +284,7 @@ export function App() {
         run: () => applyProfile(profile)
       }))
     ],
-    [profiles]
+    [profiles, tr]
   );
 
   function pushToast(text: string, kind: ToastItem["kind"] = "info"): void {
@@ -276,7 +326,7 @@ export function App() {
       setHistory(historySnapshot);
       setProfiles(profileItems);
     } catch {
-      setStatus("Ошибка загрузки данных");
+      setStatus(tr("app.status.persistenceError", "Ошибка загрузки данных"));
     }
   }
 
@@ -336,14 +386,14 @@ export function App() {
   }
   async function handleSearch(): Promise<void> {
     if (!tauriRuntimeAvailable) {
-      setStatus("Tauri runtime не обнаружен");
+      setStatus(tr("app.status.tauriUnavailable", "Tauri runtime не обнаружен"));
       return;
     }
     setResults([]);
     setSelectedPath(null);
     setCheckedPaths(0);
     setLimitReached(false);
-    setStatus("Сканирование...");
+    setStatus(tr("app.status.scanning", "Сканирование..."));
     setIsSearching(true);
     setSearchStartedAt(Date.now());
     setElapsedMs(null);
@@ -353,8 +403,8 @@ export function App() {
       setActiveSearchId(response.search_id);
     } catch (error) {
       setIsSearching(false);
-      setStatus(`Ошибка запуска: ${String(error)}`);
-      pushToast("Не удалось запустить поиск", "error");
+      setStatus(tr("app.status.startError", "Ошибка запуска: {{error}}", { error: String(error) }));
+      pushToast(tr("app.toast.searchStartFailed", "Не удалось запустить поиск"), "error");
     }
   }
 
@@ -362,9 +412,9 @@ export function App() {
     if (!tauriRuntimeAvailable) return;
     try {
       await cancelSearch();
-      setStatus("Остановка...");
+      setStatus(tr("app.status.stopping", "Остановка..."));
     } catch {
-      setStatus("Не удалось остановить поиск");
+      setStatus(tr("app.status.stopError", "Не удалось остановить поиск"));
     }
   }
 
@@ -374,7 +424,7 @@ export function App() {
       await actionOpenPath(path);
       await refreshPersistenceData();
     } catch {
-      pushToast("Не удалось открыть элемент", "error");
+      pushToast(tr("app.toast.openFailed", "Не удалось открыть элемент"), "error");
     }
   }
 
@@ -384,7 +434,7 @@ export function App() {
       await actionOpenParent(path);
       await refreshPersistenceData();
     } catch {
-      pushToast("Не удалось открыть родительскую папку", "error");
+      pushToast(tr("app.toast.openParentFailed", "Не удалось открыть родительскую папку"), "error");
     }
   }
 
@@ -393,7 +443,7 @@ export function App() {
     try {
       await actionRevealPath(path);
     } catch {
-      pushToast("Не удалось показать в проводнике", "error");
+      pushToast(tr("app.toast.revealFailed", "Не удалось показать в проводнике"), "error");
     }
   }
 
@@ -401,9 +451,9 @@ export function App() {
     if (!tauriRuntimeAvailable) return;
     try {
       await actionCopyToClipboard(path);
-      pushToast("Путь скопирован", "success");
+      pushToast(tr("app.toast.pathCopied", "Путь скопирован"), "success");
     } catch {
-      pushToast("Не удалось скопировать путь", "error");
+      pushToast(tr("app.toast.pathCopyFailed", "Не удалось скопировать путь"), "error");
     }
   }
 
@@ -411,9 +461,9 @@ export function App() {
     if (!tauriRuntimeAvailable) return;
     try {
       await actionCopyToClipboard(name);
-      pushToast("Имя скопировано", "success");
+      pushToast(tr("app.toast.nameCopied", "Имя скопировано"), "success");
     } catch {
-      pushToast("Не удалось скопировать имя", "error");
+      pushToast(tr("app.toast.nameCopyFailed", "Не удалось скопировать имя"), "error");
     }
   }
 
@@ -434,9 +484,9 @@ export function App() {
     try {
       const updated = await favoritesAdd(path);
       setFavorites(updated);
-      pushToast("Добавлено в избранное", "success");
+      pushToast(tr("app.toast.favoriteAdded", "Добавлено в избранное"), "success");
     } catch {
-      pushToast("Не удалось добавить в избранное", "error");
+      pushToast(tr("app.toast.favoriteAddFailed", "Не удалось добавить в избранное"), "error");
     }
   }
 
@@ -446,7 +496,7 @@ export function App() {
       await favoritesRemove(path);
       setFavorites((previous) => previous.filter((item) => item !== path));
     } catch {
-      pushToast("Не удалось удалить из избранного", "error");
+      pushToast(tr("app.toast.favoriteRemoveFailed", "Не удалось удалить из избранного"), "error");
     }
   }
 
@@ -462,9 +512,9 @@ export function App() {
       });
       setNewProfileName("");
       await refreshPersistenceData();
-      pushToast("Профиль сохранен", "success");
+      pushToast(tr("app.toast.profileSaved", "Профиль сохранен"), "success");
     } catch {
-      pushToast("Не удалось сохранить профиль", "error");
+      pushToast(tr("app.toast.profileSaveFailed", "Не удалось сохранить профиль"), "error");
     }
   }
 
@@ -474,7 +524,7 @@ export function App() {
       await profilesDelete(profileId);
       setProfiles((previous) => previous.filter((item) => item.id !== profileId));
     } catch {
-      pushToast("Не удалось удалить профиль", "error");
+      pushToast(tr("app.toast.profileDeleteFailed", "Не удалось удалить профиль"), "error");
     }
   }
 
@@ -483,16 +533,16 @@ export function App() {
     try {
       const snapshot = await historyClear();
       setHistory(snapshot);
-      pushToast("История очищена", "success");
+      pushToast(tr("app.toast.historyCleared", "История очищена"), "success");
     } catch {
-      pushToast("Не удалось очистить историю", "error");
+      pushToast(tr("app.toast.historyClearFailed", "Не удалось очистить историю"), "error");
     }
   }
 
   function createCustomTheme(): void {
     const name = newThemeName.trim();
     if (!name) {
-      pushToast("Введите имя темы", "info");
+      pushToast(tr("app.toast.themeNameRequired", "Введите имя темы"), "info");
       return;
     }
     const id = `custom-${Date.now()}`;
@@ -547,7 +597,7 @@ export function App() {
         setCheckedPaths((prev) => prev + payload.results.length);
       }),
       onSearchDone((payload) => {
-        setStatus("Готово");
+        setStatus(tr("app.status.ready", "Готово"));
         setLimitReached(payload.limit_reached);
         setIsSearching(false);
         setActiveSearchId(null);
@@ -557,7 +607,7 @@ export function App() {
         void refreshPersistenceData();
       }),
       onSearchCancelled(() => {
-        setStatus("Остановлено");
+        setStatus(tr("app.status.stopped", "Остановлено"));
         setIsSearching(false);
         setActiveSearchId(null);
         if (searchStartedAt !== null) {
@@ -565,7 +615,7 @@ export function App() {
         }
       }),
       onSearchError((payload) => {
-        setStatus(`Ошибка: ${payload.message}`);
+        setStatus(tr("app.status.error", "Ошибка: {{message}}", { message: payload.message }));
         setIsSearching(false);
         setActiveSearchId(null);
         if (searchStartedAt !== null) {
@@ -581,7 +631,7 @@ export function App() {
         unlisten.push(...handlers);
       })
       .catch(() => {
-        setStatus("Ошибка подписки событий");
+        setStatus(tr("app.status.eventsError", "Ошибка подписки событий"));
       });
 
     return () => {
@@ -727,71 +777,76 @@ export function App() {
   }, []);
 
   const statusText = useMemo(() => {
-    const elapsed = elapsedMs === null ? "-" : `${(elapsedMs / 1000).toFixed(2)} сек`;
-    const warning = limitReached ? `Показано только ${results.length} результатов` : "";
+    const elapsed =
+      elapsedMs === null
+        ? "-"
+        : tr("app.status.elapsedSeconds", "{{value}} сек", { value: (elapsedMs / 1000).toFixed(2) });
+    const warning = limitReached
+      ? tr("app.status.limitWarning", "Показано только {{count}} результатов", { count: results.length })
+      : "";
     return { elapsed, warning };
-  }, [elapsedMs, limitReached, results.length]);
+  }, [elapsedMs, limitReached, results.length, tr]);
   return (
     <>
       <main className="app">
         <header className="topbar">
-          <button className="icon-btn" type="button" onClick={() => setLeftVisible((prev) => !prev)} title="Левая панель">☰</button>
+          <button className="icon-btn" type="button" onClick={() => setLeftVisible((prev) => !prev)} title={tr("app.tooltips.leftPanel", "Левая панель")}>☰</button>
           <input
             ref={searchInputRef}
             className="search-input"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="Поиск файлов и папок..."
+            placeholder={tr("app.search.placeholder", "Поиск файлов и папок...")}
           />
-          {query ? <button className="icon-btn" type="button" onClick={() => setQuery("")} title="Очистить">✕</button> : null}
+          {query ? <button className="icon-btn" type="button" onClick={() => setQuery("")} title={tr("app.tooltips.clear", "Очистить")}>✕</button> : null}
           {isSearching ? (
-            <button className="primary-btn" type="button" onClick={() => void handleCancel()}>Отменить поиск</button>
+            <button className="primary-btn" type="button" onClick={() => void handleCancel()}>{tr("app.actions.cancelSearch", "Отменить поиск")}</button>
           ) : (
-            <button className="primary-btn" type="button" onClick={() => void handleSearch()}>🔎 Поиск</button>
+            <button className="primary-btn" type="button" onClick={() => void handleSearch()}>{tr("app.actions.searchTop", "🔎 Поиск")}</button>
           )}
-          <label className="toggle" title="Live search">
+          <label className="toggle" title={tr("app.tooltips.liveSearch", "Live search")}>
             <input type="checkbox" checked={liveSearch} onChange={(event) => setLiveSearch(event.target.checked)} />
-            <span>Live</span>
+            <span>{tr("app.labels.live", "Live")}</span>
           </label>
-          <button className="icon-btn" type="button" onClick={() => setFiltersOpen((prev) => !prev)} title="Фильтры">⏷</button>
+          <button className="icon-btn" type="button" onClick={() => setFiltersOpen((prev) => !prev)} title={tr("app.tooltips.filters", "Фильтры")}>⏷</button>
           <select className="theme-select" value={themeId} onChange={(event) => setThemeId(event.target.value)}>
             {themeOptions.map((theme) => (
               <option value={theme.id} key={theme.id}>🎨 {theme.name}</option>
             ))}
           </select>
-          <button className="icon-btn" type="button" onClick={() => setPaletteOpen(true)} title="Командная палитра">⌘K</button>
-          <button className="icon-btn" type="button" onClick={() => setSettingsOpen((prev) => !prev)} title="Настройки">⚙</button>
-          <button className="icon-btn" type="button" onClick={() => setRightVisible((prev) => !prev)} title="Правая панель">⫸</button>
+          <button className="icon-btn" type="button" onClick={() => setPaletteOpen(true)} title={tr("app.tooltips.commandPalette", "Командная палитра")}>⌘K</button>
+          <button className="icon-btn" type="button" onClick={() => setSettingsOpen((prev) => !prev)} title={tr("app.tooltips.settings", "Настройки")}>⚙</button>
+          <button className="icon-btn" type="button" onClick={() => setRightVisible((prev) => !prev)} title={tr("app.tooltips.rightPanel", "Правая панель")}>⫸</button>
         </header>
 
         {isSearching ? <div className="progress-line" /> : null}
 
         {filtersOpen ? (
-          <section className="filters-panel" aria-label="Расширенные фильтры">
+          <section className="filters-panel" aria-label={tr("app.filters.ariaLabel", "Расширенные фильтры")}>
             <div className="filter-grid">
               <fieldset>
-                <legend>Тип элементов</legend>
-                <label><input type="radio" checked={entryKind === "Any"} onChange={() => setEntryKind("Any")} /> Файлы и папки</label>
-                <label><input type="radio" checked={entryKind === "File"} onChange={() => setEntryKind("File")} /> Только файлы</label>
-                <label><input type="radio" checked={entryKind === "Directory"} onChange={() => setEntryKind("Directory")} /> Только папки</label>
+                <legend>{tr("app.filters.kind.legend", "Тип элементов")}</legend>
+                <label><input type="radio" checked={entryKind === "Any"} onChange={() => setEntryKind("Any")} /> {tr("app.filters.kind.any", "Файлы и папки")}</label>
+                <label><input type="radio" checked={entryKind === "File"} onChange={() => setEntryKind("File")} /> {tr("app.filters.kind.file", "Только файлы")}</label>
+                <label><input type="radio" checked={entryKind === "Directory"} onChange={() => setEntryKind("Directory")} /> {tr("app.filters.kind.directory", "Только папки")}</label>
               </fieldset>
               <fieldset>
-                <legend>Расширения</legend>
-                <input value={extensionsRaw} onChange={(event) => setExtensionsRaw(event.target.value)} placeholder="rs, txt, md" />
-                <small>Разделяйте значения запятыми</small>
+                <legend>{tr("app.filters.extensions.legend", "Расширения")}</legend>
+                <input value={extensionsRaw} onChange={(event) => setExtensionsRaw(event.target.value)} placeholder={tr("app.filters.extensions.placeholder", "rs, txt, md")} />
+                <small>{tr("app.filters.extensions.hint", "Разделяйте значения запятыми")}</small>
               </fieldset>
               <fieldset>
-                <legend>Глубина</legend>
-                <label><input type="checkbox" checked={maxDepthUnlimited} onChange={(event) => setMaxDepthUnlimited(event.target.checked)} /> Без ограничений</label>
+                <legend>{tr("app.filters.depth.legend", "Глубина")}</legend>
+                <label><input type="checkbox" checked={maxDepthUnlimited} onChange={(event) => setMaxDepthUnlimited(event.target.checked)} /> {tr("app.filters.depth.unlimited", "Без ограничений")}</label>
                 <input type="range" min={0} max={10} value={maxDepth} disabled={maxDepthUnlimited} onChange={(event) => setMaxDepth(Number(event.target.value))} />
                 <input type="number" min={0} max={10} value={maxDepth} disabled={maxDepthUnlimited} onChange={(event) => setMaxDepth(Number(event.target.value))} />
               </fieldset>
               <fieldset>
-                <legend>Размер</legend>
-                <label><input type="checkbox" checked={sizeFilterEnabled} onChange={(event) => setSizeFilterEnabled(event.target.checked)} /> Учитывать</label>
+                <legend>{tr("app.filters.size.legend", "Размер")}</legend>
+                <label><input type="checkbox" checked={sizeFilterEnabled} onChange={(event) => setSizeFilterEnabled(event.target.checked)} /> {tr("app.filters.size.enabled", "Учитывать")}</label>
                 <div className="inline-row">
                   <select value={sizeComparison} disabled={!sizeFilterEnabled} onChange={(event) => setSizeComparison(event.target.value as SizeComparison)}>
-                    <option value="Greater">больше</option><option value="Smaller">меньше</option><option value="Equal">равно</option>
+                    <option value="Greater">{tr("app.filters.size.comparison.greater", "больше")}</option><option value="Smaller">{tr("app.filters.size.comparison.smaller", "меньше")}</option><option value="Equal">{tr("app.filters.size.comparison.equal", "равно")}</option>
                   </select>
                   <input type="number" min={0} value={sizeValue} disabled={!sizeFilterEnabled} onChange={(event) => setSizeValue(Math.max(0, Number(event.target.value) || 0))} />
                   <select value={sizeUnit} disabled={!sizeFilterEnabled} onChange={(event) => setSizeUnit(event.target.value as "B" | "KB" | "MB" | "GB" | "TB")}>
@@ -800,68 +855,68 @@ export function App() {
                 </div>
               </fieldset>
               <fieldset>
-                <legend>Дата изменения</legend>
-                <label><input type="checkbox" checked={modifiedFilterEnabled} onChange={(event) => setModifiedFilterEnabled(event.target.checked)} /> Учитывать</label>
+                <legend>{tr("app.filters.modified.legend", "Дата изменения")}</legend>
+                <label><input type="checkbox" checked={modifiedFilterEnabled} onChange={(event) => setModifiedFilterEnabled(event.target.checked)} /> {tr("app.filters.modified.enabled", "Учитывать")}</label>
                 <div className="inline-row">
                   <input type="datetime-local" disabled={!modifiedFilterEnabled} value={modifiedAfter} onChange={(event) => setModifiedAfter(event.target.value)} />
                   <input type="datetime-local" disabled={!modifiedFilterEnabled} value={modifiedBefore} onChange={(event) => setModifiedBefore(event.target.value)} />
                 </div>
               </fieldset>
               <fieldset>
-                <legend>Дата создания</legend>
-                <label><input type="checkbox" checked={createdFilterEnabled} onChange={(event) => setCreatedFilterEnabled(event.target.checked)} /> Учитывать</label>
+                <legend>{tr("app.filters.created.legend", "Дата создания")}</legend>
+                <label><input type="checkbox" checked={createdFilterEnabled} onChange={(event) => setCreatedFilterEnabled(event.target.checked)} /> {tr("app.filters.created.enabled", "Учитывать")}</label>
                 <div className="inline-row">
                   <input type="datetime-local" disabled={!createdFilterEnabled} value={createdAfter} onChange={(event) => setCreatedAfter(event.target.value)} />
                   <input type="datetime-local" disabled={!createdFilterEnabled} value={createdBefore} onChange={(event) => setCreatedBefore(event.target.value)} />
                 </div>
               </fieldset>
               <fieldset>
-                <legend>Режимы</legend>
-                <label><input type="checkbox" checked={strict} onChange={(event) => setStrict(event.target.checked)} /> Строгий режим</label>
-                <label><input type="checkbox" checked={ignoreCase} onChange={(event) => setIgnoreCase(event.target.checked)} /> Игнорировать регистр</label>
-                <label><input type="checkbox" checked={includeHidden} onChange={(event) => setIncludeHidden(event.target.checked)} /> Включать скрытые</label>
+                <legend>{tr("app.filters.modes.legend", "Режимы")}</legend>
+                <label><input type="checkbox" checked={strict} onChange={(event) => setStrict(event.target.checked)} /> {tr("app.filters.modes.strict", "Строгий режим")}</label>
+                <label><input type="checkbox" checked={ignoreCase} onChange={(event) => setIgnoreCase(event.target.checked)} /> {tr("app.filters.modes.ignoreCase", "Игнорировать регистр")}</label>
+                <label><input type="checkbox" checked={includeHidden} onChange={(event) => setIncludeHidden(event.target.checked)} /> {tr("app.filters.modes.hidden", "Включать скрытые")}</label>
               </fieldset>
               <fieldset>
-                <legend>Лимит результатов</legend>
+                <legend>{tr("app.filters.limit.legend", "Лимит результатов")}</legend>
                 <label><input type="radio" checked={limitMode === "100"} onChange={() => setLimitMode("100")} /> 100</label>
                 <label><input type="radio" checked={limitMode === "500"} onChange={() => setLimitMode("500")} /> 500</label>
                 <label><input type="radio" checked={limitMode === "1000"} onChange={() => setLimitMode("1000")} /> 1000</label>
-                <label><input type="radio" checked={limitMode === "custom"} onChange={() => setLimitMode("custom")} /> Пользовательский</label>
+                <label><input type="radio" checked={limitMode === "custom"} onChange={() => setLimitMode("custom")} /> {tr("app.filters.limit.custom", "Пользовательский")}</label>
                 <input type="number" min={1} disabled={limitMode !== "custom"} value={customLimit} onChange={(event) => setCustomLimit(Math.max(1, Number(event.target.value) || 1))} />
-                <label><input type="radio" checked={limitMode === "none"} onChange={() => setLimitMode("none")} /> Без лимита</label>
+                <label><input type="radio" checked={limitMode === "none"} onChange={() => setLimitMode("none")} /> {tr("app.filters.limit.none", "Без лимита")}</label>
               </fieldset>
             </div>
             <div className="filters-actions">
-              <button className="primary-btn" type="button" onClick={() => { setFiltersOpen(false); void handleSearch(); }}>Применить</button>
-              <button className="ghost-btn" type="button" onClick={clearAllFilters}>Сбросить все</button>
+              <button className="primary-btn" type="button" onClick={() => { setFiltersOpen(false); void handleSearch(); }}>{tr("app.filters.apply", "Применить")}</button>
+              <button className="ghost-btn" type="button" onClick={clearAllFilters}>{tr("app.filters.resetAll", "Сбросить все")}</button>
             </div>
           </section>
         ) : null}
 
         {settingsOpen ? (
-          <section className="settings-panel" aria-label="Настройки">
+          <section className="settings-panel" aria-label={tr("app.settings.ariaLabel", "Настройки")}>
             <div className="settings-grid">
               <div>
-                <h4>Общие</h4>
-                <label>Язык
+                <h4>{tr("app.settings.general", "Общие")}</h4>
+                <label>{tr("app.settings.language", "Язык")}
                   <select value={language} onChange={(event) => void i18n.changeLanguage(event.target.value)}>
-                    <option value="ru">Русский</option><option value="en">English</option>
+                    <option value="ru">{tr("app.settings.language.ru", "Русский")}</option><option value="en">{tr("app.settings.language.en", "English")}</option>
                   </select>
                 </label>
-                <label>Live search по умолчанию
+                <label>{tr("app.settings.liveSearchDefault", "Live search по умолчанию")}
                   <input type="checkbox" checked={liveSearch} onChange={(event) => setLiveSearch(event.target.checked)} />
                 </label>
-                <label>Debounce (мс)
+                <label>{tr("app.settings.debounce", "Debounce (мс)")}
                   <input type="number" min={100} max={2000} value={debounceMs} onChange={(event) => setDebounceMs(Math.max(100, Number(event.target.value) || 300))} />
                 </label>
               </div>
               <div>
-                <h4>Пользовательская тема</h4>
-                <input placeholder="Имя темы" value={newThemeName} onChange={(event) => setNewThemeName(event.target.value)} />
-                <label>Фон <input type="color" value={newThemeBg} onChange={(event) => setNewThemeBg(event.target.value)} /></label>
-                <label>Текст <input type="color" value={newThemeText} onChange={(event) => setNewThemeText(event.target.value)} /></label>
-                <label>Акцент <input type="color" value={newThemeAccent} onChange={(event) => setNewThemeAccent(event.target.value)} /></label>
-                <button className="primary-btn" type="button" onClick={createCustomTheme}>Создать тему</button>
+                <h4>{tr("app.settings.customTheme", "Пользовательская тема")}</h4>
+                <input placeholder={tr("app.settings.themeName.placeholder", "Имя темы")} value={newThemeName} onChange={(event) => setNewThemeName(event.target.value)} />
+                <label>{tr("app.settings.themeBg", "Фон")} <input type="color" value={newThemeBg} onChange={(event) => setNewThemeBg(event.target.value)} /></label>
+                <label>{tr("app.settings.themeText", "Текст")} <input type="color" value={newThemeText} onChange={(event) => setNewThemeText(event.target.value)} /></label>
+                <label>{tr("app.settings.themeAccent", "Акцент")} <input type="color" value={newThemeAccent} onChange={(event) => setNewThemeAccent(event.target.value)} /></label>
+                <button className="primary-btn" type="button" onClick={createCustomTheme}>{tr("app.settings.createTheme", "Создать тему")}</button>
               </div>
             </div>
           </section>
@@ -884,12 +939,12 @@ export function App() {
               }}
             >
               <details open>
-                <summary>Корневые пути</summary>
+                <summary>{tr("app.roots.summary", "Корневые пути")}</summary>
                 <div className="section-block">
-                  <strong>Основной: {primaryRoot}</strong>
+                  <strong>{tr("app.roots.primary", "Основной: {{path}}", { path: primaryRoot })}</strong>
                   <div className="inline-row">
-                    <input value={newRoot} onChange={(event) => setNewRoot(event.target.value)} placeholder="Новый путь" />
-                    <button type="button" onClick={handleAddRoot}>Добавить путь</button>
+                    <input value={newRoot} onChange={(event) => setNewRoot(event.target.value)} placeholder={tr("app.roots.newPath.placeholder", "Новый путь")} />
+                    <button type="button" onClick={handleAddRoot}>{tr("app.roots.addPath", "Добавить путь")}</button>
                   </div>
                   <ul className="list">
                     {roots.map((root) => (
@@ -919,11 +974,11 @@ export function App() {
               </details>
 
               <details open>
-                <summary>Профили поиска</summary>
+                <summary>{tr("app.profiles.summary", "Профили поиска")}</summary>
                 <div className="section-block">
                   <div className="inline-row">
-                    <input value={newProfileName} onChange={(event) => setNewProfileName(event.target.value)} placeholder="Имя профиля" />
-                    <button type="button" onClick={() => void handleSaveProfile()}>Сохранить</button>
+                    <input value={newProfileName} onChange={(event) => setNewProfileName(event.target.value)} placeholder={tr("app.profiles.name.placeholder", "Имя профиля")} />
+                    <button type="button" onClick={() => void handleSaveProfile()}>{tr("app.profiles.save", "Сохранить")}</button>
                   </div>
                   <ul className="list">
                     {profiles.map((profile) => (
@@ -937,7 +992,7 @@ export function App() {
               </details>
 
               <details open>
-                <summary>Избранное</summary>
+                <summary>{tr("app.favorites.summary", "Избранное")}</summary>
                 <div className="section-block">
                   <ul className="list">
                     {favorites.map((path) => (
@@ -951,13 +1006,13 @@ export function App() {
               </details>
 
               <details open>
-                <summary>История поиска</summary>
+                <summary>{tr("app.history.summary", "История поиска")}</summary>
                 <div className="section-block">
-                  <button type="button" className="ghost-btn" onClick={() => void handleClearHistory()}>Очистить историю</button>
+                  <button type="button" className="ghost-btn" onClick={() => void handleClearHistory()}>{tr("app.history.clear", "Очистить историю")}</button>
                   <ul className="list">
                     {history.queries.slice(0, 10).map((item, index) => (
                       <li key={`${item.query}-${index}`}>
-                        <button type="button" className="link-btn" onClick={() => setQuery(item.query)}>{item.query || "(пустой запрос)"}</button>
+                        <button type="button" className="link-btn" onClick={() => setQuery(item.query)}>{item.query || tr("app.history.emptyQuery", "(пустой запрос)")}</button>
                       </li>
                     ))}
                   </ul>
@@ -970,22 +1025,22 @@ export function App() {
           <section className="center-panel" ref={resultPaneRef}>
             <div className="center-toolbar">
               <div className="inline-row">
-                <button className={displayMode === "table" ? "mode-btn active" : "mode-btn"} type="button" onClick={() => setDisplayMode("table")}>Таблица</button>
-                <button className={displayMode === "compact" ? "mode-btn active" : "mode-btn"} type="button" onClick={() => setDisplayMode("compact")}>Компактно</button>
-                <button className={displayMode === "cards" ? "mode-btn active" : "mode-btn"} type="button" onClick={() => setDisplayMode("cards")}>Карточки</button>
+                <button className={displayMode === "table" ? "mode-btn active" : "mode-btn"} type="button" onClick={() => setDisplayMode("table")}>{tr("app.viewModes.table", "Таблица")}</button>
+                <button className={displayMode === "compact" ? "mode-btn active" : "mode-btn"} type="button" onClick={() => setDisplayMode("compact")}>{tr("app.viewModes.compact", "Компактно")}</button>
+                <button className={displayMode === "cards" ? "mode-btn active" : "mode-btn"} type="button" onClick={() => setDisplayMode("cards")}>{tr("app.viewModes.cards", "Карточки")}</button>
               </div>
               <div className="inline-row">
                 <select value={sortMode} onChange={(event) => setSortMode(event.target.value as SortMode)}>
-                  <option value="Relevance">По релевантности</option>
-                  <option value="Name">По имени</option>
-                  <option value="Size">По размеру</option>
-                  <option value="Modified">По дате изменения</option>
-                  <option value="Type">По типу</option>
+                  <option value="Relevance">{tr("app.sort.relevance", "По релевантности")}</option>
+                  <option value="Name">{tr("app.sort.name", "По имени")}</option>
+                  <option value="Size">{tr("app.sort.size", "По размеру")}</option>
+                  <option value="Modified">{tr("app.sort.modified", "По дате изменения")}</option>
+                  <option value="Type">{tr("app.sort.type", "По типу")}</option>
                 </select>
                 {isSearching ? (
-                  <button className="primary-btn" type="button" onClick={() => void handleCancel()}>Отменить поиск</button>
+                  <button className="primary-btn" type="button" onClick={() => void handleCancel()}>{tr("app.actions.cancelSearch", "Отменить поиск")}</button>
                 ) : (
-                  <button className="primary-btn" type="button" onClick={() => void handleSearch()}>Поиск</button>
+                  <button className="primary-btn" type="button" onClick={() => void handleSearch()}>{tr("app.actions.search", "Поиск")}</button>
                 )}
               </div>
             </div>
@@ -994,7 +1049,7 @@ export function App() {
               {chips.map((chip) => (
                 <button key={chip.id} className="chip" type="button" onClick={chip.remove}>{chip.label} ✕</button>
               ))}
-              {chips.length > 0 ? <button className="ghost-btn" type="button" onClick={clearAllFilters}>Сбросить все фильтры</button> : null}
+              {chips.length > 0 ? <button className="ghost-btn" type="button" onClick={clearAllFilters}>{tr("app.filters.resetAllFilters", "Сбросить все фильтры")}</button> : null}
             </div>
 
             {displayMode === "cards" ? (
@@ -1005,9 +1060,9 @@ export function App() {
                     className={selectedPath === item.full_path ? "result-card selected" : "result-card"}
                     onClick={() => setSelectedPath(item.full_path)}
                   >
-                    <div className="card-title">{item.is_dir ? "📁" : "📄"} {item.name || "Без имени"}</div>
+                    <div className="card-title">{item.is_dir ? "📁" : "📄"} {item.name || tr("app.common.unnamed", "Без имени")}</div>
                     <div className="card-path">{item.full_path}</div>
-                    <div className="card-meta">{item.is_dir ? "Папка" : "Файл"} • {formatBytes(item.size) || "-"}</div>
+                    <div className="card-meta">{item.is_dir ? tr("app.common.folder", "Папка") : tr("app.common.file", "Файл")} • {formatBytes(item.size) || "-"}</div>
                   </article>
                 ))}
               </div>
@@ -1016,12 +1071,12 @@ export function App() {
                 <table className="results-table">
                   <thead>
                     <tr>
-                      <th>Иконка</th>
-                      <th>Имя</th>
-                      <th>Полный путь</th>
-                      <th>Размер</th>
-                      <th>Дата изменения</th>
-                      <th>Тип</th>
+                      <th>{tr("app.results.columns.icon", "Иконка")}</th>
+                      <th>{tr("app.results.columns.name", "Имя")}</th>
+                      <th>{tr("app.results.columns.path", "Полный путь")}</th>
+                      <th>{tr("app.results.columns.size", "Размер")}</th>
+                      <th>{tr("app.results.columns.modified", "Дата изменения")}</th>
+                      <th>{tr("app.results.columns.type", "Тип")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1043,11 +1098,11 @@ export function App() {
                         }}
                       >
                         <td className={item.hidden ? "muted-40" : ""}>{item.is_dir ? "📁" : "📄"}</td>
-                        <td className={item.is_dir ? "name-cell dir" : "name-cell"}>{item.name || "Без имени"}</td>
+                        <td className={item.is_dir ? "name-cell dir" : "name-cell"}>{item.name || tr("app.common.unnamed", "Без имени")}</td>
                         <td className="path-cell">{item.full_path}</td>
                         <td>{item.is_dir ? "" : formatBytes(item.size)}</td>
                         <td>{formatDate(item.modified_at)}</td>
-                        <td>{item.is_dir ? "Папка" : "Файл"}</td>
+                        <td>{item.is_dir ? tr("app.common.folder", "Папка") : tr("app.common.file", "Файл")}</td>
                       </tr>
                     ))}
 
@@ -1066,65 +1121,65 @@ export function App() {
 
           {rightVisible ? (
             <aside className="right-panel">
-              <h3>Детали</h3>
+              <h3>{tr("app.details.title", "Детали")}</h3>
               {selectedResult ? (
                 <div className="detail-grid">
                   <div className="detail-icon">{selectedResult.is_dir ? "📁" : "📄"}</div>
-                  <div><strong>{selectedResult.name || "Без имени"}</strong></div>
-                  <label>Полный путь</label>
+                  <div><strong>{selectedResult.name || tr("app.common.unnamed", "Без имени")}</strong></div>
+                  <label>{tr("app.details.fullPath", "Полный путь")}</label>
                   <div className="copy-row">
                     <span className="truncate">{selectedResult.full_path}</span>
-                    <button type="button" onClick={() => void handleCopyPath(selectedResult.full_path)}>Копия</button>
+                    <button type="button" onClick={() => void handleCopyPath(selectedResult.full_path)}>{tr("app.details.copy", "Копия")}</button>
                   </div>
-                  <label>Размер</label>
+                  <label>{tr("app.details.size", "Размер")}</label>
                   <div>{selectedResult.is_dir ? "" : formatBytes(selectedResult.size)}</div>
-                  <label>Дата создания</label>
+                  <label>{tr("app.details.created", "Дата создания")}</label>
                   <div>{formatDate(selectedResult.created_at)}</div>
-                  <label>Дата изменения</label>
+                  <label>{tr("app.details.modified", "Дата изменения")}</label>
                   <div>{formatDate(selectedResult.modified_at)}</div>
-                  <label>Скрытый</label>
-                  <div>{selectedResult.hidden ? "Да" : "Нет"}</div>
-                  <label>Корневой источник</label>
+                  <label>{tr("app.details.hidden", "Скрытый")}</label>
+                  <div>{selectedResult.hidden ? tr("app.common.yes", "Да") : tr("app.common.no", "Нет")}</div>
+                  <label>{tr("app.details.sourceRoot", "Корневой источник")}</label>
                   <div>{selectedResult.source_root}</div>
                   <div className="actions-stack">
-                    <button type="button" onClick={() => void handleOpenPath(selectedResult.full_path)}>Открыть</button>
-                    <button type="button" onClick={() => void handleOpenParent(selectedResult.full_path)}>Открыть родительскую папку</button>
-                    <button type="button" onClick={() => void handleRevealPath(selectedResult.full_path)}>Показать в файловом менеджере</button>
-                    <button type="button" onClick={() => void handleCopyPath(selectedResult.full_path)}>Копировать путь</button>
-                    <button type="button" onClick={() => void handleAddFavorite(selectedResult.full_path)}>Добавить в избранное</button>
+                    <button type="button" onClick={() => void handleOpenPath(selectedResult.full_path)}>{tr("app.details.open", "Открыть")}</button>
+                    <button type="button" onClick={() => void handleOpenParent(selectedResult.full_path)}>{tr("app.details.openParent", "Открыть родительскую папку")}</button>
+                    <button type="button" onClick={() => void handleRevealPath(selectedResult.full_path)}>{tr("app.details.reveal", "Показать в файловом менеджере")}</button>
+                    <button type="button" onClick={() => void handleCopyPath(selectedResult.full_path)}>{tr("app.details.copyPath", "Копировать путь")}</button>
+                    <button type="button" onClick={() => void handleAddFavorite(selectedResult.full_path)}>{tr("app.details.addFavorite", "Добавить в избранное")}</button>
                   </div>
                 </div>
               ) : (
-                <p className="muted">Выберите элемент в списке результатов.</p>
+                <p className="muted">{tr("app.details.empty", "Выберите элемент в списке результатов.")}</p>
               )}
             </aside>
           ) : null}
         </section>
 
         <footer className="statusbar">
-          <span>Найдено: {results.length} элементов</span>
-          <span>Статус: {status}</span>
-          <span>Время: {statusText.elapsed}</span>
-          {statusText.warning ? <span className="warning">▲ {statusText.warning}</span> : null}
-          <span>Проверено: {checkedPaths}</span>
-          <span>ID: {activeSearchId ?? "-"}</span>
+          <span>{tr("app.statusbar.found", "Найдено: {{count}} элементов", { count: results.length })}</span>
+          <span>{tr("app.statusbar.status", "Статус: {{status}}", { status })}</span>
+          <span>{tr("app.statusbar.time", "Время: {{elapsed}}", { elapsed: statusText.elapsed })}</span>
+          {statusText.warning ? <span className="warning">{tr("app.statusbar.warningPrefix", "▲")} {statusText.warning}</span> : null}
+          <span>{tr("app.statusbar.checked", "Проверено: {{count}}", { count: checkedPaths })}</span>
+          <span>{tr("app.statusbar.searchId", "ID: {{id}}", { id: activeSearchId ?? "-" })}</span>
         </footer>
 
         {contextMenu ? (
           <div className="context-menu" style={{ left: contextMenu.x, top: contextMenu.y }} role="menu">
             {contextMenu.type === "result" ? (
               <>
-                <button type="button" onClick={() => void handleOpenPath(contextMenu.item.full_path)}>Открыть</button>
-                <button type="button" onClick={() => void handleOpenParent(contextMenu.item.full_path)}>Открыть родительскую папку</button>
-                <button type="button" onClick={() => void handleRevealPath(contextMenu.item.full_path)}>Показать в файловом менеджере</button>
-                <button type="button" onClick={() => void handleCopyPath(contextMenu.item.full_path)}>Копировать полный путь</button>
-                <button type="button" onClick={() => void handleCopyName(contextMenu.item.name)}>Копировать имя</button>
-                <button type="button" onClick={() => void handleAddFavorite(contextMenu.item.full_path)}>Добавить в избранное</button>
+                <button type="button" onClick={() => void handleOpenPath(contextMenu.item.full_path)}>{tr("app.context.open", "Открыть")}</button>
+                <button type="button" onClick={() => void handleOpenParent(contextMenu.item.full_path)}>{tr("app.context.openParent", "Открыть родительскую папку")}</button>
+                <button type="button" onClick={() => void handleRevealPath(contextMenu.item.full_path)}>{tr("app.context.reveal", "Показать в файловом менеджере")}</button>
+                <button type="button" onClick={() => void handleCopyPath(contextMenu.item.full_path)}>{tr("app.context.copyPath", "Копировать полный путь")}</button>
+                <button type="button" onClick={() => void handleCopyName(contextMenu.item.name)}>{tr("app.context.copyName", "Копировать имя")}</button>
+                <button type="button" onClick={() => void handleAddFavorite(contextMenu.item.full_path)}>{tr("app.context.addFavorite", "Добавить в избранное")}</button>
               </>
             ) : (
               <>
-                <button type="button" onClick={() => setPrimaryRoot(contextMenu.path)}>Сделать основным</button>
-                <button type="button" onClick={() => setRoots((previous) => previous.filter((item) => item.path !== contextMenu.path))}>Удалить</button>
+                <button type="button" onClick={() => setPrimaryRoot(contextMenu.path)}>{tr("app.context.makePrimary", "Сделать основным")}</button>
+                <button type="button" onClick={() => setRoots((previous) => previous.filter((item) => item.path !== contextMenu.path))}>{tr("app.context.delete", "Удалить")}</button>
               </>
             )}
           </div>
