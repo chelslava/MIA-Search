@@ -56,6 +56,7 @@ fn option_date_filter_eq(
 }
 
 const BATCH_SIZE: usize = 100;
+const FIRST_BATCH_SIZE: usize = 20;
 const MAX_SCAN_WORKERS: usize = 12;
 
 #[derive(Debug, Clone, Default)]
@@ -223,6 +224,7 @@ impl SearchService {
     let mut total_results = 0usize;
     let mut seen_paths = HashSet::new();
     let mut batch = Vec::with_capacity(BATCH_SIZE);
+    let mut current_batch_limit = FIRST_BATCH_SIZE;
     let tasks = build_scan_tasks(request, &roots);
     let worker_count = compute_worker_count(tasks.len());
     let request_ref = Arc::new(request.clone());
@@ -295,12 +297,13 @@ impl SearchService {
       batch.push(item);
       total_results = total_results.saturating_add(1);
 
-      if batch.len() >= BATCH_SIZE {
+      if batch.len() >= current_batch_limit {
         if cancel_flag.load(Ordering::Acquire) && !limit_reached {
           break;
         }
         sort_stream_batch(&mut batch, &request.options.sort_mode, &query);
         on_batch(std::mem::take(&mut batch));
+        current_batch_limit = BATCH_SIZE;
       }
 
       if let Some(limit) = request.options.limit {
