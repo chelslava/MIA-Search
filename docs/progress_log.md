@@ -3,66 +3,30 @@
 ## 2026-03-24
 
 ### Выполнено
-- Инициализирован git-репозиторий в `d:/Repo/MIA-Search`.
-- Создана структура проекта по ТЗ (`src-tauri`, `src`, `public`, `docs`).
-- Поднят минимальный frontend-скелет (`React + TypeScript`) с базовым `App`.
-- Поднят backend-скелет Tauri с модулями `commands/core/storage/platform`.
-- Подключён `rust_search = 2.1.0` и реализован `SearchService::execute(...)`.
-- Реализованы:
-  - multi-root (`location` + `more_locations`);
-  - strict / ignore_case / hidden;
-  - depth / limit;
-  - files / dirs / mixed через `custom_filter`;
-  - ответ `search_start` с подтверждением запуска и `search_id`.
-  - потоковая выдача через события Tauri: `search:batch`, `search:done`, `search:cancelled`, `search:error`;
-  - отмена текущего поиска при `search_cancel`;
-  - авто-отмена предыдущего поиска при новом `search_start`.
-  - frontend-интеграция с Tauri commands/events:
-    - invoke: `search_start`, `search_cancel`;
-    - listen: `search:batch`, `search:done`, `search:cancelled`, `search:error`;
-  - UI-секции для `D-01` и `D-02`: search controls, roots panel, потоковый список результатов и статус.
-  - UI-фильтры: extension list, size filter, date filters.
-  - Мультирасширение в backend: N запусков + merge + dedupe.
-  - Переключаемые режимы сортировки: relevance / name / size / modified / type.
-  - Правая панель метаданных выбранного результата (`D-04`).
-  - Статус-область с elapsed временем (`D-05`).
-  - persistence-блок:
-    - загрузка state на старте (`AppState::bootstrap`, stores `load()`);
-    - сохранение settings/profiles/favorites/history на диск (`persist()`);
-    - команды `favorites_*` и `history_*`.
-  - UI-подключение persistence:
-    - отображение favorites/history/profiles;
-    - сохранение и применение профилей;
-    - добавление/удаление избранного для выбранного результата.
-- Для истории добавлен лимит размера (`max_history_entries`) с обрезкой старых записей.
-- UX-блок:
-  - командная палитра (`Ctrl/Cmd+K`);
-  - горячие клавиши (`Ctrl/Cmd+F`, `Esc`, `Enter`, `Ctrl/Cmd+C`, `F5`);
-  - toast-уведомления;
-  - skeleton-состояние результатов;
-  - чипы активных фильтров и `Reset all`.
-- Блок действий над результатами:
-  - open file/folder;
-  - open parent directory;
-  - reveal in file manager;
-  - copy full path / copy name.
-- Тестовый блок:
-  - добавлены unit-тесты для `search_mapper`, `filters`, `ranking`;
-  - добавлены integration-style тесты для `SearchService`;
-  - `cargo test`: 9 passed, 0 failed.
-- UI smoke блок:
-  - добавлен `vitest` + `@testing-library/react` + `jsdom`;
-  - добавлены smoke-тесты `src/app/App.smoke.test.tsx` (4 сценария);
-  - `npm run smoke` проходит.
-- Добавлен релизный checklist: `docs/release_smoke_checklist.md`.
+- Инициализирован проект и базовая архитектура (`src-tauri/core/commands/storage/platform`).
+- Реализован потоковый поиск и отмена в backend.
+- Реализованы основные фильтры/сортировки и интеграция frontend-backend.
+- Добавлены stores (settings/history/favorites/profiles) и базовый UI.
+
+## 2026-03-25
+
+### Выполнено
+- Исправлен wildcard-поиск при лимитах (`/wc *.xls*` и аналогичные сценарии).
+- Существенно доработан компактный UI:
+  - фиксированный status bar;
+  - компактная левая панель с tree roots;
+  - выбор root через системный диалог;
+  - быстрые кнопки команд поиска с контекстными подсказками.
+- Добавлен toggle включения regex в настройках.
+- Расширены backend тесты по `core`, `commands`, `storage`, `platform`, `main`.
+- Достигнуто покрытие backend >80%:
+  - `cargo llvm-cov --summary-only`: **TOTAL Regions Cover 81.14%**.
 
 ### Проверки
-- `cargo check` (в `src-tauri`) проходит успешно.
-- `npm run check` проходит успешно.
-- `npm run build` проходит успешно (в sandbox запуск требуется с elevated permissions из-за `spawn EPERM`).
+- `cargo test`: 61 passed, 0 failed.
+- `npm run check`: успешно.
+- `npm run test`: успешно (локально; в sandbox возможны ограничения `spawn EPERM`).
 
-### Ограничения окружения
-- В sandbox `vite build` периодически падает с `spawn EPERM`; elevated-run решает проблему.
-
-### Следующий шаг
-- Закрыть остаток `H-05`: smoke-прогоны Linux/macOS и финальный release checklist.
+### Следующие шаги до MVP
+- Финальный `cargo tauri build` и ручной Windows smoke на артефакте.
+- Завершение пользовательской документации и MVP release notes.

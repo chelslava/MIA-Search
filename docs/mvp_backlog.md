@@ -1,67 +1,52 @@
-# MVP Backlog (до первого релиза)
+# MVP Backlog (актуально на 25 марта 2026)
 
-Цель MVP: закрыть базовый и продвинутый поиск из ТЗ с потоковой выдачей, без полной финализации UX/i18n.
+Цель MVP: стабильный desktop-поиск файлов/папок с потоковой выдачей, фильтрами, действиями над результатами и готовой Windows-сборкой.
 
-## Scope MVP (Must Have)
+## Must Have (для выхода в MVP)
 
-1. Платформа и архитектура
-- [x] Инициализация `Tauri 2 + React + TS`
-- [x] Backend-слои и модели данных (`SearchRequest`, `SearchResultItem`, ...)
-- [x] IPC-команды поиска и настроек
+## 1. Core и поиск
+- [x] `SearchService` на Rust с потоковой выдачей батчами.
+- [x] Multi-root, depth, limit, strict, ignore_case, include_hidden.
+- [x] Режимы запроса: `plain`, `wildcard`, `regex`.
+- [x] Отмена поиска (ручная и авто-отмена прошлого live-запроса).
+- [x] Корректная обработка wildcard при лимитах (фикс внесён).
 
-2. Core поиск
-- [x] `SearchService`-обёртка над `rust_search`
-- [x] Поддержка multi-root (`location` + `more_locations`)
-- [x] Поддержка `strict`, `ignore_case`, `hidden`, `depth`, `limit`
-- [x] Режимы files/dirs/mixed через `custom_filter`
-- [x] Потоковая выдача батчами
-- [x] Отмена поиска (ручная + для live mode)
+## 2. Фильтры и сортировка
+- [x] Entry kind (files/dirs/all).
+- [x] Расширения (single + multi merge/dedupe).
+- [x] Размер и даты (created/modified).
+- [x] Сортировки: relevance/name/size/modified/type.
 
-3. Фильтры и сортировка
-- [x] Фильтр по расширению (single)
-- [x] Мультирасширение на уровне приложения (merge + dedupe)
-- [x] Фильтры размера (>, <, =)
-- [x] Фильтры дат (created/modified before/after)
-- [x] Сортировки: relevance (`similarity_sort`), name, size, modified, type
+## 3. UI и взаимодействие
+- [x] Компактная верхняя панель поиска.
+- [x] Быстрые кнопки команд под полем поиска + контекстные подсказки.
+- [x] Левая панель root-путей + выбор папки через системный диалог.
+- [x] Дерево дисков/папок (компактное).
+- [x] Правая панель деталей.
+- [x] Фиксированный статус-бар без растягивания.
+- [x] Горячие клавиши и командная палитра.
 
-4. UI MVP
-- [x] Строка поиска + search/clear
-- [x] Панель корневых путей
-- [x] Список результатов (минимум table/list)
-- [x] Базовая правая панель метаданных
-- [x] Статус-бар: count/status/time/limit reached
-- [x] Чипы активных фильтров + reset
-- [x] Toast/skeleton/hotkeys/command palette
+## 4. Persistence и actions
+- [x] Settings/History/Favorites/Profiles stores.
+- [x] Open/Open parent/Reveal/Copy path/name.
 
-5. Действия над результатами
-- [x] Open
-- [x] Open parent
-- [x] Reveal in file manager
-- [x] Copy full path / copy name
+## 5. Качество
+- [x] Backend unit/integration tests.
+- [x] Full backend coverage >= 80% (`cargo llvm-cov`: 81.14% Regions).
+- [x] Frontend smoke (`npm run test`, `npm run check`).
+- [ ] Финальный Windows release smoke (`cargo tauri build` + ручной чек-лист).
 
-6. Базовое хранение данных
-- [x] Настройки (минимальный набор)
-- [x] История запросов
-- [x] Профили поиска (минимально: save/load)
+## 6. Документация и релиз
+- [ ] Финализировать пользовательскую инструкцию запуска и сценарии поиска.
+- [ ] Зафиксировать MVP release notes.
 
-7. Качество MVP
-- [x] Unit-тесты ядра (минимальный критичный набор)
-- [x] Integration-тесты (multi-root, limits, hidden, filters)
-- [x] Smoke на целевой ОС (минимум Windows)
+## Out of MVP (следующая фаза)
+- Linux/macOS полный smoke и release-артефакты.
+- Продвинутые диагностические метрики в UI.
+- CI pipeline для мультиплатформенных сборок.
+- Глубокий UX polish и дополнительные режимы представления.
 
-## Out of MVP (в следующую фазу)
-- Полная локализация RU/EN.
-- Командная палитра.
-- Продвинутые UX-анимации и cards-view.
-- Полный набор accessibility-проверок.
-- Расширенная диагностика и экспорт/импорт настроек.
-- Полноценные кроссплатформенные release-пайплайны.
-
-## Definition of Done для MVP
-- Поиск не блокирует интерфейс.
-- Результаты приходят потоково.
-- Доступны файлы/директории/смешанный режим.
-- Работают фильтры по расширению, глубине, лимиту, размеру, датам.
-- Работает релевантная сортировка через `similarity_sort`.
-- Есть история и сохранённые профили (базово).
-- Стабильная desktop-сборка минимум для Windows.
+## Definition of Done (MVP)
+- Все пункты Must Have закрыты.
+- Нету P0-блокеров по поиску/событиям/отображению результатов.
+- Windows release-сборка проходит и подтверждена smoke-checklist.

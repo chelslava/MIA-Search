@@ -1,32 +1,29 @@
 # Release Smoke Checklist
 
-Дата последнего прогона: **25 марта 2026**
+Дата последнего обновления: **25 марта 2026**
 
-## Frontend smoke
+## Автоматические проверки
 - [x] `npm run check`
-- [x] `npm run test` (Vitest UI smoke)
+- [x] `npm run test`
 - [x] `npm run build`
-- [x] `npm run smoke`
-
-## Backend smoke
 - [x] `cargo check`
 - [x] `cargo test`
+- [x] `cargo llvm-cov --summary-only` >= 80% regions (факт: 81.14%)
 
-## Manual scenario smoke (Windows)
-- [x] Запуск поиска из UI
-- [x] Потоковая выдача результатов
-- [x] Отмена поиска
-- [x] Фильтры (extension, size, date)
-- [x] Сортировки (relevance/name/size/modified/type)
-- [x] Действия над результатами (open/open parent/reveal/copy)
-- [x] Favorites / History / Profiles persistence
-- [x] Горячие клавиши и командная палитра
+## Ручной smoke (Windows)
+- [ ] Запуск release-версии после `cargo tauri build`
+- [ ] Поиск: plain / wildcard / regex
+- [ ] Поиск по нескольким root (включая дерево дисков)
+- [ ] Отмена поиска и повторный запуск
+- [ ] Фильтры и сортировки
+- [ ] Действия результата: open / open parent / reveal / copy
+- [ ] Проверка stores: history / favorites / profiles / settings
+- [ ] Проверка горячих клавиш и command palette
 
-## Cross-platform packaging smoke
-- [x] Windows: локальные smoke-проверки выполнены
-- [ ] Linux: smoke-проверки не выполнялись в текущем окружении
-- [ ] macOS: smoke-проверки не выполнялись в текущем окружении
+## Кроссплатформенный smoke
+- [ ] Linux
+- [ ] macOS
 
-## Notes
-- В текущем sandbox `vite`/`vitest` иногда требуют elevated запуск из-за `spawn EPERM`.
-- Для финального релиза нужен отдельный прогон smoke на Linux и macOS.
+## Примечания
+- Для финального MVP-билда обязательна ручная проверка именно release-артефакта.
+- В sandbox-окружениях возможны ошибки `spawn EPERM` для `vite/vitest`; это не всегда дефект кода.
