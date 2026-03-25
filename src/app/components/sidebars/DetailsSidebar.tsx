@@ -24,16 +24,16 @@ export function DetailsSidebar({
   onAddFavorite
 }: DetailsSidebarProps) {
   return (
-    <aside className="flex h-full min-h-0 min-w-0 flex-col gap-2 overflow-y-auto overflow-x-hidden border-l border-[var(--border)] bg-[var(--surface)] p-2 text-[var(--text)] shadow-[0_10px_30px_rgba(0,0,0,0.12)]">
-      <div className="flex items-center justify-between gap-3">
+    <aside className="flex h-full min-h-0 min-w-0 flex-col gap-1.5 overflow-y-auto overflow-x-hidden border-l border-[var(--border)] bg-[var(--surface)] p-1.5 text-[var(--text)]">
+      <div className="flex items-center justify-between gap-2">
         <h3 className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
           {tr("app.details.title", "Детали")}
         </h3>
       </div>
       {selectedResult ? (
-        <div className="min-w-0 space-y-2 rounded-xl border border-[var(--border)] bg-[var(--surface-alt)] p-2">
+        <div className="min-w-0 space-y-1.5 rounded-md border border-[var(--border)] bg-[var(--surface-alt)] p-1.5">
           <div className="flex items-start gap-2">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[var(--border)] bg-[var(--surface)] text-lg">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface)] text-base">
               {selectedResult.is_dir ? "📁" : "📄"}
             </div>
             <div className="min-w-0 flex-1">
@@ -43,8 +43,8 @@ export function DetailsSidebar({
             </div>
           </div>
 
-          <dl className="grid gap-1.5 text-xs">
-            <div className="grid min-w-0 gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5">
+          <dl className="grid gap-1 text-xs">
+            <div className="grid min-w-0 gap-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1">
               <dt className="text-[10px] uppercase tracking-[0.1em] text-[var(--muted)]">
                 {tr("app.details.fullPath", "Полный путь")}
               </dt>
@@ -61,31 +61,31 @@ export function DetailsSidebar({
                 </Button>
               </dd>
             </div>
-            <div className="grid gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5">
+            <div className="grid gap-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1">
               <dt className="text-[10px] uppercase tracking-[0.1em] text-[var(--muted)]">
                 {tr("app.details.size", "Размер")}
               </dt>
               <dd>{selectedResult.is_dir ? "" : formatBytes(selectedResult.size)}</dd>
             </div>
-            <div className="grid gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5">
+            <div className="grid gap-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1">
               <dt className="text-[10px] uppercase tracking-[0.1em] text-[var(--muted)]">
                 {tr("app.details.created", "Дата создания")}
               </dt>
               <dd>{formatDate(selectedResult.created_at)}</dd>
             </div>
-            <div className="grid gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5">
+            <div className="grid gap-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1">
               <dt className="text-[10px] uppercase tracking-[0.1em] text-[var(--muted)]">
                 {tr("app.details.modified", "Дата изменения")}
               </dt>
               <dd>{formatDate(selectedResult.modified_at)}</dd>
             </div>
-            <div className="grid gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5">
+            <div className="grid gap-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1">
               <dt className="text-[10px] uppercase tracking-[0.1em] text-[var(--muted)]">
                 {tr("app.details.hidden", "Скрытый")}
               </dt>
               <dd>{selectedResult.hidden ? tr("app.common.yes", "Да") : tr("app.common.no", "Нет")}</dd>
             </div>
-            <div className="grid min-w-0 gap-1 rounded-lg border border-[var(--border)] bg-[var(--surface)] px-2 py-1.5">
+            <div className="grid min-w-0 gap-1 rounded-md border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1">
               <dt className="text-[10px] uppercase tracking-[0.1em] text-[var(--muted)]">
                 {tr("app.details.sourceRoot", "Корневой источник")}
               </dt>
@@ -93,7 +93,7 @@ export function DetailsSidebar({
             </div>
           </dl>
 
-          <div className="grid gap-1.5">
+          <div className="grid gap-1">
             <Button type="button" onClick={() => void onOpenPath(selectedResult.full_path)} className="h-8 w-full px-2 text-[12px]">
               {tr("app.details.open", "Открыть")}
             </Button>
@@ -132,7 +132,7 @@ export function DetailsSidebar({
           </div>
         </div>
       ) : (
-        <p className="rounded-lg border border-dashed border-[var(--border)] bg-[var(--surface-alt)] px-3 py-2 text-xs text-[var(--muted)]">
+        <p className="rounded-md border border-dashed border-[var(--border)] bg-[var(--surface-alt)] px-2 py-1.5 text-xs text-[var(--muted)]">
           {tr("app.details.empty", "Выберите элемент в списке результатов.")}
         </p>
       )}

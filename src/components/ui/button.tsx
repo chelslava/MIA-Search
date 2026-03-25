@@ -24,10 +24,10 @@ const variantClasses: Record<ButtonVariant, string> = {
 };
 
 const sizeClasses: Record<ButtonSize, string> = {
-  default: "h-10 px-4 py-2",
-  sm: "h-9 px-3 text-sm",
-  lg: "h-11 px-5 text-sm",
-  icon: "h-10 w-10 p-0"
+  default: "h-8 px-2.5 py-1 text-xs",
+  sm: "h-7 px-2 text-[11px]",
+  lg: "h-9 px-3 text-xs",
+  icon: "h-8 w-8 p-0"
 };
 
 export const Button = forwardRef(function Button(
@@ -39,7 +39,7 @@ export const Button = forwardRef(function Button(
       ref={ref}
       type={type}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-lg border px-3 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent disabled:pointer-events-none disabled:opacity-50",
+        "inline-flex items-center justify-center gap-1.5 rounded-md border font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent disabled:pointer-events-none disabled:opacity-50",
         variantClasses[variant],
         sizeClasses[size],
         className

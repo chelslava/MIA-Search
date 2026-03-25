@@ -53,9 +53,9 @@ export function ResultsWorkspace({
   t
 }: ResultsWorkspaceProps) {
   return (
-    <section ref={containerRef} className="flex h-full min-h-0 flex-col gap-3 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-alt)] p-3">
-        <div className="flex flex-wrap gap-2">
+    <section ref={containerRef} className="flex h-full min-h-0 flex-col gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] p-2">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-alt)] p-2">
+        <div className="flex flex-wrap gap-1">
           <Button
             type="button"
             size="sm"
@@ -81,7 +81,7 @@ export function ResultsWorkspace({
             {t("app.labels.viewCards", "Карточки")}
           </Button>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1">
           <Select
             value={sortMode}
             onChange={(event) => setSortMode(event.target.value as SortMode)}
@@ -105,7 +105,7 @@ export function ResultsWorkspace({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-1">
         {chips.map((chip) => (
           <Button
             key={chip.id}
@@ -113,7 +113,7 @@ export function ResultsWorkspace({
             variant="ghost"
             size="sm"
             onClick={chip.remove}
-            className="h-auto rounded-full border border-[var(--border)] px-3 py-1.5 text-xs font-medium"
+            className="h-auto rounded-md border border-[var(--border)] px-2 py-0.5 text-[11px] font-medium"
           >
             {chip.label} <span aria-hidden="true">✕</span>
           </Button>
@@ -127,7 +127,7 @@ export function ResultsWorkspace({
 
       {displayMode === "cards" ? (
         <div
-          className="grid min-h-0 flex-1 auto-rows-min gap-3 overflow-auto rounded-xl border border-[var(--border)] bg-[var(--surface-alt)] p-3 sm:grid-cols-2 xl:grid-cols-3"
+          className="grid min-h-0 flex-1 auto-rows-min gap-1.5 overflow-auto rounded-md border border-[var(--border)] bg-[var(--surface-alt)] p-1.5 sm:grid-cols-2 xl:grid-cols-3"
           onScroll={(event) => setScrollTop((event.currentTarget as HTMLDivElement).scrollTop)}
         >
           {results.map((item) => (
@@ -135,21 +135,21 @@ export function ResultsWorkspace({
               key={item.full_path}
               className={
                 selectedPath === item.full_path
-                  ? "cursor-pointer rounded-xl border border-[var(--accent)] bg-[color-mix(in_srgb,var(--surface)_88%,var(--accent))] p-4 shadow-sm transition-colors"
-                  : "cursor-pointer rounded-xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm transition-colors hover:border-[var(--accent)] hover:bg-[color-mix(in_srgb,var(--surface)_88%,var(--accent))]"
+                  ? "cursor-pointer rounded-md border border-[var(--accent)] bg-[color-mix(in_srgb,var(--surface)_88%,var(--accent))] p-2 transition-colors"
+                  : "cursor-pointer rounded-md border border-[var(--border)] bg-[var(--surface)] p-2 transition-colors hover:border-[var(--accent)] hover:bg-[color-mix(in_srgb,var(--surface)_88%,var(--accent))]"
               }
               onClick={() => onSelectPath(item.full_path)}
             >
-              <div className="mb-2 flex items-start gap-2 text-sm font-semibold text-[var(--text)]">
-                <span aria-hidden="true" className="text-base leading-none">
+              <div className="mb-1.5 flex items-start gap-1.5 text-xs font-semibold text-[var(--text)]">
+                <span aria-hidden="true" className="text-sm leading-none">
                   {item.is_dir ? "📁" : "📄"}
                 </span>
                 <span className="min-w-0 break-words">
                   {item.name || t("app.labels.noName", "Без имени")}
                 </span>
               </div>
-              <div className="mb-2 break-all text-xs text-[var(--muted)]">{item.full_path}</div>
-              <div className="text-xs text-[var(--muted)]">
+              <div className="mb-1 break-all text-[11px] text-[var(--muted)]">{item.full_path}</div>
+              <div className="text-[11px] text-[var(--muted)]">
                 {item.is_dir ? t("app.labels.dir", "Папка") : t("app.labels.file", "Файл")} {"•"}{" "}
                 {formatBytes(item.size) || "-"}
               </div>
@@ -158,18 +158,18 @@ export function ResultsWorkspace({
         </div>
       ) : (
         <div
-          className="min-h-0 flex-1 overflow-auto rounded-xl border border-[var(--border)] bg-[var(--surface-alt)]"
+          className="min-h-0 flex-1 overflow-auto rounded-md border border-[var(--border)] bg-[var(--surface-alt)]"
           onScroll={(event) => setScrollTop((event.currentTarget as HTMLDivElement).scrollTop)}
         >
-          <table className="w-full border-separate border-spacing-0 text-sm">
+          <table className="w-full border-separate border-spacing-0 text-xs">
             <thead className="sticky top-0 z-10 bg-[var(--surface-alt)]">
               <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
-                <th className="border-b border-[var(--border)] px-4 py-3 font-medium">{t("app.labels.colIcon", "Иконка")}</th>
-                <th className="border-b border-[var(--border)] px-4 py-3 font-medium">{t("app.labels.colName", "Имя")}</th>
-                <th className="border-b border-[var(--border)] px-4 py-3 font-medium">{t("app.labels.colPath", "Полный путь")}</th>
-                <th className="border-b border-[var(--border)] px-4 py-3 font-medium">{t("app.labels.colSize", "Размер")}</th>
-                <th className="border-b border-[var(--border)] px-4 py-3 font-medium">{t("app.labels.colModified", "Дата изменения")}</th>
-                <th className="border-b border-[var(--border)] px-4 py-3 font-medium">{t("app.labels.colType", "Тип")}</th>
+                <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium">{t("app.labels.colIcon", "Иконка")}</th>
+                <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium">{t("app.labels.colName", "Имя")}</th>
+                <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium">{t("app.labels.colPath", "Полный путь")}</th>
+                <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium">{t("app.labels.colSize", "Размер")}</th>
+                <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium">{t("app.labels.colModified", "Дата изменения")}</th>
+                <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium">{t("app.labels.colType", "Тип")}</th>
               </tr>
             </thead>
             <tbody>
@@ -191,20 +191,20 @@ export function ResultsWorkspace({
                   onClick={() => onSelectPath(item.full_path)}
                   onContextMenu={(event: MouseEvent<HTMLTableRowElement>) => onResultContextMenu(event, item)}
                 >
-                  <td className={`border-b border-[var(--border)] px-4 py-3 ${item.hidden ? "text-[var(--muted)] opacity-60" : ""}`}>
+                  <td className={`border-b border-[var(--border)] px-2 py-1.5 ${item.hidden ? "text-[var(--muted)] opacity-60" : ""}`}>
                     {item.is_dir ? "📁" : "📄"}
                   </td>
-                  <td className={`border-b border-[var(--border)] px-4 py-3 ${item.is_dir ? "font-medium text-[var(--text)]" : "text-[var(--text)]"}`}>
+                  <td className={`border-b border-[var(--border)] px-2 py-1.5 ${item.is_dir ? "font-medium text-[var(--text)]" : "text-[var(--text)]"}`}>
                     {item.name || t("app.labels.noName", "Без имени")}
                   </td>
-                  <td className="max-w-0 truncate border-b border-[var(--border)] px-4 py-3 text-[var(--muted)]">{item.full_path}</td>
-                  <td className="border-b border-[var(--border)] px-4 py-3 text-[var(--text)]">
+                  <td className="max-w-0 truncate border-b border-[var(--border)] px-2 py-1.5 text-[var(--muted)]">{item.full_path}</td>
+                  <td className="border-b border-[var(--border)] px-2 py-1.5 text-[var(--text)]">
                     {item.is_dir ? "" : formatBytes(item.size)}
                   </td>
-                  <td className="border-b border-[var(--border)] px-4 py-3 text-[var(--text)]">
+                  <td className="border-b border-[var(--border)] px-2 py-1.5 text-[var(--text)]">
                     {formatDate(item.modified_at)}
                   </td>
-                  <td className="border-b border-[var(--border)] px-4 py-3 text-[var(--text)]">
+                  <td className="border-b border-[var(--border)] px-2 py-1.5 text-[var(--text)]">
                     {item.is_dir ? t("app.labels.dir", "Папка") : t("app.labels.file", "Файл")}
                   </td>
                 </tr>

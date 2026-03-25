@@ -61,13 +61,13 @@ export function FiltersPanel({
 
   return (
     <section
-      className="space-y-5 rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm"
+      className="space-y-2 rounded-md border border-[var(--border)] bg-[var(--surface)] p-2"
       aria-label={tr("app.filters.ariaLabel", "Расширенные фильтры")}
     >
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <fieldset className="space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface-alt)] p-4">
-          <legend className="px-1 text-sm font-medium text-[var(--text)]">{tr("app.filters.kind.legend", "Тип элементов")}</legend>
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--text)]">
+      <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
+        <fieldset className="space-y-2 rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] p-2">
+          <legend className="px-1 text-xs font-medium text-[var(--text)]">{tr("app.filters.kind.legend", "Тип элементов")}</legend>
+          <label className="flex cursor-pointer items-center gap-1.5 text-xs text-[var(--text)]">
             <input
               type="radio"
               checked={entryKind === "Any"}
@@ -76,7 +76,7 @@ export function FiltersPanel({
             />
             {tr("app.filters.kind.any", "Файлы и папки")}
           </label>
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--text)]">
+          <label className="flex cursor-pointer items-center gap-1.5 text-xs text-[var(--text)]">
             <input
               type="radio"
               checked={entryKind === "File"}
@@ -85,7 +85,7 @@ export function FiltersPanel({
             />
             {tr("app.filters.kind.file", "Только файлы")}
           </label>
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--text)]">
+          <label className="flex cursor-pointer items-center gap-1.5 text-xs text-[var(--text)]">
             <input
               type="radio"
               checked={entryKind === "Directory"}
@@ -96,8 +96,8 @@ export function FiltersPanel({
           </label>
         </fieldset>
 
-        <fieldset className="space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface-alt)] p-4">
-          <legend className="px-1 text-sm font-medium text-[var(--text)]">{tr("app.filters.extensions.legend", "Расширения")}</legend>
+        <fieldset className="space-y-2 rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] p-2">
+          <legend className="px-1 text-xs font-medium text-[var(--text)]">{tr("app.filters.extensions.legend", "Расширения")}</legend>
           <Input
             value={extensionsRaw}
             onChange={(event) => onExtensionsRawChange(event.target.value)}
@@ -106,10 +106,10 @@ export function FiltersPanel({
           <small className="text-xs text-[var(--muted)]">{tr("app.filters.extensions.hint", "Разделяйте значения запятыми")}</small>
         </fieldset>
 
-        <fieldset className="space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface-alt)] p-4">
-          <legend className="px-1 text-sm font-medium text-[var(--text)]">{tr("app.filters.depth.legend", "Глубина")}</legend>
-          <div className="flex items-center justify-between gap-3">
-            <label htmlFor={maxDepthUnlimitedId} className="text-sm text-[var(--text)]">
+        <fieldset className="space-y-2 rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] p-2">
+          <legend className="px-1 text-xs font-medium text-[var(--text)]">{tr("app.filters.depth.legend", "Глубина")}</legend>
+          <div className="flex items-center justify-between gap-2">
+            <label htmlFor={maxDepthUnlimitedId} className="text-xs text-[var(--text)]">
               {tr("app.filters.depth.unlimited", "Без ограничений")}
             </label>
             <Switch
@@ -137,10 +137,10 @@ export function FiltersPanel({
           />
         </fieldset>
 
-        <fieldset className="space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface-alt)] p-4">
-          <legend className="px-1 text-sm font-medium text-[var(--text)]">{tr("app.filters.size.legend", "Размер")}</legend>
-          <div className="flex items-center justify-between gap-3">
-            <label htmlFor={sizeFilterEnabledId} className="text-sm text-[var(--text)]">
+        <fieldset className="space-y-2 rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] p-2">
+          <legend className="px-1 text-xs font-medium text-[var(--text)]">{tr("app.filters.size.legend", "Размер")}</legend>
+          <div className="flex items-center justify-between gap-2">
+            <label htmlFor={sizeFilterEnabledId} className="text-xs text-[var(--text)]">
               {tr("app.filters.size.enabled", "Учитывать")}
             </label>
             <Switch
@@ -149,7 +149,7 @@ export function FiltersPanel({
               onCheckedChange={onSizeFilterEnabledChange}
             />
           </div>
-          <div className="grid gap-3 sm:grid-cols-3">
+          <div className="grid gap-2 sm:grid-cols-3">
             <Select
               value={sizeComparison}
               disabled={!sizeFilterEnabled}
@@ -180,10 +180,10 @@ export function FiltersPanel({
           </div>
         </fieldset>
 
-        <fieldset className="space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface-alt)] p-4">
-          <legend className="px-1 text-sm font-medium text-[var(--text)]">{tr("app.filters.modified.legend", "Дата изменения")}</legend>
-          <div className="flex items-center justify-between gap-3">
-            <label htmlFor={modifiedFilterEnabledId} className="text-sm text-[var(--text)]">
+        <fieldset className="space-y-2 rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] p-2">
+          <legend className="px-1 text-xs font-medium text-[var(--text)]">{tr("app.filters.modified.legend", "Дата изменения")}</legend>
+          <div className="flex items-center justify-between gap-2">
+            <label htmlFor={modifiedFilterEnabledId} className="text-xs text-[var(--text)]">
               {tr("app.filters.modified.enabled", "Учитывать")}
             </label>
             <Switch
@@ -192,7 +192,7 @@ export function FiltersPanel({
               onCheckedChange={onModifiedFilterEnabledChange}
             />
           </div>
-          <div className="grid gap-3">
+          <div className="grid gap-2">
             <Input
               type="datetime-local"
               disabled={!modifiedFilterEnabled}
@@ -208,10 +208,10 @@ export function FiltersPanel({
           </div>
         </fieldset>
 
-        <fieldset className="space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface-alt)] p-4">
-          <legend className="px-1 text-sm font-medium text-[var(--text)]">{tr("app.filters.created.legend", "Дата создания")}</legend>
-          <div className="flex items-center justify-between gap-3">
-            <label htmlFor={createdFilterEnabledId} className="text-sm text-[var(--text)]">
+        <fieldset className="space-y-2 rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] p-2">
+          <legend className="px-1 text-xs font-medium text-[var(--text)]">{tr("app.filters.created.legend", "Дата создания")}</legend>
+          <div className="flex items-center justify-between gap-2">
+            <label htmlFor={createdFilterEnabledId} className="text-xs text-[var(--text)]">
               {tr("app.filters.created.enabled", "Учитывать")}
             </label>
             <Switch
@@ -220,7 +220,7 @@ export function FiltersPanel({
               onCheckedChange={onCreatedFilterEnabledChange}
             />
           </div>
-          <div className="grid gap-3">
+          <div className="grid gap-2">
             <Input
               type="datetime-local"
               disabled={!createdFilterEnabled}
@@ -236,10 +236,10 @@ export function FiltersPanel({
           </div>
         </fieldset>
 
-        <fieldset className="space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface-alt)] p-4">
-          <legend className="px-1 text-sm font-medium text-[var(--text)]">{tr("app.filters.modes.legend", "Режимы")}</legend>
-          <div className="flex items-center justify-between gap-3">
-            <label htmlFor={strictId} className="text-sm text-[var(--text)]">
+        <fieldset className="space-y-2 rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] p-2">
+          <legend className="px-1 text-xs font-medium text-[var(--text)]">{tr("app.filters.modes.legend", "Режимы")}</legend>
+          <div className="flex items-center justify-between gap-2">
+            <label htmlFor={strictId} className="text-xs text-[var(--text)]">
               {tr("app.filters.modes.strict", "Строгий режим")}
             </label>
             <Switch
@@ -248,8 +248,8 @@ export function FiltersPanel({
               onCheckedChange={onStrictChange}
             />
           </div>
-          <div className="flex items-center justify-between gap-3">
-            <label htmlFor={ignoreCaseId} className="text-sm text-[var(--text)]">
+          <div className="flex items-center justify-between gap-2">
+            <label htmlFor={ignoreCaseId} className="text-xs text-[var(--text)]">
               {tr("app.filters.modes.ignoreCase", "Игнорировать регистр")}
             </label>
             <Switch
@@ -258,8 +258,8 @@ export function FiltersPanel({
               onCheckedChange={onIgnoreCaseChange}
             />
           </div>
-          <div className="flex items-center justify-between gap-3">
-            <label htmlFor={includeHiddenId} className="text-sm text-[var(--text)]">
+          <div className="flex items-center justify-between gap-2">
+            <label htmlFor={includeHiddenId} className="text-xs text-[var(--text)]">
               {tr("app.filters.modes.hidden", "Включать скрытые")}
             </label>
             <Switch
@@ -270,10 +270,10 @@ export function FiltersPanel({
           </div>
         </fieldset>
 
-        <fieldset className="space-y-3 rounded-xl border border-[var(--border)] bg-[var(--surface-alt)] p-4">
-          <legend className="px-1 text-sm font-medium text-[var(--text)]">{tr("app.filters.limit.legend", "Лимит результатов")}</legend>
-          <div className="flex flex-wrap gap-3">
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--text)]">
+        <fieldset className="space-y-2 rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] p-2">
+          <legend className="px-1 text-xs font-medium text-[var(--text)]">{tr("app.filters.limit.legend", "Лимит результатов")}</legend>
+          <div className="flex flex-wrap gap-2">
+            <label className="flex cursor-pointer items-center gap-1.5 text-xs text-[var(--text)]">
               <input
                 type="radio"
                 checked={limitMode === "100"}
@@ -282,7 +282,7 @@ export function FiltersPanel({
               />
               100
             </label>
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--text)]">
+            <label className="flex cursor-pointer items-center gap-1.5 text-xs text-[var(--text)]">
               <input
                 type="radio"
                 checked={limitMode === "500"}
@@ -291,7 +291,7 @@ export function FiltersPanel({
               />
               500
             </label>
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--text)]">
+            <label className="flex cursor-pointer items-center gap-1.5 text-xs text-[var(--text)]">
               <input
                 type="radio"
                 checked={limitMode === "1000"}
@@ -300,7 +300,7 @@ export function FiltersPanel({
               />
               1000
             </label>
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--text)]">
+            <label className="flex cursor-pointer items-center gap-1.5 text-xs text-[var(--text)]">
               <input
                 type="radio"
                 checked={limitMode === "custom"}
@@ -309,7 +309,7 @@ export function FiltersPanel({
               />
               {tr("app.filters.limit.custom", "Пользовательский")}
             </label>
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--text)]">
+            <label className="flex cursor-pointer items-center gap-1.5 text-xs text-[var(--text)]">
               <input
                 type="radio"
                 checked={limitMode === "none"}
@@ -328,7 +328,7 @@ export function FiltersPanel({
           />
         </fieldset>
       </div>
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-2">
         <Button type="button" onClick={onApply}>
           {tr("app.filters.apply", "Применить")}
         </Button>

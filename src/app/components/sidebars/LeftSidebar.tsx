@@ -132,7 +132,7 @@ export function LeftSidebar({
 }: LeftSidebarProps) {
   return (
     <aside
-      className="left-panel space-y-2 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2 text-[var(--text)] shadow-sm"
+      className="left-panel space-y-1 rounded-md border border-[var(--border)] bg-[var(--surface)] p-1.5 text-[var(--text)]"
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => {
         event.preventDefault();
@@ -140,16 +140,16 @@ export function LeftSidebar({
         if (text) onDropRootPath(text.replace("file://", "").trim());
       }}
     >
-      <details open className="rounded-md border border-[var(--border)] bg-[var(--surface-alt)] p-1.5">
+      <details open className="rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] p-1">
         <summary className="cursor-pointer list-none select-none rounded-sm px-1 py-0.5 text-[11px] font-semibold text-[var(--text)] transition-colors hover:bg-[var(--surface)]">
           {tr("app.roots.summary", "Корневые пути")}
         </summary>
-        <div className="mt-1.5 space-y-1.5">
+        <div className="mt-1 space-y-1">
           <strong className="block text-[11px] font-medium text-[var(--text)]">
             {tr("app.roots.primary", "Основной: {{path}}", { path: primaryRoot })}
           </strong>
           <div className="flex">
-            <Button type="button" variant="secondary" size="sm" onClick={() => void onPickRootPath()} className="h-7 w-full px-2 text-[11px]">
+            <Button type="button" variant="secondary" size="sm" onClick={() => void onPickRootPath()} className="h-6 w-full px-1.5 text-[11px]">
               {tr("app.roots.pickPath", "Выбрать...")}
             </Button>
           </div>
@@ -160,7 +160,7 @@ export function LeftSidebar({
               return (
                 <li
                   key={root.path}
-                  className="flex items-center gap-1 rounded-sm border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1"
+                  className="flex items-center gap-1 rounded-sm border border-[var(--border)] bg-[var(--surface)] px-1 py-0.5"
                   onContextMenu={(event) => {
                     event.preventDefault();
                     onRootContextMenu({ type: "root", x: event.clientX, y: event.clientY, path: root.path });
@@ -178,7 +178,7 @@ export function LeftSidebar({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-5 w-5 rounded-sm text-[11px]"
+                    className="h-5 w-5 rounded-sm text-[10px]"
                     onClick={() => onRemoveRoot(root.path)}
                     aria-label={tr("app.roots.removePath", "Удалить путь")}
                     title={tr("app.roots.removePath", "Удалить путь")}
@@ -192,11 +192,11 @@ export function LeftSidebar({
         </div>
       </details>
 
-      <details open className="rounded-md border border-[var(--border)] bg-[var(--surface-alt)] p-1.5">
+      <details open className="rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] p-1">
         <summary className="cursor-pointer list-none select-none rounded-sm px-1 py-0.5 text-[11px] font-semibold text-[var(--text)] transition-colors hover:bg-[var(--surface)]">
           {tr("app.computer.summary", "Этот компьютер")}
         </summary>
-        <div className="mt-1.5 max-h-64 overflow-auto rounded-sm border border-[var(--border)] bg-[var(--surface)] p-0.5">
+        <div className="mt-1 max-h-64 overflow-auto rounded-sm border border-[var(--border)] bg-[var(--surface)] p-0.5">
           <TreeBranch
             nodes={computerRoots}
             level={0}
@@ -208,18 +208,18 @@ export function LeftSidebar({
         </div>
       </details>
 
-      <details open className="rounded-md border border-[var(--border)] bg-[var(--surface-alt)] p-1.5">
+      <details open className="rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] p-1">
         <summary className="cursor-pointer list-none select-none rounded-sm px-1 py-0.5 text-[11px] font-semibold text-[var(--text)] transition-colors hover:bg-[var(--surface)]">
           {tr("app.profiles.summary", "Профили поиска")}
         </summary>
-        <div className="mt-1.5 space-y-1.5">
+        <div className="mt-1 space-y-1">
           <div className="flex flex-col gap-1 sm:flex-row">
             <Input
               value={newProfileName}
               onChange={(event) => onNewProfileNameChange(event.target.value)}
               placeholder={tr("app.profiles.name.placeholder", "Имя профиля")}
             />
-            <Button type="button" variant="secondary" size="sm" onClick={onSaveProfile} className="h-7 shrink-0 px-2 text-[11px]">
+            <Button type="button" variant="secondary" size="sm" onClick={onSaveProfile} className="h-6 shrink-0 px-1.5 text-[11px]">
               {tr("app.profiles.save", "Сохранить")}
             </Button>
           </div>
@@ -227,7 +227,7 @@ export function LeftSidebar({
             {profiles.map((profile) => (
               <li
                 key={profile.id}
-                className="flex items-center justify-between gap-1 rounded-sm border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1"
+                className="flex items-center justify-between gap-1 rounded-sm border border-[var(--border)] bg-[var(--surface)] px-1 py-0.5"
               >
                 <Button
                   type="button"
@@ -242,7 +242,7 @@ export function LeftSidebar({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-5 w-5 shrink-0 rounded-sm text-[11px]"
+                  className="h-5 w-5 shrink-0 rounded-sm text-[10px]"
                   onClick={() => void onDeleteProfile(profile.id)}
                   aria-label={tr("app.profiles.delete", "Удалить профиль")}
                 >
@@ -254,19 +254,19 @@ export function LeftSidebar({
         </div>
       </details>
 
-      <section className="rounded-md border border-[var(--border)] bg-[var(--surface-alt)] p-1.5">
+      <section className="rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] p-1">
         <Button type="button" variant="ghost" size="sm" className="h-6 w-full justify-between px-1 text-[11px] font-semibold" onClick={onToggleHistoryOpen}>
           {tr("app.history.summary", "История поиска")}
           <span>{historyOpen ? "▾" : "▸"}</span>
         </Button>
         {historyOpen ? (
-          <div className="mt-1.5 space-y-1.5">
+          <div className="mt-1 space-y-1">
             <Button type="button" variant="ghost" size="sm" className="h-6 w-full justify-start px-1 text-[11px] font-normal" onClick={() => void onClearHistory()}>
               {tr("app.history.clear", "Очистить историю")}
             </Button>
             <ul className="space-y-1">
               {history.queries.slice(0, 10).map((item, index) => (
-                <li key={`${item.query}-${index}`} className="rounded-sm border border-[var(--border)] bg-[var(--surface)] px-1.5 py-1">
+                <li key={`${item.query}-${index}`} className="rounded-sm border border-[var(--border)] bg-[var(--surface)] px-1 py-0.5">
                   <Button
                     type="button"
                     variant="ghost"

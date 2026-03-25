@@ -16,7 +16,7 @@ export const Switch = forwardRef(function Switch(
   return (
     <label
       className={cn(
-        "inline-flex cursor-pointer items-center gap-3 rounded-lg border border-[var(--border)] bg-[var(--surface-alt)] px-3 py-2 text-sm text-[var(--text)] transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--surface-alt)_78%,var(--accent))]",
+        "inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-1.5 py-1 text-xs text-[var(--text)] transition-colors duration-150 hover:bg-[color-mix(in_srgb,var(--surface-alt)_78%,var(--accent))]",
         className
       )}
     >
@@ -30,14 +30,14 @@ export const Switch = forwardRef(function Switch(
       />
       <span
         aria-hidden="true"
-        className="relative h-6 w-11 rounded-full border border-[var(--border)] transition-colors duration-150"
+        className="relative h-5 w-9 rounded-full border border-[var(--border)] transition-colors duration-150"
         style={{ backgroundColor: isChecked ? "var(--accent)" : "var(--surface)" }}
       >
         <span
           className={cn(
-            "absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-[var(--text)] shadow-sm transition-transform duration-150"
+            "absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-[var(--text)] transition-transform duration-150"
           )}
-          style={{ transform: isChecked ? "translateX(20px)" : "translateX(0px)" }}
+          style={{ transform: isChecked ? "translateX(15px)" : "translateX(0px)" }}
         />
       </span>
     </label>

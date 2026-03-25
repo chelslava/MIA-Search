@@ -26,11 +26,11 @@ export function SettingsPanel({
 }: SettingsPanelProps) {
   return (
     <section
-      className="rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2 shadow-[0_10px_30px_rgba(0,0,0,0.12)] backdrop-blur-sm"
+      className="rounded-md border border-[var(--border)] bg-[var(--surface)] p-1.5"
       aria-label={tr("app.settings.ariaLabel", "Настройки")}
     >
-      <div className="grid gap-2 lg:grid-cols-2">
-        <div className="space-y-2">
+      <div className="grid gap-1.5 lg:grid-cols-2">
+        <div className="space-y-1.5">
           <h4 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
             {tr("app.settings.general", "Общие")}
           </h4>
@@ -45,7 +45,7 @@ export function SettingsPanel({
               <option value="en">{tr("app.settings.language.en", "English")}</option>
             </Select>
           </label>
-          <div className="flex items-center justify-between gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-2 py-1.5">
+          <div className="flex items-center justify-between gap-1.5 rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] px-1.5 py-1">
             <div className="space-y-0.5">
               <div className="text-[11px] font-medium text-[var(--text)]">
                 {tr("app.settings.liveSearchDefault", "Live search по умолчанию")}
@@ -57,7 +57,7 @@ export function SettingsPanel({
               aria-label={tr("app.settings.liveSearchDefault", "Live search по умолчанию")}
             />
           </div>
-          <div className="flex items-center justify-between gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-2 py-1.5">
+          <div className="flex items-center justify-between gap-1.5 rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] px-1.5 py-1">
             <div className="space-y-0.5">
               <div className="text-[11px] font-medium text-[var(--text)]">
                 {tr("app.settings.regexEnabled", "Включить regex")}
@@ -81,7 +81,7 @@ export function SettingsPanel({
             />
           </label>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <h4 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
             {tr("app.settings.customTheme", "Пользовательская тема")}
           </h4>
@@ -93,35 +93,35 @@ export function SettingsPanel({
               onChange={(event) => onNewThemeNameChange(event.target.value)}
             />
           </label>
-          <div className="grid gap-2 sm:grid-cols-3">
-            <label className="flex items-center justify-between gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-2 py-1.5 text-[11px] font-medium text-[var(--text)]">
+          <div className="grid gap-1.5 sm:grid-cols-3">
+            <label className="flex items-center justify-between gap-1.5 rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] px-1.5 py-1 text-[11px] font-medium text-[var(--text)]">
               <span>{tr("app.settings.themeBg", "Фон")}</span>
               <Input
                 type="color"
                 value={newThemeBg}
                 onChange={(event) => onNewThemeBgChange(event.target.value)}
                 aria-label={tr("app.settings.themeBg", "Фон")}
-                className="h-8 w-12 cursor-pointer p-1"
+                className="h-7 w-11 cursor-pointer p-1"
               />
             </label>
-            <label className="flex items-center justify-between gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-2 py-1.5 text-[11px] font-medium text-[var(--text)]">
+            <label className="flex items-center justify-between gap-1.5 rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] px-1.5 py-1 text-[11px] font-medium text-[var(--text)]">
               <span>{tr("app.settings.themeText", "Текст")}</span>
               <Input
                 type="color"
                 value={newThemeText}
                 onChange={(event) => onNewThemeTextChange(event.target.value)}
                 aria-label={tr("app.settings.themeText", "Текст")}
-                className="h-8 w-12 cursor-pointer p-1"
+                className="h-7 w-11 cursor-pointer p-1"
               />
             </label>
-            <label className="flex items-center justify-between gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-2 py-1.5 text-[11px] font-medium text-[var(--text)]">
+            <label className="flex items-center justify-between gap-1.5 rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] px-1.5 py-1 text-[11px] font-medium text-[var(--text)]">
               <span>{tr("app.settings.themeAccent", "Акцент")}</span>
               <Input
                 type="color"
                 value={newThemeAccent}
                 onChange={(event) => onNewThemeAccentChange(event.target.value)}
                 aria-label={tr("app.settings.themeAccent", "Акцент")}
-                className="h-8 w-12 cursor-pointer p-1"
+                className="h-7 w-11 cursor-pointer p-1"
               />
             </label>
           </div>

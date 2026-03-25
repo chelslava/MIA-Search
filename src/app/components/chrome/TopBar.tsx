@@ -109,8 +109,8 @@ export function TopBar({
   );
 
   return (
-    <header className="topbar grid gap-1 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2 shadow-[0_10px_30px_rgba(0,0,0,0.12)] backdrop-blur-sm">
-      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto_auto_auto_auto_auto_auto] items-center gap-2">
+    <header className="topbar grid gap-1 rounded-md border border-[var(--border)] bg-[var(--surface)] p-1.5">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto_auto_auto_auto_auto_auto] items-center gap-1">
         <Button
           variant="ghost"
           size="icon"
@@ -138,7 +138,7 @@ export function TopBar({
               onClick={onClearQuery}
               title={tr("app.tooltips.clear", "Очистить")}
               aria-label={tr("app.tooltips.clear", "Очистить")}
-              className="icon-btn absolute right-1 top-1 h-8 w-8 text-sm"
+              className="icon-btn absolute right-1 top-1 h-6 w-6 text-xs"
             >
               ✕
             </Button>
@@ -153,7 +153,7 @@ export function TopBar({
             {tr("app.actions.searchTop", "🔎 Поиск")}
           </Button>
         )}
-        <div className="toggle flex items-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--surface-alt)] px-3 py-2">
+        <div className="toggle flex items-center gap-1 rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-2 py-1">
           <Switch
             checked={liveSearch}
             onCheckedChange={onLiveSearchChange}
@@ -161,7 +161,7 @@ export function TopBar({
             aria-label={tr("app.labels.live", "Live")}
             className="toggle"
           />
-          <span className="text-sm text-[var(--text)]">{tr("app.labels.live", "Live")}</span>
+          <span className="text-xs text-[var(--text)]">{tr("app.labels.live", "Live")}</span>
         </div>
         <Button
           variant="ghost"
@@ -219,16 +219,16 @@ export function TopBar({
           ⫸
         </Button>
       </div>
-      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 pl-10 pr-1">
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-1 pl-8 pr-1">
         <div className="min-w-0 overflow-x-auto">
-          <div className="flex min-w-max items-center gap-1">
+          <div className="flex min-w-max items-center gap-0.5">
             {commandButtons.map((item) => (
               <Button
                 key={item.id}
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="h-5 rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-1.5 text-[10px] leading-none"
+                className="h-5 rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] px-1 text-[10px] leading-none"
                 onMouseEnter={() => setActiveHint(item.hint)}
                 onFocus={() => setActiveHint(item.hint)}
                 onMouseLeave={() => setActiveHint("")}
