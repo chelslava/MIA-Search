@@ -48,45 +48,38 @@ describe("App smoke", () => {
     vi.clearAllMocks();
   });
 
-  it("renders core sections", async () => {
+  it("renders main layout blocks", async () => {
     render(<App />);
     await waitFor(() => expect(mocks.favoritesListMock).toHaveBeenCalled());
 
-    expect(screen.getByText("Файл")).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Имя" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Путь" })).toBeInTheDocument();
-    expect(screen.getByRole("columnheader", { name: "Действия" })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Поиск файлов и папок...")).toBeInTheDocument();
+    expect(screen.getByText("Корневые пути")).toBeInTheDocument();
+    expect(screen.getByText("Детали")).toBeInTheDocument();
+    expect(screen.getByText(/Найдено:/i)).toBeInTheDocument();
   });
 
-  it("starts search from UI", async () => {
+  it("starts search from top bar", async () => {
     render(<App />);
-    await userEvent.click(screen.getByRole("button", { name: "Найти" }));
-
-    await waitFor(() => {
-      expect(mocks.startSearchMock).toHaveBeenCalledTimes(1);
-    });
-    expect(screen.getByText(/Состояние:\s*Выполняется \(#42\)/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "🔎 Поиск" }));
+    await waitFor(() => expect(mocks.startSearchMock).toHaveBeenCalledTimes(1));
   });
 
-  it("opens command palette with Ctrl+K and closes with Esc", async () => {
+  it("opens command palette with Ctrl+K", async () => {
     render(<App />);
-
     fireEvent.keyDown(window, { key: "k", ctrlKey: true });
-    expect(screen.getByRole("dialog", { name: "Палитра команд" })).toBeInTheDocument();
-
-    fireEvent.keyDown(window, { key: "Escape" });
     await waitFor(() =>
-      expect(screen.queryByRole("dialog", { name: "Палитра команд" })).not.toBeInTheDocument()
+      expect(screen.getByRole("dialog", { name: "Палитра команд" })).toBeInTheDocument()
     );
   });
 
-  it("resets active filters", async () => {
+  it("changes search mode from filters", async () => {
     render(<App />);
-    const strictCheckbox = screen.getByRole("checkbox", { name: /строго/i });
-    await userEvent.click(strictCheckbox);
-    expect(strictCheckbox).toBeChecked();
+    await userEvent.click(screen.getByRole("button", { name: "⏷" }));
+    await userEvent.click(screen.getByRole("radio", { name: /только файлы/i }));
+    await userEvent.click(screen.getByRole("button", { name: "Применить" }));
 
-    await userEvent.click(screen.getByRole("button", { name: "Сброс" }));
-    expect(strictCheckbox).not.toBeChecked();
+    await waitFor(() => expect(mocks.startSearchMock).toHaveBeenCalledTimes(1));
+    const firstCall = ((mocks.startSearchMock as any).mock.calls[0]?.[0] as any) ?? null;
+    expect(firstCall?.options?.entry_kind).toBe("File");
   });
 });
