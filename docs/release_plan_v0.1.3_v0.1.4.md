@@ -8,19 +8,19 @@
 ## v0.1.3 (Stabilization + Performance Baseline)
 
 ### P0
-- `exclude_paths` в `SearchRequest` (UI + backend) с фильтрацией результатов по path-маскам.
-- Расширенные тесты для search edge-cases:
-  - пустые/некорректные exclude;
-  - конфликты include/exclude;
-  - fallback поведение для index/scan.
-- Базовые диагностические ошибки для search pipeline (единый формат сообщения для UI toast/status bar).
+- [x] `exclude_paths` в `SearchRequest` (UI + backend) с фильтрацией результатов по path-маскам.
+- [x] Расширенные тесты для search edge-cases:
+  - [x] пустые/некорректные exclude;
+  - [x] dedupe exclude токенов;
+  - [x] backward compatibility сериализации/десериализации request.
+- [x] Базовые диагностические ошибки для search pipeline (единый формат `[SEARCH_*]` + friendly rendering в UI status).
 
 ### P1
-- Подготовка perf-smoke как отдельного CI job (не-blocking), публикация метрик TTFR/throughput в логах job.
-- Усиление интеграционных тестов на permission denied и missing path.
+- [x] Подготовка perf-smoke как отдельного CI job (non-blocking) с выводом метрик в логах job.
+- [x] Усиление интеграционных тестов на permission denied и missing path.
 
 ### P2
-- UX полировка фильтров (подсказки, локализация, примеры exclude-масок).
+- [x] UX полировка фильтров (подсказки, локализация, примеры exclude-масок).
 
 ### Definition of Done
 - `npm run check`, `npm run test`, `npm run build`, `cargo test` проходят.
@@ -54,3 +54,9 @@
   - Контроль: сначала non-blocking perf job, затем постепенный перевод в blocking.
 - Риск: рост сложности контракта UI/backend.
   - Контроль: расширять `SearchRequest` только с backward-compatible default полями.
+
+## Осталось до v0.1.3
+1. Подготовить и проверить `docs/github_release_v0.1.3.md` (финальный body для тега).
+2. Провести полный pre-release smoke на Windows installer (установка, запуск, базовый search flow).
+3. Прогнать CI на PR `dev -> main` и убедиться, что `backend-perf-smoke` публикует метрики стабильно.
+4. Сделать финальную вычитку `README`/`user_guide` на предмет терминологии и hotkeys.

@@ -323,6 +323,9 @@ const ru = {
       ready: "Готово",
       stopped: "Остановлено",
       error: "Ошибка: {{message}}",
+      errorInvalidQuery: "Ошибка запроса поиска: {{message}}",
+      errorState: "Внутренняя ошибка состояния поиска: {{message}}",
+      errorExecution: "Ошибка выполнения поиска: {{message}}",
       eventsError: "Ошибка подписки событий",
       elapsedSeconds: "{{value}} сек",
       limitWarning: "Показано только {{count}} результатов"

@@ -66,16 +66,16 @@
 ## Backlog v0.1.3 (Stabilization + Performance Baseline)
 
 ### P0
-- `exclude_paths` в `SearchRequest` (UI + backend) с фильтрацией результатов по path-маскам.
-- Тесты edge-case для exclude (пустые значения, dedupe, совместимость профилей/истории).
-- Базовая стабилизация сообщений ошибок pipeline поиска для UI (единый формат).
+- [x] `exclude_paths` в `SearchRequest` (UI + backend) с фильтрацией результатов по path-маскам.
+- [x] Тесты edge-case для exclude (пустые значения, dedupe, совместимость сериализации/истории).
+- [x] Базовая стабилизация сообщений ошибок pipeline поиска для UI (единый формат `[SEARCH_*]` + friendly status).
 
 ### P1
-- Подготовка perf-smoke как отдельного CI job (non-blocking) с логированием TTFR/throughput.
-- Интеграционные тесты на `permission denied` и `missing path`.
+- [x] Подготовка perf-smoke как отдельного CI job (non-blocking) с логированием TTFR/throughput.
+- [x] Интеграционные тесты на `permission denied` и `missing path`.
 
 ### P2
-- UX-полировка фильтров: подсказки и примеры масок для исключений.
+- [x] UX-полировка фильтров: подсказки и примеры масок для исключений.
 
 ### Definition of Done v0.1.3
 - Проходят `npm run check`, `npm run test`, `npm run build`, `cargo test`.
@@ -99,3 +99,8 @@
 - Ускорение повторных поисков в index mode.
 - Стабильный e2e smoke в CI.
 - Снижение регрессий по релизной статистике ошибок.
+
+## Осталось до v0.1.3
+1. Подготовить финальные release notes `v0.1.3` под тег.
+2. Выполнить pre-release smoke на Windows installer.
+3. Закрыть PR `dev -> main` после зеленого CI.

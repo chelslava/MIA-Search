@@ -106,6 +106,43 @@ function sameSearchContextWithoutQuery(left: SearchRequest, right: SearchRequest
   );
 }
 
+type SearchErrorCode = "SEARCH_INVALID_QUERY" | "SEARCH_STATE_ERROR" | "SEARCH_EXECUTION_ERROR";
+
+type ParsedSearchError = {
+  code: SearchErrorCode | null;
+  message: string;
+};
+
+function parseSearchErrorMessage(raw: string): ParsedSearchError {
+  const match = raw.match(/^\[(SEARCH_[A-Z_]+)\]\s*(.*)$/);
+  if (!match) {
+    return { code: null, message: raw };
+  }
+  const code = match[1] as SearchErrorCode;
+  const message = match[2]?.trim() ?? "";
+  if (code === "SEARCH_INVALID_QUERY" || code === "SEARCH_STATE_ERROR" || code === "SEARCH_EXECUTION_ERROR") {
+    return { code, message: message || raw };
+  }
+  return { code: null, message: raw };
+}
+
+function renderSearchErrorStatus(
+  rawMessage: string,
+  tr: (key: string, defaultValue: string, values?: Record<string, unknown>) => string
+): string {
+  const parsed = parseSearchErrorMessage(rawMessage);
+  if (parsed.code === "SEARCH_INVALID_QUERY") {
+    return tr("app.status.errorInvalidQuery", "Ошибка запроса поиска: {{message}}", { message: parsed.message });
+  }
+  if (parsed.code === "SEARCH_STATE_ERROR") {
+    return tr("app.status.errorState", "Внутренняя ошибка состояния поиска: {{message}}", { message: parsed.message });
+  }
+  if (parsed.code === "SEARCH_EXECUTION_ERROR") {
+    return tr("app.status.errorExecution", "Ошибка выполнения поиска: {{message}}", { message: parsed.message });
+  }
+  return tr("app.status.error", "Ошибка: {{message}}", { message: rawMessage });
+}
+
 function filterPlainResults(items: SearchResultItem[], query: string, ignoreCase: boolean): SearchResultItem[] {
   const normalizedQuery = ignoreCase ? query.toLocaleLowerCase() : query;
   return items.filter((item) => {
@@ -1128,7 +1165,7 @@ export function App() {
         if (payload.search_id !== activeSearchIdRef.current) {
           return;
         }
-        setStatus(tr("app.status.error", "Ошибка: {{message}}", { message: payload.message }));
+        setStatus(renderSearchErrorStatus(payload.message, tr));
         setIsSearching(false);
         setSearchErrorCount((prev) => prev + 1);
         if (pendingCheckedDeltaRef.current > 0) {
