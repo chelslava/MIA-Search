@@ -887,6 +887,53 @@ mod tests {
     assert!(execution.limit_reached);
   }
 
+  #[test]
+  fn missing_root_returns_empty_results_without_failure() {
+    let mut request = request_for_roots(vec!["Z:/this/path/should/not/exist".to_string()]);
+    request.options.max_depth = None;
+
+    let summary = SearchService::stream(
+      &request,
+      Arc::new(AtomicBool::new(false)),
+      |_batch| {},
+      |_limit| {},
+    )
+    .expect("stream should not fail for missing root");
+
+    assert_eq!(summary.total_results, 0);
+    assert!(!summary.cancelled);
+    assert!(!summary.limit_reached);
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn permission_denied_root_does_not_fail_stream() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let root = tempdir().expect("root");
+    let locked = root.path().join("locked");
+    fs::create_dir_all(&locked).expect("create locked dir");
+    write_file(&locked.join("secret.txt"), "secret");
+
+    let original = fs::metadata(&locked).expect("metadata").permissions();
+    let mut no_access = original.clone();
+    no_access.set_mode(0o000);
+    fs::set_permissions(&locked, no_access).expect("set restricted perms");
+
+    let mut request = request_for_roots(vec![locked.to_string_lossy().to_string()]);
+    request.options.max_depth = None;
+
+    let result = SearchService::stream(
+      &request,
+      Arc::new(AtomicBool::new(false)),
+      |_batch| {},
+      |_limit| {},
+    );
+
+    fs::set_permissions(&locked, original).expect("restore perms");
+    assert!(result.is_ok(), "stream should degrade gracefully on permission denied");
+  }
+
   fn build_perf_dataset(root: &Path, dirs: usize, files_per_dir: usize) {
     for dir_idx in 0..dirs {
       let dir = root.join(format!("dir_{dir_idx:02}"));
