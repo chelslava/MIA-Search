@@ -154,6 +154,8 @@ pub struct SearchRequest {
   pub query: String,
   pub roots: Vec<String>,
   pub extensions: Vec<String>,
+  #[serde(default)]
+  pub exclude_paths: Vec<String>,
   pub options: SearchOptions,
 }
 
@@ -163,6 +165,7 @@ impl Default for SearchRequest {
       query: String::new(),
       roots: Vec::new(),
       extensions: Vec::new(),
+      exclude_paths: Vec::new(),
       options: SearchOptions::default(),
     }
   }
@@ -284,6 +287,7 @@ mod tests {
     assert_eq!(request.query, "");
     assert!(request.roots.is_empty());
     assert!(request.extensions.is_empty());
+    assert!(request.exclude_paths.is_empty());
     assert_eq!(request.options.max_depth, SearchOptions::default().max_depth);
     assert_eq!(request.options.limit, SearchOptions::default().limit);
     assert_eq!(request.options.strict, SearchOptions::default().strict);
@@ -321,5 +325,32 @@ mod tests {
     assert!(!item.hidden);
     assert!(item.score.is_none());
     assert_eq!(item.source_root, "");
+  }
+
+  #[test]
+  fn search_request_deserializes_without_exclude_paths_for_backward_compatibility() {
+    let raw = r#"{
+      "query": "report",
+      "roots": ["C:/data"],
+      "extensions": ["txt"],
+      "options": {
+        "max_depth": null,
+        "limit": 100,
+        "strict": false,
+        "ignore_case": false,
+        "include_hidden": false,
+        "entry_kind": "Any",
+        "match_mode": "Plain",
+        "size_filter": null,
+        "created_filter": null,
+        "modified_filter": null,
+        "sort_mode": "Relevance",
+        "search_backend": "Scan"
+      }
+    }"#;
+
+    let parsed: SearchRequest = serde_json::from_str(raw).expect("legacy request should parse");
+    assert!(parsed.exclude_paths.is_empty());
+    assert_eq!(parsed.query, "report");
   }
 }

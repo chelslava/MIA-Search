@@ -62,3 +62,44 @@
 3. Неделя 5: все фильтры и сортировки.
 4. Неделя 7: профили, история, UX и производительность.
 5. Неделя 9-10: тесты, локализация, релиз.
+
+## Backlog v0.1.3 (Stabilization + Performance Baseline)
+
+### P0
+- [x] `exclude_paths` в `SearchRequest` (UI + backend) с фильтрацией результатов по path-маскам.
+- [x] Тесты edge-case для exclude (пустые значения, dedupe, совместимость сериализации/истории).
+- [x] Базовая стабилизация сообщений ошибок pipeline поиска для UI (единый формат `[SEARCH_*]` + friendly status).
+
+### P1
+- [x] Подготовка perf-smoke как отдельного CI job (non-blocking) с логированием TTFR/throughput.
+- [x] Интеграционные тесты на `permission denied` и `missing path`.
+
+### P2
+- [x] UX-полировка фильтров: подсказки и примеры масок для исключений.
+
+### Definition of Done v0.1.3
+- Проходят `npm run check`, `npm run test`, `npm run build`, `cargo test`.
+- Покрытие backend не ниже CI gate.
+- Обновлены `user_guide` и release notes для `v0.1.3`.
+
+## Backlog v0.1.4 (Feature Depth + Reliability)
+
+### P0
+- Инкрементальная индексация без полного rebuild.
+- E2E smoke сценарии: `search -> filters -> actions` и `index rebuild -> fallback`.
+
+### P1
+- Batch actions по выдаче (multi-select + copy/open/reveal).
+- Кэш метаданных + ленивое обогащение для больших выборок.
+
+### P2
+- Диагностический snapshot для поддержки (структурные логи + экспорт).
+
+### Definition of Done v0.1.4
+- Ускорение повторных поисков в index mode.
+- Стабильный e2e smoke в CI.
+- Снижение регрессий по релизной статистике ошибок.
+
+## Осталось до v0.1.3
+1. Выполнить pre-release smoke на Windows installer.
+2. Закрыть PR `dev -> main` после зеленого CI.

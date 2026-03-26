@@ -209,6 +209,7 @@ impl SearchService {
     G: FnMut(bool),
   {
     let roots = normalized_roots(request);
+    let exclude_tokens = normalized_exclude_tokens(request);
     let roots_for_source = prepare_source_roots(&roots);
     let default_root = roots.first().cloned().unwrap_or_else(|| ".".to_string());
     let query = request.query.trim().to_string();
@@ -273,6 +274,9 @@ impl SearchService {
       }
 
       if !matcher.matches(&path) {
+        continue;
+      }
+      if path_matches_exclude_tokens(&path, &exclude_tokens) {
         continue;
       }
 
@@ -439,6 +443,32 @@ fn normalized_extensions(request: &SearchRequest) -> Vec<String> {
     .map(|ext| ext.trim().trim_start_matches('.').to_string())
     .filter(|ext| !ext.is_empty())
     .collect()
+}
+
+fn normalized_exclude_tokens(request: &SearchRequest) -> Vec<String> {
+  let mut seen = HashSet::new();
+  request
+    .exclude_paths
+    .iter()
+    .map(|value| value.trim())
+    .filter(|value| !value.is_empty())
+    .map(normalize_path_for_match)
+    .filter(|value| seen.insert(value.clone()))
+    .collect()
+}
+
+fn normalize_path_for_match(value: &str) -> String {
+  value.replace('\\', "/").to_lowercase()
+}
+
+fn path_matches_exclude_tokens(path: &str, exclude_tokens: &[String]) -> bool {
+  if exclude_tokens.is_empty() {
+    return false;
+  }
+  let normalized_path = normalize_path_for_match(path);
+  exclude_tokens
+    .iter()
+    .any(|token| !token.is_empty() && normalized_path.contains(token))
 }
 
 fn build_scan_tasks(request: &SearchRequest, roots: &[String]) -> Vec<(String, Option<String>)> {
@@ -755,6 +785,54 @@ mod tests {
   }
 
   #[test]
+  fn exclude_paths_filters_out_matching_subdirectories() {
+    let root = tempdir().expect("root");
+    write_file(&root.path().join("node_modules/leftpad/index.js"), "x");
+    write_file(&root.path().join(".git/config"), "x");
+    write_file(&root.path().join("target/debug/app.bin"), "x");
+    write_file(&root.path().join("src/main.rs"), "x");
+
+    let mut request = request_for_roots(vec![root.path().to_string_lossy().to_string()]);
+    request.exclude_paths = vec!["node_modules".to_string(), ".git".to_string(), "target".to_string()];
+    request.options.max_depth = None;
+    request.options.sort_mode = SortMode::Name;
+
+    let execution = SearchService::execute(&request);
+    let paths: Vec<String> = execution.items.iter().map(|item| item.full_path.clone()).collect();
+
+    assert!(execution.items.iter().any(|item| item.name == "main.rs"));
+    assert!(!paths.iter().any(|path| path.contains("node_modules")));
+    assert!(!paths.iter().any(|path| path.contains(".git")));
+    assert!(!paths.iter().any(|path| path.contains("target")));
+  }
+
+  #[test]
+  fn exclude_paths_ignores_blank_values() {
+    let root = tempdir().expect("root");
+    write_file(&root.path().join("src/main.rs"), "x");
+
+    let mut request = request_for_roots(vec![root.path().to_string_lossy().to_string()]);
+    request.exclude_paths = vec!["  ".to_string(), "\t".to_string(), "".to_string()];
+    request.options.max_depth = None;
+    request.options.sort_mode = SortMode::Name;
+
+    let execution = SearchService::execute(&request);
+
+    assert!(execution.items.iter().any(|item| item.name == "main.rs"));
+  }
+
+  #[test]
+  fn exclude_paths_deduplicates_tokens() {
+    let request = SearchRequest {
+      exclude_paths: vec![" target ".to_string(), "target".to_string(), "TARGET".to_string()],
+      ..SearchRequest::default()
+    };
+
+    let tokens = normalized_exclude_tokens(&request);
+    assert_eq!(tokens, vec!["target".to_string()]);
+  }
+
+  #[test]
   fn search_session_lifecycle_updates_snapshot() {
     let mut session = SearchSession::default();
     let request = SearchRequest::default();
@@ -807,6 +885,53 @@ mod tests {
     let execution = SearchService::execute(&request);
     assert!(execution.items.is_empty());
     assert!(execution.limit_reached);
+  }
+
+  #[test]
+  fn missing_root_returns_empty_results_without_failure() {
+    let mut request = request_for_roots(vec!["Z:/this/path/should/not/exist".to_string()]);
+    request.options.max_depth = None;
+
+    let summary = SearchService::stream(
+      &request,
+      Arc::new(AtomicBool::new(false)),
+      |_batch| {},
+      |_limit| {},
+    )
+    .expect("stream should not fail for missing root");
+
+    assert_eq!(summary.total_results, 0);
+    assert!(!summary.cancelled);
+    assert!(!summary.limit_reached);
+  }
+
+  #[cfg(unix)]
+  #[test]
+  fn permission_denied_root_does_not_fail_stream() {
+    use std::os::unix::fs::PermissionsExt;
+
+    let root = tempdir().expect("root");
+    let locked = root.path().join("locked");
+    fs::create_dir_all(&locked).expect("create locked dir");
+    write_file(&locked.join("secret.txt"), "secret");
+
+    let original = fs::metadata(&locked).expect("metadata").permissions();
+    let mut no_access = original.clone();
+    no_access.set_mode(0o000);
+    fs::set_permissions(&locked, no_access).expect("set restricted perms");
+
+    let mut request = request_for_roots(vec![locked.to_string_lossy().to_string()]);
+    request.options.max_depth = None;
+
+    let result = SearchService::stream(
+      &request,
+      Arc::new(AtomicBool::new(false)),
+      |_batch| {},
+      |_limit| {},
+    );
+
+    fs::set_permissions(&locked, original).expect("restore perms");
+    assert!(result.is_ok(), "stream should degrade gracefully on permission denied");
   }
 
   fn build_perf_dataset(root: &Path, dirs: usize, files_per_dir: usize) {

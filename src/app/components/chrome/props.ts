@@ -53,6 +53,8 @@ export type FiltersPanelProps = {
   onEntryKindChange: (value: EntryKind) => void;
   extensionsRaw: string;
   onExtensionsRawChange: (value: string) => void;
+  excludePathsRaw: string;
+  onExcludePathsRawChange: (value: string) => void;
   maxDepthUnlimited: boolean;
   onMaxDepthUnlimitedChange: (value: boolean) => void;
   maxDepth: number;

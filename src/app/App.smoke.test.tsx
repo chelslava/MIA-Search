@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -17,7 +17,12 @@ const mocks = vi.hoisted(() => ({
   actionOpenParentMock: vi.fn(async () => undefined),
   actionRevealPathMock: vi.fn(async () => undefined),
   actionCopyToClipboardMock: vi.fn(async () => undefined),
-  searchEnrichMetadataMock: vi.fn(async () => [])
+  searchEnrichMetadataMock: vi.fn(async () => []),
+  onSearchErrorMock: vi.fn(async (handler: (payload: any) => void) => {
+    mocks.searchErrorHandler = handler;
+    return () => {};
+  }),
+  searchErrorHandler: null as null | ((payload: any) => void)
 }));
 
 vi.mock("../shared/tauri-client", () => ({
@@ -40,7 +45,7 @@ vi.mock("../shared/tauri-client", () => ({
   onSearchBatch: async () => () => {},
   onSearchDone: async () => () => {},
   onSearchCancelled: async () => () => {},
-  onSearchError: async () => () => {}
+  onSearchError: mocks.onSearchErrorMock
 }));
 
 import { App } from "./App";
@@ -48,6 +53,7 @@ import { App } from "./App";
 describe("App smoke", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.searchErrorHandler = null;
   });
 
   it("renders main layout blocks", async () => {
@@ -83,5 +89,36 @@ describe("App smoke", () => {
     await waitFor(() => expect(mocks.startSearchMock).toHaveBeenCalledTimes(1));
     const firstCall = ((mocks.startSearchMock as any).mock.calls[0]?.[0] as any) ?? null;
     expect(firstCall?.options?.entry_kind).toBe("File");
+  });
+
+  it("passes exclude paths from filters into search request", async () => {
+    render(<App />);
+    await userEvent.click(screen.getByRole("button", { name: "⏷" }));
+    await userEvent.type(
+      screen.getByPlaceholderText("node_modules, .git, target"),
+      " node_modules, .git, node_modules "
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Применить" }));
+
+    await waitFor(() => expect(mocks.startSearchMock).toHaveBeenCalledTimes(1));
+    const firstCall = ((mocks.startSearchMock as any).mock.calls[0]?.[0] as any) ?? null;
+    expect(firstCall?.exclude_paths).toEqual(["node_modules", ".git"]);
+  });
+
+  it("renders friendly status for coded search errors", async () => {
+    render(<App />);
+    await waitFor(() => expect(mocks.onSearchErrorMock).toHaveBeenCalled());
+    expect(mocks.searchErrorHandler).not.toBeNull();
+
+    await act(async () => {
+      mocks.searchErrorHandler?.({
+        search_id: 42,
+        message: "[SEARCH_INVALID_QUERY] regex parse error: ["
+      });
+    });
+
+    await waitFor(() =>
+      expect(screen.getByText(/Ошибка запроса поиска:/i)).toBeInTheDocument()
+    );
   });
 });

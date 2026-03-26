@@ -58,3 +58,4 @@ cargo llvm-cov --summary-only
 - [GitHub Release v0.1.0](docs/github_release_v0.1.0.md)
 - [GitHub Release v0.1.1](docs/github_release_v0.1.1.md)
 - [GitHub Release v0.1.2](docs/github_release_v0.1.2.md)
+- [GitHub Release v0.1.3](docs/github_release_v0.1.3.md)

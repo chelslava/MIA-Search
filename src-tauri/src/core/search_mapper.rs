@@ -5,6 +5,7 @@ pub struct SearchPlan {
   pub query: String,
   pub roots: Vec<String>,
   pub extensions: Vec<String>,
+  pub exclude_paths: Vec<String>,
   pub options: SearchOptions,
 }
 
@@ -17,6 +18,12 @@ pub fn request_to_plan(request: &SearchRequest) -> SearchPlan {
       .iter()
       .map(|ext| ext.trim().trim_start_matches('.').to_string())
       .filter(|ext| !ext.is_empty())
+      .collect(),
+    exclude_paths: request
+      .exclude_paths
+      .iter()
+      .map(|value| value.trim().to_string())
+      .filter(|value| !value.is_empty())
       .collect(),
     options: request.options.clone(),
   }
@@ -33,6 +40,7 @@ mod tests {
       query: "  report  ".to_string(),
       roots: vec!["  C:/data  ".to_string(), "\tD:/logs\t".to_string()],
       extensions: vec!["  .rs  ".to_string(), "  txt".to_string(), "   ".to_string()],
+      exclude_paths: vec!["  node_modules  ".to_string(), " ".to_string()],
       ..SearchRequest::default()
     };
 
@@ -41,6 +49,7 @@ mod tests {
     assert_eq!(plan.query, "report");
     assert_eq!(plan.roots, vec!["C:/data", "D:/logs"]);
     assert_eq!(plan.extensions, vec!["rs", "txt"]);
+    assert_eq!(plan.exclude_paths, vec!["node_modules"]);
     assert_eq!(plan.options.limit, request.options.limit);
     assert_eq!(plan.options.strict, request.options.strict);
     assert_eq!(plan.options.ignore_case, request.options.ignore_case);
@@ -57,6 +66,7 @@ mod tests {
         "   ".to_string(),
         ".".to_string(),
       ],
+      exclude_paths: vec!["  target  ".to_string(), "  ".to_string(), ".git".to_string()],
       options: SearchOptions {
         max_depth: Some(3),
         limit: Some(7),
@@ -78,6 +88,7 @@ mod tests {
     assert_eq!(plan.query, "quarterly summary");
     assert_eq!(plan.roots, vec!["C:/data", "", "D:/logs"]);
     assert_eq!(plan.extensions, vec!["md", "txt"]);
+    assert_eq!(plan.exclude_paths, vec!["target", ".git"]);
     assert_eq!(plan.options.max_depth, Some(3));
     assert_eq!(plan.options.limit, Some(7));
     assert!(plan.options.strict);

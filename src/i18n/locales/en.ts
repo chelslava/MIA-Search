@@ -140,6 +140,11 @@ const en = {
         placeholder: "rs, txt, md",
         hint: "Separate values with commas"
       },
+      exclude: {
+        legend: "Exclude paths",
+        placeholder: "node_modules, .git, target",
+        hint: "Separate masks with commas"
+      },
       depth: {
         legend: "Depth",
         unlimited: "Unlimited"
@@ -287,6 +292,7 @@ const en = {
       filesOnly: "Files only",
       dirsOnly: "Folders only",
       extensions: "Extensions: {{extensions}}",
+      excludePaths: "Exclude: {{paths}}",
       depth: "Depth: {{depth}}",
       size: "Size {{sign}} {{value}} {{unit}}",
       modified: "Modified date",
@@ -317,6 +323,9 @@ const en = {
       ready: "Ready",
       stopped: "Stopped",
       error: "Error: {{message}}",
+      errorInvalidQuery: "Search query error: {{message}}",
+      errorState: "Search state error: {{message}}",
+      errorExecution: "Search execution error: {{message}}",
       eventsError: "Failed to subscribe to events",
       elapsedSeconds: "{{value}} s",
       limitWarning: "Showing only {{count}} results"

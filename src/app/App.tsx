@@ -101,8 +101,46 @@ function sameSearchContextWithoutQuery(left: SearchRequest, right: SearchRequest
   return (
     arraysEqual(left.roots, right.roots) &&
     arraysEqual(left.extensions, right.extensions) &&
+    arraysEqual(left.exclude_paths ?? [], right.exclude_paths ?? []) &&
     JSON.stringify(left.options) === JSON.stringify(right.options)
   );
+}
+
+type SearchErrorCode = "SEARCH_INVALID_QUERY" | "SEARCH_STATE_ERROR" | "SEARCH_EXECUTION_ERROR";
+
+type ParsedSearchError = {
+  code: SearchErrorCode | null;
+  message: string;
+};
+
+function parseSearchErrorMessage(raw: string): ParsedSearchError {
+  const match = raw.match(/^\[(SEARCH_[A-Z_]+)\]\s*(.*)$/);
+  if (!match) {
+    return { code: null, message: raw };
+  }
+  const code = match[1] as SearchErrorCode;
+  const message = match[2]?.trim() ?? "";
+  if (code === "SEARCH_INVALID_QUERY" || code === "SEARCH_STATE_ERROR" || code === "SEARCH_EXECUTION_ERROR") {
+    return { code, message: message || raw };
+  }
+  return { code: null, message: raw };
+}
+
+function renderSearchErrorStatus(
+  rawMessage: string,
+  tr: (key: string, defaultValue: string, values?: Record<string, unknown>) => string
+): string {
+  const parsed = parseSearchErrorMessage(rawMessage);
+  if (parsed.code === "SEARCH_INVALID_QUERY") {
+    return tr("app.status.errorInvalidQuery", "Ошибка запроса поиска: {{message}}", { message: parsed.message });
+  }
+  if (parsed.code === "SEARCH_STATE_ERROR") {
+    return tr("app.status.errorState", "Внутренняя ошибка состояния поиска: {{message}}", { message: parsed.message });
+  }
+  if (parsed.code === "SEARCH_EXECUTION_ERROR") {
+    return tr("app.status.errorExecution", "Ошибка выполнения поиска: {{message}}", { message: parsed.message });
+  }
+  return tr("app.status.error", "Ошибка: {{message}}", { message: rawMessage });
 }
 
 function filterPlainResults(items: SearchResultItem[], query: string, ignoreCase: boolean): SearchResultItem[] {
@@ -180,6 +218,7 @@ export function App() {
   const [includeHidden, setIncludeHidden] = useState(false);
   const [entryKind, setEntryKind] = useState<EntryKind>("Any");
   const [extensionsRaw, setExtensionsRaw] = useState("");
+  const [excludePathsRaw, setExcludePathsRaw] = useState("");
   const [matchMode, setMatchMode] = useState<MatchMode>("Plain");
   const [sortMode, setSortMode] = useState<SortMode>("Relevance");
   const [searchBackend, setSearchBackend] = useState<SearchBackend>("Scan");
@@ -343,6 +382,13 @@ export function App() {
         remove: () => setExtensionsRaw("")
       });
     }
+    if (excludePathsRaw.trim()) {
+      items.push({
+        id: "exclude",
+        label: tr("app.chips.excludePaths", "Исключить: {{paths}}", { paths: excludePathsRaw }),
+        remove: () => setExcludePathsRaw("")
+      });
+    }
     if (!maxDepthUnlimited) {
       items.push({
         id: "depth",
@@ -400,6 +446,7 @@ export function App() {
   }, [
     createdFilterEnabled,
     entryKind,
+    excludePathsRaw,
     extensionsRaw,
     ignoreCase,
     includeHidden,
@@ -484,6 +531,7 @@ export function App() {
     setEntryKind("Any");
     setMatchMode("Plain");
     setExtensionsRaw("");
+    setExcludePathsRaw("");
     setMaxDepthUnlimited(true);
     setMaxDepth(3);
     setSizeFilterEnabled(false);
@@ -627,6 +675,7 @@ export function App() {
       enabledRoots,
       primaryRoot,
       extensionsRaw,
+      excludePathsRaw,
       maxDepthUnlimited,
       maxDepth,
       limit,
@@ -657,6 +706,7 @@ export function App() {
     setRoots(profileRoots);
     setPrimaryRoot(profileRoots[0]?.path ?? defaultRootPath);
     setExtensionsRaw(req.extensions.join(","));
+    setExcludePathsRaw((req.exclude_paths ?? []).join(","));
     setStrict(req.options.strict);
     setIgnoreCase(req.options.ignore_case);
     setIncludeHidden(req.options.include_hidden);
@@ -1115,7 +1165,7 @@ export function App() {
         if (payload.search_id !== activeSearchIdRef.current) {
           return;
         }
-        setStatus(tr("app.status.error", "Ошибка: {{message}}", { message: payload.message }));
+        setStatus(renderSearchErrorStatus(payload.message, tr));
         setIsSearching(false);
         setSearchErrorCount((prev) => prev + 1);
         if (pendingCheckedDeltaRef.current > 0) {
@@ -1172,6 +1222,7 @@ export function App() {
     debounceMs,
     entryKind,
     extensionsRaw,
+    excludePathsRaw,
     ignoreCase,
     includeHidden,
     limit,
@@ -1424,6 +1475,8 @@ export function App() {
             onEntryKindChange={setEntryKind}
             extensionsRaw={extensionsRaw}
             onExtensionsRawChange={setExtensionsRaw}
+            excludePathsRaw={excludePathsRaw}
+            onExcludePathsRawChange={setExcludePathsRaw}
             maxDepthUnlimited={maxDepthUnlimited}
             onMaxDepthUnlimitedChange={setMaxDepthUnlimited}
             maxDepth={maxDepth}
