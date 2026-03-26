@@ -39,6 +39,7 @@ export interface SearchRequest {
   query: string;
   roots: string[];
   extensions: string[];
+  exclude_paths: string[];
   options: SearchOptions;
 }
 

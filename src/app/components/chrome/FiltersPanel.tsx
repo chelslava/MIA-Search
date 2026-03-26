@@ -11,6 +11,8 @@ export function FiltersPanel({
   onEntryKindChange,
   extensionsRaw,
   onExtensionsRawChange,
+  excludePathsRaw,
+  onExcludePathsRawChange,
   maxDepthUnlimited,
   onMaxDepthUnlimitedChange,
   maxDepth,
@@ -111,6 +113,20 @@ export function FiltersPanel({
             placeholder={tr("app.filters.extensions.placeholder", "rs, txt, md")}
           />
           <small className="text-xs text-[var(--muted)]">{tr("app.filters.extensions.hint", "Разделяйте значения запятыми")}</small>
+        </fieldset>
+
+        <fieldset className="space-y-2 rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] p-2">
+          <legend className="px-1 text-xs font-medium text-[var(--text)]">
+            {tr("app.filters.exclude.legend", "Исключить пути")}
+          </legend>
+          <Input
+            value={excludePathsRaw}
+            onChange={(event) => onExcludePathsRawChange(event.target.value)}
+            placeholder={tr("app.filters.exclude.placeholder", "node_modules, .git, target")}
+          />
+          <small className="text-xs text-[var(--muted)]">
+            {tr("app.filters.exclude.hint", "Разделяйте маски запятыми")}
+          </small>
         </fieldset>
 
         <fieldset className="space-y-2 rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] p-2">

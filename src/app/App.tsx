@@ -101,6 +101,7 @@ function sameSearchContextWithoutQuery(left: SearchRequest, right: SearchRequest
   return (
     arraysEqual(left.roots, right.roots) &&
     arraysEqual(left.extensions, right.extensions) &&
+    arraysEqual(left.exclude_paths ?? [], right.exclude_paths ?? []) &&
     JSON.stringify(left.options) === JSON.stringify(right.options)
   );
 }
@@ -180,6 +181,7 @@ export function App() {
   const [includeHidden, setIncludeHidden] = useState(false);
   const [entryKind, setEntryKind] = useState<EntryKind>("Any");
   const [extensionsRaw, setExtensionsRaw] = useState("");
+  const [excludePathsRaw, setExcludePathsRaw] = useState("");
   const [matchMode, setMatchMode] = useState<MatchMode>("Plain");
   const [sortMode, setSortMode] = useState<SortMode>("Relevance");
   const [searchBackend, setSearchBackend] = useState<SearchBackend>("Scan");
@@ -343,6 +345,13 @@ export function App() {
         remove: () => setExtensionsRaw("")
       });
     }
+    if (excludePathsRaw.trim()) {
+      items.push({
+        id: "exclude",
+        label: tr("app.chips.excludePaths", "Исключить: {{paths}}", { paths: excludePathsRaw }),
+        remove: () => setExcludePathsRaw("")
+      });
+    }
     if (!maxDepthUnlimited) {
       items.push({
         id: "depth",
@@ -400,6 +409,7 @@ export function App() {
   }, [
     createdFilterEnabled,
     entryKind,
+    excludePathsRaw,
     extensionsRaw,
     ignoreCase,
     includeHidden,
@@ -484,6 +494,7 @@ export function App() {
     setEntryKind("Any");
     setMatchMode("Plain");
     setExtensionsRaw("");
+    setExcludePathsRaw("");
     setMaxDepthUnlimited(true);
     setMaxDepth(3);
     setSizeFilterEnabled(false);
@@ -627,6 +638,7 @@ export function App() {
       enabledRoots,
       primaryRoot,
       extensionsRaw,
+      excludePathsRaw,
       maxDepthUnlimited,
       maxDepth,
       limit,
@@ -657,6 +669,7 @@ export function App() {
     setRoots(profileRoots);
     setPrimaryRoot(profileRoots[0]?.path ?? defaultRootPath);
     setExtensionsRaw(req.extensions.join(","));
+    setExcludePathsRaw((req.exclude_paths ?? []).join(","));
     setStrict(req.options.strict);
     setIgnoreCase(req.options.ignore_case);
     setIncludeHidden(req.options.include_hidden);
@@ -1172,6 +1185,7 @@ export function App() {
     debounceMs,
     entryKind,
     extensionsRaw,
+    excludePathsRaw,
     ignoreCase,
     includeHidden,
     limit,
@@ -1424,6 +1438,8 @@ export function App() {
             onEntryKindChange={setEntryKind}
             extensionsRaw={extensionsRaw}
             onExtensionsRawChange={setExtensionsRaw}
+            excludePathsRaw={excludePathsRaw}
+            onExcludePathsRawChange={setExcludePathsRaw}
             maxDepthUnlimited={maxDepthUnlimited}
             onMaxDepthUnlimitedChange={setMaxDepthUnlimited}
             maxDepth={maxDepth}

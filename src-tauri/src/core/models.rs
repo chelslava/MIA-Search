@@ -154,6 +154,8 @@ pub struct SearchRequest {
   pub query: String,
   pub roots: Vec<String>,
   pub extensions: Vec<String>,
+  #[serde(default)]
+  pub exclude_paths: Vec<String>,
   pub options: SearchOptions,
 }
 
@@ -163,6 +165,7 @@ impl Default for SearchRequest {
       query: String::new(),
       roots: Vec::new(),
       extensions: Vec::new(),
+      exclude_paths: Vec::new(),
       options: SearchOptions::default(),
     }
   }
@@ -284,6 +287,7 @@ mod tests {
     assert_eq!(request.query, "");
     assert!(request.roots.is_empty());
     assert!(request.extensions.is_empty());
+    assert!(request.exclude_paths.is_empty());
     assert_eq!(request.options.max_depth, SearchOptions::default().max_depth);
     assert_eq!(request.options.limit, SearchOptions::default().limit);
     assert_eq!(request.options.strict, SearchOptions::default().strict);

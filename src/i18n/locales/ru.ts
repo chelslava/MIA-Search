@@ -140,6 +140,11 @@ const ru = {
         placeholder: "rs, txt, md",
         hint: "Разделяйте значения запятыми"
       },
+      exclude: {
+        legend: "Исключить пути",
+        placeholder: "node_modules, .git, target",
+        hint: "Разделяйте маски запятыми"
+      },
       depth: {
         legend: "Глубина",
         unlimited: "Без ограничений"
@@ -287,6 +292,7 @@ const ru = {
       filesOnly: "Только файлы",
       dirsOnly: "Только папки",
       extensions: "Расширения: {{extensions}}",
+      excludePaths: "Исключить: {{paths}}",
       depth: "Глубина: {{depth}}",
       size: "Размер {{sign}} {{value}} {{unit}}",
       modified: "Дата изменения",

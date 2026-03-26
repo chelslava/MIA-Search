@@ -209,6 +209,7 @@ impl SearchService {
     G: FnMut(bool),
   {
     let roots = normalized_roots(request);
+    let exclude_tokens = normalized_exclude_tokens(request);
     let roots_for_source = prepare_source_roots(&roots);
     let default_root = roots.first().cloned().unwrap_or_else(|| ".".to_string());
     let query = request.query.trim().to_string();
@@ -273,6 +274,9 @@ impl SearchService {
       }
 
       if !matcher.matches(&path) {
+        continue;
+      }
+      if path_matches_exclude_tokens(&path, &exclude_tokens) {
         continue;
       }
 
@@ -439,6 +443,30 @@ fn normalized_extensions(request: &SearchRequest) -> Vec<String> {
     .map(|ext| ext.trim().trim_start_matches('.').to_string())
     .filter(|ext| !ext.is_empty())
     .collect()
+}
+
+fn normalized_exclude_tokens(request: &SearchRequest) -> Vec<String> {
+  request
+    .exclude_paths
+    .iter()
+    .map(|value| value.trim())
+    .filter(|value| !value.is_empty())
+    .map(normalize_path_for_match)
+    .collect()
+}
+
+fn normalize_path_for_match(value: &str) -> String {
+  value.replace('\\', "/").to_lowercase()
+}
+
+fn path_matches_exclude_tokens(path: &str, exclude_tokens: &[String]) -> bool {
+  if exclude_tokens.is_empty() {
+    return false;
+  }
+  let normalized_path = normalize_path_for_match(path);
+  exclude_tokens
+    .iter()
+    .any(|token| !token.is_empty() && normalized_path.contains(token))
 }
 
 fn build_scan_tasks(request: &SearchRequest, roots: &[String]) -> Vec<(String, Option<String>)> {
@@ -752,6 +780,43 @@ mod tests {
 
     assert!(names.iter().any(|name| name == "report.xlsm"));
     assert!(!names.iter().any(|name| name == "notes.txt"));
+  }
+
+  #[test]
+  fn exclude_paths_filters_out_matching_subdirectories() {
+    let root = tempdir().expect("root");
+    write_file(&root.path().join("node_modules/leftpad/index.js"), "x");
+    write_file(&root.path().join(".git/config"), "x");
+    write_file(&root.path().join("target/debug/app.bin"), "x");
+    write_file(&root.path().join("src/main.rs"), "x");
+
+    let mut request = request_for_roots(vec![root.path().to_string_lossy().to_string()]);
+    request.exclude_paths = vec!["node_modules".to_string(), ".git".to_string(), "target".to_string()];
+    request.options.max_depth = None;
+    request.options.sort_mode = SortMode::Name;
+
+    let execution = SearchService::execute(&request);
+    let paths: Vec<String> = execution.items.iter().map(|item| item.full_path.clone()).collect();
+
+    assert!(execution.items.iter().any(|item| item.name == "main.rs"));
+    assert!(!paths.iter().any(|path| path.contains("node_modules")));
+    assert!(!paths.iter().any(|path| path.contains(".git")));
+    assert!(!paths.iter().any(|path| path.contains("target")));
+  }
+
+  #[test]
+  fn exclude_paths_ignores_blank_values() {
+    let root = tempdir().expect("root");
+    write_file(&root.path().join("src/main.rs"), "x");
+
+    let mut request = request_for_roots(vec![root.path().to_string_lossy().to_string()]);
+    request.exclude_paths = vec!["  ".to_string(), "\t".to_string(), "".to_string()];
+    request.options.max_depth = None;
+    request.options.sort_mode = SortMode::Name;
+
+    let execution = SearchService::execute(&request);
+
+    assert!(execution.items.iter().any(|item| item.name == "main.rs"));
   }
 
   #[test]

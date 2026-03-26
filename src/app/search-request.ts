@@ -6,6 +6,7 @@ type BuildSearchRequestInput = {
   enabledRoots: string[];
   primaryRoot: string;
   extensionsRaw: string;
+  excludePathsRaw: string;
   maxDepthUnlimited: boolean;
   maxDepth: number;
   limit: number | null;
@@ -48,11 +49,20 @@ export function buildSearchRequest(input: BuildSearchRequestInput): SearchReques
     .map((value) => value.trim().replace(/^\./, ""))
     .filter(Boolean);
   const mergedExtensions = Array.from(new Set(uiExtensions));
+  const excludePaths = Array.from(
+    new Set(
+      input.excludePathsRaw
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean)
+    )
+  );
 
   return {
     query: input.query.trim(),
     roots: input.enabledRoots.length > 0 ? input.enabledRoots : [input.primaryRoot || fallbackRoot],
     extensions: mergedExtensions,
+    exclude_paths: excludePaths,
     options: {
       max_depth: input.maxDepthUnlimited ? null : input.maxDepth,
       limit: input.limit,
