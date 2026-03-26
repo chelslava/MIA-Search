@@ -17,6 +17,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate tag version sync
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}".TrimStart("v")
+          $packageVersion = (Get-Content "package.json" | ConvertFrom-Json).version
+          $cargoVersion = Select-String -Path "src-tauri/Cargo.toml" -Pattern '^version\s*=\s*"([^"]+)"' | ForEach-Object { $_.Matches[0].Groups[1].Value } | Select-Object -First 1
+          $tauriVersion = (Get-Content "src-tauri/tauri.conf.json" | ConvertFrom-Json).version
+
+          if ($tag -ne $packageVersion -or $tag -ne $cargoVersion -or $tag -ne $tauriVersion) {
+            Write-Error "Version mismatch: tag=v$tag package=$packageVersion cargo=$cargoVersion tauri=$tauriVersion"
+            exit 1
+          }
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
