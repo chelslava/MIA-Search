@@ -49,6 +49,22 @@ jobs:
         run: cargo tauri build
         working-directory: src-tauri
 
+      - name: Smoke check installer artifact
+        shell: pwsh
+        run: |
+          $installers = Get-ChildItem -Path "src-tauri/target/release/bundle/nsis/*.exe" -File
+          if (-not $installers -or $installers.Count -eq 0) {
+            Write-Error "No NSIS installer found at src-tauri/target/release/bundle/nsis/*.exe"
+            exit 1
+          }
+
+          foreach ($installer in $installers) {
+            $hash = Get-FileHash -Path $installer.FullName -Algorithm SHA256
+            Write-Host "Installer: $($installer.Name)"
+            Write-Host "SizeBytes: $($installer.Length)"
+            Write-Host "SHA256: $($hash.Hash)"
+          }
+
       - name: Upload installer artifact
         uses: actions/upload-artifact@v4
         with:
@@ -65,7 +81,8 @@ jobs:
           if (Test-Path $candidate) {
             "path=$candidate" >> $env:GITHUB_OUTPUT
           } else {
-            "path=docs/github_release_v0.1.0.md" >> $env:GITHUB_OUTPUT
+            Write-Error "Release body file not found: $candidate"
+            exit 1
           }
 
       - name: Publish GitHub Release

@@ -43,6 +43,5 @@ Release date: 2026-03-25
 
 ## Docs
 - `docs/user_guide.md`
-- `docs/release_notes_v0.1.0.md`
-- `docs/release_smoke_checklist.md`
-- `docs/release_ops_playbook.md`
+- `docs/implementation_plan.md`
+- `docs/github_release_v0.1.0.md`

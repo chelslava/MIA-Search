@@ -27,7 +27,9 @@ cd src-tauri
 cargo tauri build
 ```
 
-Примечание для Windows MVP: bundle target настроен на `nsis` (установщик `.exe`).
+Примечание:
+- Автоматизированный release pipeline в GitHub Actions сейчас **Windows-only** и публикует NSIS-установщик (`.exe`).
+- Локальная сборка на Linux/macOS возможна, но публикация артефактов из workflow сейчас настроена только для Windows.
 
 ## Проверки качества
 ```bash
@@ -51,10 +53,7 @@ cargo llvm-cov --summary-only
 - Open / Open parent / Reveal / Copy
 
 ## Документация
-- [Roadmap](docs/roadmap.md)
 - [План реализации](docs/implementation_plan.md)
-- [Release Smoke Checklist](docs/release_smoke_checklist.md)
 - [Руководство пользователя](docs/user_guide.md)
-- [Release Notes v0.1.0](docs/release_notes_v0.1.0.md)
-- [Release Ops Playbook](docs/release_ops_playbook.md)
-- [Support Triage SLA](docs/support_triage_sla.md)
+- [GitHub Release v0.1.0](docs/github_release_v0.1.0.md)
+- [GitHub Release v0.1.1](docs/github_release_v0.1.1.md)
