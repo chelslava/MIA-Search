@@ -167,8 +167,22 @@ fn terminal_event_from_stream(
       total_results: summary.total_results,
       limit_reached: summary.limit_reached,
     }),
-    Err(message) => SearchTerminalEvent::Error(SearchErrorEvent { search_id, message }),
+    Err(message) => SearchTerminalEvent::Error(SearchErrorEvent {
+      search_id,
+      message: format_search_error(&message),
+    }),
   }
+}
+
+fn format_search_error(message: &str) -> String {
+  let code = if message.contains("regex parse error") || message.contains("wildcard parse error") {
+    "SEARCH_INVALID_QUERY"
+  } else if message.contains("index store lock poisoned") || message.contains("search session lock poisoned") {
+    "SEARCH_STATE_ERROR"
+  } else {
+    "SEARCH_EXECUTION_ERROR"
+  };
+  format!("[{code}] {message}")
 }
 
 fn run_search_stream(
@@ -306,10 +320,23 @@ mod tests {
     match error {
       SearchTerminalEvent::Error(payload) => {
         assert_eq!(payload.search_id, 3);
-        assert_eq!(payload.message, "boom");
+        assert_eq!(payload.message, "[SEARCH_EXECUTION_ERROR] boom");
       }
       _ => panic!("expected error event"),
     }
+  }
+
+  #[test]
+  fn format_search_error_uses_consistent_codes() {
+    assert_eq!(
+      format_search_error("regex parse error: ["),
+      "[SEARCH_INVALID_QUERY] regex parse error: ["
+    );
+    assert_eq!(
+      format_search_error("search session lock poisoned"),
+      "[SEARCH_STATE_ERROR] search session lock poisoned"
+    );
+    assert_eq!(format_search_error("boom"), "[SEARCH_EXECUTION_ERROR] boom");
   }
 
   #[test]

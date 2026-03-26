@@ -84,4 +84,18 @@ describe("App smoke", () => {
     const firstCall = ((mocks.startSearchMock as any).mock.calls[0]?.[0] as any) ?? null;
     expect(firstCall?.options?.entry_kind).toBe("File");
   });
+
+  it("passes exclude paths from filters into search request", async () => {
+    render(<App />);
+    await userEvent.click(screen.getByRole("button", { name: "⏷" }));
+    await userEvent.type(
+      screen.getByPlaceholderText("node_modules, .git, target"),
+      " node_modules, .git, node_modules "
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Применить" }));
+
+    await waitFor(() => expect(mocks.startSearchMock).toHaveBeenCalledTimes(1));
+    const firstCall = ((mocks.startSearchMock as any).mock.calls[0]?.[0] as any) ?? null;
+    expect(firstCall?.exclude_paths).toEqual(["node_modules", ".git"]);
+  });
 });

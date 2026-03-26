@@ -446,12 +446,14 @@ fn normalized_extensions(request: &SearchRequest) -> Vec<String> {
 }
 
 fn normalized_exclude_tokens(request: &SearchRequest) -> Vec<String> {
+  let mut seen = HashSet::new();
   request
     .exclude_paths
     .iter()
     .map(|value| value.trim())
     .filter(|value| !value.is_empty())
     .map(normalize_path_for_match)
+    .filter(|value| seen.insert(value.clone()))
     .collect()
 }
 
@@ -817,6 +819,17 @@ mod tests {
     let execution = SearchService::execute(&request);
 
     assert!(execution.items.iter().any(|item| item.name == "main.rs"));
+  }
+
+  #[test]
+  fn exclude_paths_deduplicates_tokens() {
+    let request = SearchRequest {
+      exclude_paths: vec![" target ".to_string(), "target".to_string(), "TARGET".to_string()],
+      ..SearchRequest::default()
+    };
+
+    let tokens = normalized_exclude_tokens(&request);
+    assert_eq!(tokens, vec!["target".to_string()]);
   }
 
   #[test]

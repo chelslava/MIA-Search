@@ -326,4 +326,31 @@ mod tests {
     assert!(item.score.is_none());
     assert_eq!(item.source_root, "");
   }
+
+  #[test]
+  fn search_request_deserializes_without_exclude_paths_for_backward_compatibility() {
+    let raw = r#"{
+      "query": "report",
+      "roots": ["C:/data"],
+      "extensions": ["txt"],
+      "options": {
+        "max_depth": null,
+        "limit": 100,
+        "strict": false,
+        "ignore_case": false,
+        "include_hidden": false,
+        "entry_kind": "Any",
+        "match_mode": "Plain",
+        "size_filter": null,
+        "created_filter": null,
+        "modified_filter": null,
+        "sort_mode": "Relevance",
+        "search_backend": "Scan"
+      }
+    }"#;
+
+    let parsed: SearchRequest = serde_json::from_str(raw).expect("legacy request should parse");
+    assert!(parsed.exclude_paths.is_empty());
+    assert_eq!(parsed.query, "report");
+  }
 }
