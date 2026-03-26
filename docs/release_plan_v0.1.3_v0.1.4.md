@@ -56,7 +56,6 @@
   - Контроль: расширять `SearchRequest` только с backward-compatible default полями.
 
 ## Осталось до v0.1.3
-1. Подготовить и проверить `docs/github_release_v0.1.3.md` (финальный body для тега).
-2. Провести полный pre-release smoke на Windows installer (установка, запуск, базовый search flow).
-3. Прогнать CI на PR `dev -> main` и убедиться, что `backend-perf-smoke` публикует метрики стабильно.
-4. Сделать финальную вычитку `README`/`user_guide` на предмет терминологии и hotkeys.
+1. Провести полный pre-release smoke на Windows installer (установка, запуск, базовый search flow).
+2. Прогнать CI на PR `dev -> main` и убедиться, что `backend-perf-smoke` публикует метрики стабильно.
+3. Сделать финальную вычитку `README`/`user_guide` на предмет терминологии и hotkeys.

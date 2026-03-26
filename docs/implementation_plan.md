@@ -101,6 +101,5 @@
 - Снижение регрессий по релизной статистике ошибок.
 
 ## Осталось до v0.1.3
-1. Подготовить финальные release notes `v0.1.3` под тег.
-2. Выполнить pre-release smoke на Windows installer.
-3. Закрыть PR `dev -> main` после зеленого CI.
+1. Выполнить pre-release smoke на Windows installer.
+2. Закрыть PR `dev -> main` после зеленого CI.
