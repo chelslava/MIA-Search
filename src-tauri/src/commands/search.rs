@@ -54,12 +54,50 @@ enum SearchTerminalEvent {
   Error(SearchErrorEvent),
 }
 
+const MAX_QUERY_LENGTH: usize = 1024;
+const MAX_ROOTS: usize = 50;
+const MAX_EXTENSIONS: usize = 20;
+const MAX_EXCLUDE_PATHS: usize = 50;
+
+fn validate_request(request: &SearchRequest) -> Result<(), String> {
+  if request.query.len() > MAX_QUERY_LENGTH {
+    return Err(format!(
+      "Query too long: {} chars (max {})",
+      request.query.len(),
+      MAX_QUERY_LENGTH
+    ));
+  }
+  if request.roots.len() > MAX_ROOTS {
+    return Err(format!(
+      "Too many roots: {} (max {})",
+      request.roots.len(),
+      MAX_ROOTS
+    ));
+  }
+  if request.extensions.len() > MAX_EXTENSIONS {
+    return Err(format!(
+      "Too many extensions: {} (max {})",
+      request.extensions.len(),
+      MAX_EXTENSIONS
+    ));
+  }
+  if request.exclude_paths.len() > MAX_EXCLUDE_PATHS {
+    return Err(format!(
+      "Too many exclude_paths: {} (max {})",
+      request.exclude_paths.len(),
+      MAX_EXCLUDE_PATHS
+    ));
+  }
+  Ok(())
+}
+
 #[tauri::command]
 pub fn search_start(
   app: AppHandle,
   state: State<'_, AppState>,
   request: SearchRequest,
 ) -> Result<SearchCommandResponse, String> {
+  validate_request(&request)?;
   record_query_if_enabled(&state, request.clone())?;
 
   let mut session = state
@@ -375,5 +413,57 @@ mod tests {
     assert!(items[0].is_file);
     assert!(items[0].size.is_some());
     assert_eq!(items[0].source_root, roots[0]);
+  }
+
+  #[test]
+  fn validate_request_accepts_valid_requests() {
+    let request = SearchRequest {
+      query: "test".to_string(),
+      roots: vec!["C:/data".to_string()],
+      extensions: vec!["txt".to_string()],
+      exclude_paths: vec!["node_modules".to_string()],
+      ..SearchRequest::default()
+    };
+    assert!(validate_request(&request).is_ok());
+  }
+
+  #[test]
+  fn validate_request_rejects_query_too_long() {
+    let request = SearchRequest {
+      query: "x".repeat(2000),
+      ..SearchRequest::default()
+    };
+    let err = validate_request(&request).unwrap_err();
+    assert!(err.contains("Query too long"));
+  }
+
+  #[test]
+  fn validate_request_rejects_too_many_roots() {
+    let request = SearchRequest {
+      roots: (0..100).map(|i| format!("C:/root{}", i)).collect(),
+      ..SearchRequest::default()
+    };
+    let err = validate_request(&request).unwrap_err();
+    assert!(err.contains("Too many roots"));
+  }
+
+  #[test]
+  fn validate_request_rejects_too_many_extensions() {
+    let request = SearchRequest {
+      extensions: (0..100).map(|i| format!("ext{}", i)).collect(),
+      ..SearchRequest::default()
+    };
+    let err = validate_request(&request).unwrap_err();
+    assert!(err.contains("Too many extensions"));
+  }
+
+  #[test]
+  fn validate_request_rejects_too_many_exclude_paths() {
+    let request = SearchRequest {
+      exclude_paths: (0..100).map(|i| format!("exclude{}", i)).collect(),
+      ..SearchRequest::default()
+    };
+    let err = validate_request(&request).unwrap_err();
+    assert!(err.contains("Too many exclude_paths"));
   }
 }

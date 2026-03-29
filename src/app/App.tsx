@@ -1621,6 +1621,7 @@ export function App() {
             }}
             scrollTop={scrollTop}
             setScrollTop={setScrollTop}
+            listHeight={listHeight}
             visibleRows={visibleRows}
             formatBytes={formatBytes}
             formatDate={formatDate}

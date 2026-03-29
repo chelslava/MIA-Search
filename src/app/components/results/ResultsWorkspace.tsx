@@ -1,8 +1,13 @@
 import type { MouseEvent, RefObject } from "react";
+import { useMemo } from "react";
 import type { SearchResultItem, SortMode } from "../../../shared/search-types";
 import type { DisplayMode, FilterChip } from "../../types";
 import { Button } from "../../../components/ui/button";
 import { Select } from "../../../components/ui/select";
+
+const CARD_HEIGHT = 80;
+const CARDS_PER_ROW_SM = 2;
+const CARDS_PER_ROW_XL = 3;
 
 type ResultsWorkspaceProps = {
   containerRef?: RefObject<HTMLElement | null>;
@@ -18,6 +23,7 @@ type ResultsWorkspaceProps = {
   onResultContextMenu: (event: MouseEvent<HTMLTableRowElement>, item: SearchResultItem) => void;
   scrollTop: number;
   setScrollTop: (value: number) => void;
+  listHeight: number;
   visibleRows: {
     topSpacer: number;
     bottomSpacer: number;
@@ -27,6 +33,34 @@ type ResultsWorkspaceProps = {
   formatDate: (date: string | null) => string;
   t: (key: string, defaultValue: string, values?: Record<string, unknown>) => string;
 };
+
+function useVisibleCards(
+  results: SearchResultItem[],
+  scrollTop: number,
+  listHeight: number
+): { topSpacer: number; bottomSpacer: number; items: SearchResultItem[] } {
+  return useMemo(() => {
+    if (results.length === 0 || listHeight <= 0) {
+      return { topSpacer: 0, bottomSpacer: 0, items: [] };
+    }
+    const cardsPerRow = CARDS_PER_ROW_SM;
+    const rowHeight = CARD_HEIGHT + 6;
+    const totalRows = Math.ceil(results.length / cardsPerRow);
+    const safeHeight = Math.max(200, listHeight);
+    const startRow = Math.max(0, Math.floor(scrollTop / rowHeight));
+    const visibleRowCount = Math.ceil(safeHeight / rowHeight) + 2;
+    const endRow = Math.min(totalRows, startRow + visibleRowCount);
+    const startIndex = startRow * cardsPerRow;
+    const endIndex = Math.min(results.length, endRow * cardsPerRow);
+    const topSpacer = startRow * rowHeight;
+    const bottomSpacer = Math.max(0, (totalRows - endRow) * rowHeight);
+    return {
+      topSpacer,
+      bottomSpacer,
+      items: results.slice(startIndex, endIndex)
+    };
+  }, [results, scrollTop, listHeight]);
+}
 
 export function ResultsWorkspace({
   containerRef,
@@ -40,12 +74,15 @@ export function ResultsWorkspace({
   selectedPath,
   onSelectPath,
   onResultContextMenu,
+  scrollTop,
   setScrollTop,
+  listHeight,
   visibleRows,
   formatBytes,
   formatDate,
   t
 }: ResultsWorkspaceProps) {
+  const visibleCards = useVisibleCards(results, scrollTop, listHeight);
   return (
     <section ref={containerRef} className="flex h-full min-h-0 flex-col gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] p-2">
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-alt)] p-2">
@@ -112,12 +149,19 @@ export function ResultsWorkspace({
 
       {displayMode === "cards" ? (
         <div
+          role="list"
+          aria-label={t("app.labels.results", "Результаты поиска")}
           className="grid min-h-0 flex-1 auto-rows-min gap-1.5 overflow-auto rounded-md border border-[var(--border)] bg-[var(--surface-alt)] p-1.5 sm:grid-cols-2 xl:grid-cols-3"
           onScroll={(event) => setScrollTop((event.currentTarget as HTMLDivElement).scrollTop)}
         >
-          {results.map((item) => (
+          {visibleCards.topSpacer > 0 ? (
+            <div style={{ height: visibleCards.topSpacer, gridColumn: "1 / -1" }} />
+          ) : null}
+          {visibleCards.items.map((item) => (
             <article
               key={item.full_path}
+              role="listitem"
+              aria-selected={selectedPath === item.full_path}
               className={
                 selectedPath === item.full_path
                   ? "cursor-pointer rounded-md border border-[var(--accent)] bg-[color-mix(in_srgb,var(--surface)_88%,var(--accent))] p-2 transition-colors"
@@ -140,6 +184,9 @@ export function ResultsWorkspace({
               </div>
             </article>
           ))}
+          {visibleCards.bottomSpacer > 0 ? (
+            <div style={{ height: visibleCards.bottomSpacer, gridColumn: "1 / -1" }} />
+          ) : null}
         </div>
       ) : (
         <div
@@ -176,6 +223,7 @@ export function ResultsWorkspace({
                 <tr
                   data-path={item.full_path}
                   key={item.full_path}
+                  aria-selected={selectedPath === item.full_path}
                   className={
                     selectedPath === item.full_path
                       ? "cursor-pointer bg-[color-mix(in_srgb,var(--surface)_84%,var(--accent))] transition-colors hover:bg-[color-mix(in_srgb,var(--surface)_80%,var(--accent))]"
