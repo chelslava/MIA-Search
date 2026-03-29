@@ -66,7 +66,7 @@ where
   let dir = data_dir();
   fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
   let path = dir.join(file_name);
-  let content = serde_json::to_string_pretty(value).map_err(|error| error.to_string())?;
+  let content = serde_json::to_string(value).map_err(|error| error.to_string())?;
   fs::write(&path, content).map_err(|error| error.to_string())?;
 
   #[cfg(unix)]
@@ -85,16 +85,23 @@ static ENV_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
 #[cfg(test)]
 pub(crate) fn with_test_data_dir(test: impl FnOnce()) {
   let lock = ENV_LOCK.get_or_init(|| Mutex::new(()));
-  let _guard = lock.lock().expect("env lock poisoned");
+  let guard = lock.lock().unwrap_or_else(|poisoned| {
+    eprintln!("Warning: env lock was poisoned, recovering");
+    poisoned.into_inner()
+  });
   let previous = env::var("MIA_SEARCH_DATA_DIR").ok();
   let dir = tempfile::tempdir().expect("temp dir");
   unsafe {
     env::set_var("MIA_SEARCH_DATA_DIR", dir.path());
   }
-  test();
+  let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| test()));
   match previous {
     Some(value) => unsafe { env::set_var("MIA_SEARCH_DATA_DIR", value) },
     None => unsafe { env::remove_var("MIA_SEARCH_DATA_DIR") },
+  }
+  drop(guard);
+  if let Err(panic) = result {
+    std::panic::resume_unwind(panic);
   }
 }
 

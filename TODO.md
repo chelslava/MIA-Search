@@ -154,8 +154,7 @@
 ### [QUAL-2] Duplicate Path Security Functions
 **Files:** `open_path.rs:4-21`, `reveal_in_explorer.rs:4-17`
 **Effort:** S
-**Issue:** `is_safe_path`, `has_path_traversal`, `is_symlink` functions duplicated.
-**Fix:** Extract to shared `path_security.rs` module.
+**Status:** Fixed - extracted to shared `path_security.rs` module.
 
 ### [QUAL-3] Type Mismatch Frontend/Backend
 **Files:** `search-types.ts:123-129`, `commands/index.rs:111-125`
@@ -175,8 +174,7 @@
 ### [SEC-15] Favorites Store Accepts Arbitrary Paths
 **File:** `src-tauri/src/storage/favorites_store.rs:28-33`
 **Effort:** S
-**Issue:** `favorites_add` accepts any path without validation. Malicious paths could be stored and exploited.
-**Fix:** Validate paths before storing.
+**Status:** Fixed - added validate_path_for_read() in favorites_add_inner.
 
 ---
 
@@ -201,14 +199,12 @@
 ### [PERF-17] JSON Serialization Uses Pretty Print
 **File:** `src-tauri/src/storage/persistence.rs:62-80`
 **Effort:** S
-**Issue:** `save_json` uses `to_string_pretty` which is slower than compact JSON.
-**Fix:** Use `to_string` (compact) for production.
+**Status:** Fixed - changed to_string_pretty to to_string for compact JSON.
 
 ### [PERF-18] to_lowercase Called Multiple Times
 **File:** `src-tauri/src/core/search_service.rs:444-459`
 **Effort:** S
-**Issue:** `score_relevance` calls `to_lowercase()` on both name and query every time, query is constant.
-**Fix:** Pre-compute lowercase query once.
+**Status:** Fixed - pre-compute lower_query once and pass to score_relevance.
 
 ### [PERF-19] Allocation in Wildcard-to-Regex Loop
 **File:** `src-tauri/src/core/search_service.rs:400-417`
@@ -314,11 +310,11 @@ Export search results to CSV/JSON.
 
 | Category | Critical | High | Medium | Low | Total |
 |----------|----------|------|--------|-----|-------|
-| Security | 0 | 0 | 1 | 1 | 2 |
-| Stability | 0 | 0 | 2 | 2 | 4 |
-| Performance | 0 | 0 | 4 | 3 | 7 |
+| Security | 0 | 0 | 1 | 0 | 1 |
+| Stability | 0 | 0 | 2 | 1 | 3 |
+| Performance | 0 | 0 | 4 | 2 | 6 |
 | UX/UI | 0 | 0 | 4 | 4 | 8 |
-| Code Quality | 0 | 0 | 3 | 5 | 8 |
-| **Total** | **0** | **0** | **13** | **15** | **28** |
+| Code Quality | 0 | 0 | 2 | 5 | 7 |
+| **Total** | **0** | **0** | **12** | **12** | **24** |
 
 **Next Priority:** SEC-14, STAB-17, STAB-18 (Medium priority items)

@@ -225,6 +225,7 @@ impl SearchService {
     let roots_for_source = prepare_source_roots(&roots, &cwd);
     let default_root = roots.first().cloned().unwrap_or_else(|| ".".to_string());
     let query = request.query.trim().to_string();
+    let lower_query = query.to_lowercase();
     let matcher = build_query_matcher(&request.options.match_mode, &query, request.options.ignore_case)?;
     if request.options.limit == Some(0) {
       on_limit(true);
@@ -316,8 +317,8 @@ impl SearchService {
 
       let source_root = resolve_source_root(&roots_for_source, &path, &cwd).unwrap_or_else(|| default_root.clone());
       let mut item = MetadataService::lightweight_path(&path, source_root);
-      if matches!(request.options.sort_mode, SortMode::Relevance) && !query.is_empty() {
-        item.score = score_relevance(&item.name, &query);
+      if matches!(request.options.sort_mode, SortMode::Relevance) && !lower_query.is_empty() {
+        item.score = score_relevance(&item.name, &lower_query);
       }
 
       batch.push(item);
@@ -466,17 +467,16 @@ fn sort_stream_batch(items: &mut [SearchResultItem], mode: &SortMode, query: &st
   }
 }
 
-fn score_relevance(name: &str, query: &str) -> Option<f64> {
-  if query.is_empty() {
+fn score_relevance(name: &str, lower_query: &str) -> Option<f64> {
+  if lower_query.is_empty() {
     return None;
   }
   let lower_name = name.to_lowercase();
-  let lower_query = query.to_lowercase();
   if lower_name == lower_query {
     Some(1.0)
-  } else if lower_name.starts_with(&lower_query) {
+  } else if lower_name.starts_with(lower_query) {
     Some(0.85)
-  } else if lower_name.contains(&lower_query) {
+  } else if lower_name.contains(lower_query) {
     Some(0.6)
   } else {
     Some(0.2)

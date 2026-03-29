@@ -1,4 +1,5 @@
 use crate::AppState;
+use crate::platform::path_security::validate_path_for_read;
 use crate::storage::favorites_store::FavoritesStore;
 use std::sync::Mutex;
 use tauri::State;
@@ -26,6 +27,7 @@ fn favorites_list_inner(favorites: &Mutex<FavoritesStore>) -> Result<Vec<String>
 }
 
 fn favorites_add_inner(favorites: &Mutex<FavoritesStore>, path: String) -> Result<Vec<String>, String> {
+  validate_path_for_read(&path)?;
   let mut store = favorites
     .lock()
     .map_err(|_| "favorites lock poisoned".to_string())?;
@@ -54,13 +56,18 @@ mod tests {
   #[test]
   fn favorites_inner_commands_flow() {
     with_test_data_dir(|| {
+      let temp_dir = tempfile::tempdir().expect("temp dir");
+      let path_one = temp_dir.path().join("one");
+      let path_missing = temp_dir.path().join("missing");
+      std::fs::create_dir_all(&path_one).expect("create one");
+
       let favorites = Mutex::new(FavoritesStore::default());
       assert_eq!(favorites_list_inner(&favorites).expect("list"), Vec::<String>::new());
 
-      let added = favorites_add_inner(&favorites, "C:/one".to_string()).expect("add");
-      assert_eq!(added, vec!["C:/one".to_string()]);
-      assert!(!favorites_remove_inner(&favorites, "C:/missing".to_string()).expect("remove missing"));
-      assert!(favorites_remove_inner(&favorites, "C:/one".to_string()).expect("remove existing"));
+      let added = favorites_add_inner(&favorites, path_one.to_string_lossy().to_string()).expect("add");
+      assert_eq!(added, vec![path_one.to_string_lossy().to_string()]);
+      assert!(!favorites_remove_inner(&favorites, path_missing.to_string_lossy().to_string()).expect("remove missing"));
+      assert!(favorites_remove_inner(&favorites, path_one.to_string_lossy().to_string()).expect("remove existing"));
     });
   }
 }
