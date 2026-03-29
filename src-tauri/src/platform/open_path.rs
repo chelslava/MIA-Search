@@ -1,3 +1,4 @@
+use super::path_security::{is_local_path, is_symlink};
 use std::path::{Component, Path};
 use std::process::Command;
 
@@ -6,22 +7,10 @@ fn is_safe_path(path: &str) -> bool {
   !path.chars().any(|c| dangerous_chars.contains(&c))
 }
 
-fn is_local_path(path: &str) -> bool {
-  let lower = path.to_lowercase();
-  !(lower.starts_with("http://")
-    || lower.starts_with("https://")
-    || lower.starts_with("ftp://")
-    || lower.starts_with("file://"))
-}
-
 fn has_path_traversal(path: &str) -> bool {
   Path::new(path)
     .components()
     .any(|c| matches!(c, Component::ParentDir))
-}
-
-fn is_symlink(path: &Path) -> bool {
-  path.symlink_metadata().map(|m| m.file_type().is_symlink()).unwrap_or(false)
 }
 
 pub fn open_path(path: &str) -> Result<(), String> {

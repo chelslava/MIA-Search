@@ -1,4 +1,4 @@
-use crate::{commands::history::record_opened_path_if_enabled, platform, AppState};
+use crate::{commands::history::record_opened_path_if_enabled, platform, platform::path_security::validate_path_for_read, AppState};
 use rfd::FileDialog;
 use serde::{Deserialize, Serialize};
 use std::{fs, path::Path};
@@ -67,8 +67,8 @@ pub fn fs_list_roots() -> Result<Vec<FsTreeNode>, String> {
 
 #[tauri::command]
 pub fn fs_list_children(path: String) -> Result<Vec<FsTreeNode>, String> {
-  let path_ref = Path::new(&path);
-  let entries = fs::read_dir(path_ref).map_err(|error| format!("read_dir failed for {path}: {error}"))?;
+  let canonical = validate_path_for_read(&path)?;
+  let entries = fs::read_dir(&canonical).map_err(|error| format!("read_dir failed for {}: {}", path, error))?;
   let mut children: Vec<FsTreeNode> = entries
     .flatten()
     .filter_map(|entry| {
@@ -76,6 +76,20 @@ pub fn fs_list_children(path: String) -> Result<Vec<FsTreeNode>, String> {
       if !entry_path.is_dir() {
         return None;
       }
+      let full_path = entry_path.to_string_lossy().to_string();
+      let name = entry.file_name().to_string_lossy().to_string();
+      Some(FsTreeNode {
+        name: if name.is_empty() { full_path.clone() } else { name },
+        path: full_path,
+        is_drive: false,
+        has_children: has_dir_children(&entry_path),
+      })
+    })
+    .collect();
+
+  children.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+  Ok(children)
+}
       let full_path = entry_path.to_string_lossy().to_string();
       let name = entry.file_name().to_string_lossy().to_string();
       Some(FsTreeNode {

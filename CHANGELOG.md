@@ -49,6 +49,8 @@ All notable changes to this project will be documented in this file.
 - **[SEC-7]** Added path traversal validation - rejects paths containing `..` components that could escape intended directories.
 - **[SEC-8]** Fixed sensitive data exposure in history - now stores only query text, not full SearchRequest with roots/exclude_paths.
 - **[SEC-10]** Added length validation for individual exclude_paths entries - max 256 chars each to prevent DoS.
+- **[SEC-11]** Added path validation in `fs_list_children` - same security checks as open_path to prevent directory traversal attacks.
+- **[QUAL-2]** Extracted path security functions to shared `path_security.rs` module for code reuse.
 
 ### Stability
 - **[STAB-10]** Fixed TOCTOU race condition in path canonicalization - re-validates canonicalized path for symlinks, traversal sequences, and unsafe characters after resolution.

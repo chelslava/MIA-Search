@@ -16,12 +16,6 @@
 
 ## 🟠 High
 
-### [SEC-11] No Input Validation on fs_list_children Path
-**File:** `src-tauri/src/commands/actions.rs:68-92`
-**Effort:** S
-**Issue:** Command accepts any path string without validation for path traversal, symlinks, or dangerous characters. Could expose sensitive directory structures.
-**Fix:** Apply same path security checks used in `open_path.rs`.
-
 ### [SEC-12] Regex Denial of Service (ReDoS) Vulnerability
 **File:** `src-tauri/src/core/search_service.rs:391-418`
 **Effort:** M
@@ -338,11 +332,11 @@ Export search results to CSV/JSON.
 
 | Category | Critical | High | Medium | Low | Total |
 |----------|----------|------|--------|-----|-------|
-| Security | 0 | 2 | 2 | 1 | 5 |
+| Security | 0 | 1 | 2 | 1 | 5 |
 | Stability | 0 | 1 | 5 | 2 | 8 |
 | Performance | 0 | 0 | 6 | 3 | 9 |
 | UX/UI | 0 | 0 | 6 | 4 | 10 |
 | Code Quality | 0 | 0 | 4 | 5 | 9 |
-| **Total** | **0** | **3** | **23** | **15** | **41** |
+| **Total** | **0** | **2** | **22** | **15** | **39** |
 
-**Next Priority:** SEC-11, SEC-12, STAB-14 (High priority items)
+**Next Priority:** SEC-12, STAB-14 (High priority items)

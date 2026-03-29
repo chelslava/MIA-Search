@@ -1,3 +1,4 @@
+use super::path_security::is_symlink;
 use std::path::{Component, Path};
 use std::process::Command;
 
@@ -10,10 +11,6 @@ fn has_path_traversal(path: &str) -> bool {
   Path::new(path)
     .components()
     .any(|c| matches!(c, Component::ParentDir))
-}
-
-fn is_symlink(path: &Path) -> bool {
-  path.symlink_metadata().map(|m| m.file_type().is_symlink()).unwrap_or(false)
 }
 
 pub fn reveal_in_file_manager(path: &str) -> Result<(), String> {
