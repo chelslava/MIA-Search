@@ -63,6 +63,7 @@ All notable changes to this project will be documented in this file.
 - **[SEC-10]** Added length validation for individual exclude_paths entries - max 256 chars each to prevent DoS.
 - **[SEC-11]** Added path validation in `fs_list_children` - same security checks as open_path to prevent directory traversal attacks.
 - **[SEC-12]** Added protection against ReDoS attacks - max regex pattern length (256 chars), max wildcard count (32) for wildcard patterns.
+- **[SEC-14]** Fixed TOCTOU race in symlink resolution - removed pre-canonicalization symlink check, now only validates resolved path.
 - **[QUAL-2]** Extracted path security functions to shared `path_security.rs` module for code reuse.
 
 ### Stability

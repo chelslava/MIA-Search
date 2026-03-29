@@ -30,8 +30,7 @@
 ### [SEC-14] Symlink Resolution TOCTOU Race
 **File:** `src-tauri/src/platform/open_path.rs:38-56`
 **Effort:** M
-**Issue:** Symlink detection happens before and after canonicalization. Attacker could race between checks if symlink target changes.
-**Fix:** Use single canonicalization step, perform all security checks on resolved path.
+**Status:** Fixed - removed symlink check before canonicalization, now only check resolved path.
 
 ---
 

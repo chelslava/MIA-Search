@@ -22,10 +22,6 @@ pub fn reveal_in_file_manager(path: &str) -> Result<(), String> {
   }
 
   let path_ref = Path::new(path);
-  if is_symlink(path_ref) {
-    return Err(format!("Refusing to follow symlink: {}", path));
-  }
-
   let canonical = path_ref
     .canonicalize()
     .map_err(|error| format!("Invalid path {}: {}", path, error))?;
