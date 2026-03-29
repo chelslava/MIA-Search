@@ -207,8 +207,7 @@
 ### [PERF-19] Allocation in Wildcard-to-Regex Loop
 **File:** `src-tauri/src/core/search_service.rs:400-417`
 **Effort:** S
-**Issue:** Wildcard conversion allocates new String for every character in pattern.
-**Fix:** Pre-calculate output size and allocate once.
+**Status:** Fixed - pre-calculate output size and allocate once.
 
 ---
 
@@ -252,8 +251,7 @@
 ### [QUAL-7] Hardcoded Default Language
 **File:** `src-tauri/src/storage/settings_store.rs:28`
 **Effort:** S
-**Issue:** Default language hardcoded to "ru". Should detect system language.
-**Fix:** Use system language detection for default.
+**Status:** Fixed - auto-detect system language using sys-locale crate.
 
 ### [QUAL-8] Missing Documentation for Public APIs
 **Files:** All Rust files

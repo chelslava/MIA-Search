@@ -383,7 +383,12 @@ fn build_query_matcher(mode: &MatchMode, query: &str, ignore_case: bool) -> Resu
           wildcard_count, MAX_WILDCARD_COUNT
         ));
       }
-      let mut pattern = String::from("^");
+      let escaped_len: usize = query
+        .chars()
+        .map(|c| if c == '*' || c == '?' { 0 } else { regex::escape(&c.to_string()).len() })
+        .sum();
+      let mut pattern = String::with_capacity(1 + wildcard_count + escaped_len + 1);
+      pattern.push('^');
       for ch in query.chars() {
         match ch {
           '*' => pattern.push_str(".*"),

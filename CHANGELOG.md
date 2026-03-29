@@ -49,6 +49,9 @@ All notable changes to this project will be documented in this file.
 - **[UX-26]** Added aria-label to filters toggle button for accessibility.
 - **[UX-28]** Removed sortMode from live search triggers - changing sort no longer triggers new search.
 
+### Performance
+- **[PERF-19]** Pre-calculate output size in wildcard-to-regex conversion - allocates once instead of per-character.
+
 ### Code Quality
 - **[PERF-6]** Improved NaN handling in relevance sorting - NaN scores are now sorted to the end instead of being treated as equal.
 
@@ -65,6 +68,7 @@ All notable changes to this project will be documented in this file.
 - **[SEC-12]** Added protection against ReDoS attacks - max regex pattern length (256 chars), max wildcard count (32) for wildcard patterns.
 - **[SEC-14]** Fixed TOCTOU race in symlink resolution - removed pre-canonicalization symlink check, now only validates resolved path.
 - **[QUAL-2]** Extracted path security functions to shared `path_security.rs` module for code reuse.
+- **[QUAL-7]** Auto-detect system language for default setting instead of hardcoding "ru".
 
 ### Stability
 - **[STAB-10]** Fixed TOCTOU race condition in path canonicalization - re-validates canonicalized path for symlinks, traversal sequences, and unsafe characters after resolution.

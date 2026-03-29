@@ -21,11 +21,26 @@ pub struct SettingsSnapshot {
   pub default_roots: Vec<String>,
 }
 
+fn detect_system_language() -> String {
+  sys_locale::get_locale()
+    .and_then(|locale| {
+      let locale = locale.to_lowercase();
+      if locale.starts_with("ru") {
+        Some("ru".to_string())
+      } else if locale.starts_with("en") {
+        Some("en".to_string())
+      } else {
+        locale.split('-').next().map(|s| s.to_string())
+      }
+    })
+    .unwrap_or_else(|| "en".to_string())
+}
+
 impl Default for SettingsSnapshot {
   fn default() -> Self {
     Self {
       theme: "system".to_string(),
-      language: "ru".to_string(),
+      language: detect_system_language(),
       live_search: true,
       debounce_ms: 250,
       default_limit: Some(100),
@@ -75,7 +90,7 @@ mod tests {
   fn settings_default_has_expected_values() {
     let defaults = SettingsSnapshot::default();
     assert_eq!(defaults.theme, "system");
-    assert_eq!(defaults.language, "ru");
+    assert!(!defaults.language.is_empty());
     assert!(defaults.live_search);
     assert_eq!(defaults.debounce_ms, 250);
     assert_eq!(defaults.default_limit, Some(100));
