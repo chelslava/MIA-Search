@@ -56,8 +56,7 @@
 ### [STAB-18] No Graceful Shutdown for In-Progress Searches
 **File:** `src-tauri/src/commands/search.rs:125-162`
 **Effort:** M
-**Issue:** Active search threads continue briefly after shutdown initiated. No explicit join with timeout.
-**Fix:** Implement proper graceful shutdown with thread join timeout and resource cleanup.
+**Status:** Fixed - added on_window_event handler to cancel searches and set shutting_down flag on CloseRequested.
 
 ### [STAB-19] Race Condition in Search Session Management
 **File:** `src-tauri/src/core/search_service.rs:97-113`

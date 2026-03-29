@@ -71,6 +71,9 @@ All notable changes to this project will be documented in this file.
 - **[QUAL-7]** Auto-detect system language for default setting instead of hardcoding "ru".
 
 ### Stability
+- **[STAB-18]** Graceful shutdown on window close - cancels active searches and sets shutting_down flag.
+
+### Stability
 - **[STAB-10]** Fixed TOCTOU race condition in path canonicalization - re-validates canonicalized path for symlinks, traversal sequences, and unsafe characters after resolution.
 - **[STAB-11]** Added memory cap for seen_paths deduplication - clears and resizes when exceeding limit*10 to prevent unbounded memory growth.
 - **[STAB-13]** Added max=999 limit on size filter input to prevent integer overflow.

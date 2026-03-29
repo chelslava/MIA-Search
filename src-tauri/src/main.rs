@@ -9,6 +9,7 @@ use commands::{actions, favorites, history, index, profiles, search, settings};
 use std::sync::Mutex;
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use tauri::Manager;
 use storage::{
   favorites_store::FavoritesStore,
   history_store::HistoryStore,
@@ -17,16 +18,17 @@ use storage::{
   settings_store::SettingsStore,
 };
 
+#[derive(Clone)]
 pub struct AppState {
-  pub search_session: Mutex<core::search_service::SearchSession>,
-  pub settings: Mutex<SettingsStore>,
-  pub profiles: Mutex<ProfilesStore>,
-  pub history: Mutex<HistoryStore>,
-  pub favorites: Mutex<FavoritesStore>,
-  pub index: Mutex<IndexStore>,
-  pub index_rebuild_in_progress: AtomicBool,
-  pub index_rebuild_cancel: Mutex<Option<Arc<AtomicBool>>>,
-  pub shutting_down: AtomicBool,
+  pub search_session: Arc<Mutex<core::search_service::SearchSession>>,
+  pub settings: Arc<Mutex<SettingsStore>>,
+  pub profiles: Arc<Mutex<ProfilesStore>>,
+  pub history: Arc<Mutex<HistoryStore>>,
+  pub favorites: Arc<Mutex<FavoritesStore>>,
+  pub index: Arc<Mutex<IndexStore>>,
+  pub index_rebuild_in_progress: Arc<AtomicBool>,
+  pub index_rebuild_cancel: Arc<Mutex<Option<Arc<AtomicBool>>>>,
+  pub shutting_down: Arc<AtomicBool>,
 }
 
 pub fn lock_or_recover<T>(mutex: &Mutex<T>) -> Result<std::sync::MutexGuard<T>, String> {
@@ -42,15 +44,15 @@ pub fn lock_or_recover<T>(mutex: &Mutex<T>) -> Result<std::sync::MutexGuard<T>, 
 impl AppState {
   pub fn new() -> Self {
     Self {
-      search_session: Mutex::new(core::search_service::SearchSession::default()),
-      settings: Mutex::new(SettingsStore::load()),
-      profiles: Mutex::new(ProfilesStore::load()),
-      history: Mutex::new(HistoryStore::load()),
-      favorites: Mutex::new(FavoritesStore::load()),
-      index: Mutex::new(IndexStore::load()),
-      index_rebuild_in_progress: AtomicBool::new(false),
-      index_rebuild_cancel: Mutex::new(None),
-      shutting_down: AtomicBool::new(false),
+      search_session: Arc::new(Mutex::new(core::search_service::SearchSession::default())),
+      settings: Arc::new(Mutex::new(SettingsStore::load())),
+      profiles: Arc::new(Mutex::new(ProfilesStore::load())),
+      history: Arc::new(Mutex::new(HistoryStore::load())),
+      favorites: Arc::new(Mutex::new(FavoritesStore::load())),
+      index: Arc::new(Mutex::new(IndexStore::load())),
+      index_rebuild_in_progress: Arc::new(AtomicBool::new(false)),
+      index_rebuild_cancel: Arc::new(Mutex::new(None)),
+      shutting_down: Arc::new(AtomicBool::new(false)),
     }
   }
 
@@ -61,8 +63,24 @@ impl AppState {
 
 fn main() {
   let app_state = AppState::bootstrap();
+  let shutdown_flag = app_state.shutting_down.clone();
+  let search_session = app_state.search_session.clone();
+  let rebuild_cancel = app_state.index_rebuild_cancel.clone();
   tauri::Builder::default()
     .manage(app_state)
+    .on_window_event(move |_window, event| {
+      if let tauri::WindowEvent::CloseRequested { .. } = event {
+        shutdown_flag.store(true, std::sync::atomic::Ordering::Release);
+        if let Ok(mut session) = search_session.lock() {
+          session.cancel();
+        }
+        if let Ok(mut rebuild_cancel) = rebuild_cancel.lock() {
+          if let Some(flag) = rebuild_cancel.take() {
+            flag.store(true, std::sync::atomic::Ordering::Release);
+          }
+        }
+      }
+    })
     .invoke_handler(tauri::generate_handler![
       search::search_start,
       search::search_cancel,
