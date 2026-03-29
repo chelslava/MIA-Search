@@ -47,8 +47,8 @@
 
 ### [PERF-12] Regex Compilation on Every Wildcard Search
 **File:** `src-tauri/src/core/search_service.rs:381-398`
-**Issue:** Wildcard patterns converted to regex and compiled on every call.
-**Fix:** Add thread-local cache for compiled patterns.
+**Status:** Fixed - added thread-local cache for compiled regex patterns.
+**Note:** Cache stores up to 64 patterns, clears when full.
 
 ---
 
@@ -207,8 +207,8 @@ Export search results to CSV/JSON.
 |----------|----------|------|--------|-----|
 | Security | 0 | 0 | 0 | 1 |
 | Stability | 0 | 0 | 1 | 3 |
-| Performance | 0 | 0 | 3 | 2 |
+| Performance | 0 | 0 | 2 | 2 |
 | UX/UI | 0 | 0 | 2 | 7 |
 
 **Priority Order:**
-1. PERF-12: Regex compilation on every wildcard search (Medium)
+1. UX-18: Missing loading state for initial index build (Medium)

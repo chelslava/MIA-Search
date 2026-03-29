@@ -7,7 +7,8 @@ use crate::core::ranking::sort_results;
 use chrono::{DateTime, Utc};
 use regex::Regex;
 use rust_search::{FileSize, FilterExt, SearchBuilder};
-use std::collections::{HashSet, VecDeque};
+use std::cell::RefCell;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::mpsc;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -60,6 +61,11 @@ fn option_date_filter_eq(
 const BATCH_SIZE: usize = 100;
 const FIRST_BATCH_SIZE: usize = 20;
 const MAX_SCAN_WORKERS: usize = 12;
+const REGEX_CACHE_SIZE: usize = 64;
+
+thread_local! {
+  static REGEX_CACHE: RefCell<HashMap<String, Regex>> = RefCell::new(HashMap::new());
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct SearchExecution {
@@ -388,7 +394,7 @@ fn build_query_matcher(mode: &MatchMode, query: &str, ignore_case: bool) -> Resu
       } else {
         query.to_string()
       };
-      let regex = Regex::new(&pattern).map_err(|error| format!("regex parse error: {error}"))?;
+      let regex = get_or_compile_regex(&pattern)?;
       Ok(QueryMatcher::Regex { regex })
     }
     MatchMode::Wildcard => {
@@ -406,10 +412,25 @@ fn build_query_matcher(mode: &MatchMode, query: &str, ignore_case: bool) -> Resu
       } else {
         pattern
       };
-      let regex = Regex::new(&pattern).map_err(|error| format!("wildcard parse error: {error}"))?;
+      let regex = get_or_compile_regex(&pattern)?;
       Ok(QueryMatcher::Regex { regex })
     }
   }
+}
+
+fn get_or_compile_regex(pattern: &str) -> Result<Regex, String> {
+  REGEX_CACHE.with(|cache| {
+    let mut cache = cache.borrow_mut();
+    if let Some(regex) = cache.get(pattern).cloned() {
+      return Ok(regex);
+    }
+    let regex = Regex::new(pattern).map_err(|error| format!("regex parse error: {error}"))?;
+    if cache.len() >= REGEX_CACHE_SIZE {
+      cache.clear();
+    }
+    cache.insert(pattern.to_string(), regex.clone());
+    Ok(regex)
+  })
 }
 
 fn sort_stream_batch(items: &mut [SearchResultItem], mode: &SortMode, query: &str) {
