@@ -35,14 +35,15 @@
 **Note:** Requires significant architectural changes - defer to future work.
 
 ### [PERF-9] String Allocation in dedup_path_key Hot Path
-**File:** `src-tauri/src/core/search_service.rs:604-613`
+**File:** `src-tauri/src/core/search_service.rs:617-626`
 **Issue:** On Windows, allocates new String with `replace` and `to_lowercase` for every path.
-**Fix:** Use hash-based dedup or compute hash directly without allocation.
+**Status:** Deferred - requires changing HashSet to use hash-based dedup. Current impact is minimal on typical filesystems.
+**Note:** Consider implementing in future if profiling shows this is a bottleneck.
 
 ### [PERF-11] Sequential Metadata Enrichment Blocks UI
 **File:** `src-tauri/src/commands/search.rs:286-293`
-**Issue:** 64 sequential filesystem calls for metadata enrichment.
-**Fix:** Use parallel processing with `rayon`.
+**Status:** Fixed - added rayon for parallel processing.
+**Note:** Now uses `par_iter()` for parallel metadata enrichment.
 
 ### [PERF-12] Regex Compilation on Every Wildcard Search
 **File:** `src-tauri/src/core/search_service.rs:381-398`
@@ -206,8 +207,8 @@ Export search results to CSV/JSON.
 |----------|----------|------|--------|-----|
 | Security | 0 | 0 | 0 | 1 |
 | Stability | 0 | 0 | 1 | 3 |
-| Performance | 0 | 0 | 4 | 2 |
+| Performance | 0 | 0 | 3 | 2 |
 | UX/UI | 0 | 0 | 2 | 7 |
 
 **Priority Order:**
-1. PERF-9: String allocation in dedup_path_key (Medium)
+1. PERF-12: Regex compilation on every wildcard search (Medium)

@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - **[PERF-3]** Improved HashSet capacity estimation - now uses min(limit, 100000) to avoid frequent rehashing.
 - **[PERF-5]** Eliminated string allocation in index matching - matches name first, then path only if needed.
 - **[PERF-7]** Cache current directory at search start - avoids repeated `current_dir()` syscalls.
+- **[PERF-11]** Added parallel metadata enrichment using rayon - speeds up batch metadata retrieval.
 
 ### Stability
 - **[STAB-1]** Thread panic now sets cancel flag - prevents search from hanging when worker thread panics.

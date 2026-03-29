@@ -8,6 +8,7 @@ use crate::{
   commands::history::record_query_if_enabled,
   AppState,
 };
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -284,11 +285,13 @@ fn to_lightweight_item(mut item: SearchResultItem) -> SearchResultItem {
 }
 
 fn enrich_paths_with_metadata(paths: &[String], candidate_roots: &[String]) -> Result<Vec<SearchResultItem>, String> {
-  let mut items = Vec::with_capacity(paths.len());
-  for path in paths {
-    let source_root = resolve_source_root_for_path(path, candidate_roots);
-    items.push(MetadataService::enrich_path(path, source_root));
-  }
+  let items: Vec<SearchResultItem> = paths
+    .par_iter()
+    .map(|path| {
+      let source_root = resolve_source_root_for_path(path, candidate_roots);
+      MetadataService::enrich_path(path, source_root)
+    })
+    .collect();
   Ok(items)
 }
 
