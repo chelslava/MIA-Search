@@ -82,7 +82,8 @@ describe("App smoke", () => {
 
   it("changes search mode from filters", async () => {
     render(<App />);
-    await userEvent.click(screen.getByRole("button", { name: "⏷" }));
+    const filterButton = screen.getAllByRole("button").find(btn => btn.title.includes("Фильтры") || btn.title.includes("Filters"));
+    await userEvent.click(filterButton!);
     await userEvent.click(screen.getByRole("radio", { name: /только файлы/i }));
     await userEvent.click(screen.getByRole("button", { name: "Применить" }));
 
@@ -93,7 +94,8 @@ describe("App smoke", () => {
 
   it("passes exclude paths from filters into search request", async () => {
     render(<App />);
-    await userEvent.click(screen.getByRole("button", { name: "⏷" }));
+    const filterButton = screen.getAllByRole("button").find(btn => btn.title.includes("Фильтры") || btn.title.includes("Filters"));
+    await userEvent.click(filterButton!);
     await userEvent.type(
       screen.getByPlaceholderText("node_modules, .git, target"),
       " node_modules, .git, node_modules "

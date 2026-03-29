@@ -121,7 +121,7 @@ export interface FsTreeNode {
 }
 
 export interface IndexStatusResponse {
-  status: "empty" | "ready";
+  status: "empty" | "ready" | "in_progress";
   entries: number;
   roots: number;
   root_paths: string[];

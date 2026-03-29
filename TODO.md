@@ -78,8 +78,7 @@
 ### [PERF-14] Unnecessary Clone on Every Index Snapshot
 **File:** `src-tauri/src/storage/index_store.rs:47-49`
 **Effort:** M
-**Issue:** `snapshot()` clones entire index including all entries. Called frequently during index-based searches.
-**Fix:** Use `Arc<IndexSnapshot>` for cheap cloning, or implement copy-on-write.
+**Status:** Fixed - changed IndexStore to use Arc<IndexSnapshot> for cheap cloning.
 
 ### [PERF-15] Frontend Metadata Enrichment Creates Many Requests
 **File:** `src/app/App.tsx:1277-1322`
@@ -160,10 +159,9 @@
 **Fix:** Extract to shared `path_security.rs` module.
 
 ### [QUAL-3] Type Mismatch Frontend/Backend
-**Files:** `search-types.ts:123-128`, `commands/index.rs:18-25`
+**Files:** `search-types.ts:123-129`, `commands/index.rs:111-125`
 **Effort:** S
-**Issue:** Frontend `IndexStatusResponse.status` typed as `"empty" | "ready"` but backend can return `"in_progress"`.
-**Fix:** Update frontend type to include `"in_progress"`.
+**Status:** Fixed - added "in_progress" to IndexStatusResponse status type.
 
 ### [QUAL-4] Large useEffect Dependencies
 **File:** `src/app/App.tsx:1234-1275`

@@ -2,6 +2,7 @@ use crate::core::models::SearchResultItem;
 use crate::storage::persistence;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 const INDEX_FILE: &str = "search_index.json";
 const INDEX_VERSION: u32 = 1;
@@ -26,9 +27,9 @@ impl IndexSnapshot {
   }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Default)]
 pub struct IndexStore {
-  value: IndexSnapshot,
+  value: Arc<IndexSnapshot>,
 }
 
 impl IndexStore {
@@ -41,19 +42,19 @@ impl IndexStore {
       );
       return Self::default();
     }
-    Self { value: snapshot }
+    Self { value: Arc::new(snapshot) }
   }
 
-  pub fn snapshot(&self) -> IndexSnapshot {
-    self.value.clone()
+  pub fn snapshot(&self) -> Arc<IndexSnapshot> {
+    Arc::clone(&self.value)
   }
 
   pub fn replace(&mut self, value: IndexSnapshot) {
-    self.value = value;
+    self.value = Arc::new(value);
   }
 
   pub fn persist(&self) -> Result<(), String> {
-    persistence::save_json(INDEX_FILE, &self.value)
+    persistence::save_json(INDEX_FILE, &*self.value)
   }
 }
 

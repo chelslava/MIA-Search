@@ -112,7 +112,7 @@ impl IndexService {
   }
 
   pub fn stream<F, G>(
-    snapshot: &IndexSnapshot,
+    snapshot: &Arc<IndexSnapshot>,
     request: &SearchRequest,
     cancel_flag: Arc<AtomicBool>,
     mut on_batch: F,
@@ -234,7 +234,7 @@ fn build_matcher(mode: &MatchMode, query: &str, ignore_case: bool) -> Result<Que
         query.to_string()
       };
       let regex = get_or_compile_regex(&pattern)?;
-      Ok(QueryMatcher::Regex { regex })
+      Ok(QueryMatcher::Regex(regex))
     }
     MatchMode::Wildcard => {
       let wildcard_count = query.chars().filter(|&c| c == '*' || c == '?').count();
@@ -259,7 +259,7 @@ fn build_matcher(mode: &MatchMode, query: &str, ignore_case: bool) -> Result<Que
         pattern
       };
       let regex = get_or_compile_regex(&pattern)?;
-      Ok(QueryMatcher::Regex { regex })
+      Ok(QueryMatcher::Regex(regex))
     }
   }
 }
