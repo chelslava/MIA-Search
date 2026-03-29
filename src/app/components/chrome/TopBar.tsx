@@ -161,6 +161,7 @@ export function TopBar({
           type="button"
           onClick={onToggleFilters}
           title={tr("app.tooltips.filters", "Фильтры")}
+          aria-label={tr("app.tooltips.filters", "Фильтры")}
           className="icon-btn text-base"
         >
           ⏷

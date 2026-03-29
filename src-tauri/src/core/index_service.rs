@@ -5,6 +5,8 @@ use crate::core::ranking::sort_results;
 use crate::storage::index_store::IndexSnapshot;
 use regex::Regex;
 use rust_search::SearchBuilder;
+use std::cell::RefCell;
+use std::collections::HashMap;
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -12,6 +14,11 @@ use std::sync::Arc;
 const INDEX_BATCH_SIZE: usize = 100;
 const MAX_REGEX_PATTERN_LENGTH: usize = 256;
 const MAX_WILDCARD_COUNT: usize = 32;
+const REGEX_CACHE_SIZE: usize = 64;
+
+thread_local! {
+  static REGEX_CACHE: RefCell<HashMap<String, Regex>> = RefCell::new(HashMap::new());
+}
 
 #[derive(Debug, Clone, Default)]
 pub struct IndexBuildSummary {
@@ -226,9 +233,8 @@ fn build_matcher(mode: &MatchMode, query: &str, ignore_case: bool) -> Result<Que
       } else {
         query.to_string()
       };
-      Regex::new(&pattern)
-        .map(QueryMatcher::Regex)
-        .map_err(|error| format!("regex parse error: {error}"))
+      let regex = get_or_compile_regex(&pattern)?;
+      Ok(QueryMatcher::Regex { regex })
     }
     MatchMode::Wildcard => {
       let wildcard_count = query.chars().filter(|&c| c == '*' || c == '?').count();
@@ -252,11 +258,25 @@ fn build_matcher(mode: &MatchMode, query: &str, ignore_case: bool) -> Result<Que
       } else {
         pattern
       };
-      Regex::new(&pattern)
-        .map(QueryMatcher::Regex)
-        .map_err(|error| format!("wildcard parse error: {error}"))
+      let regex = get_or_compile_regex(&pattern)?;
+      Ok(QueryMatcher::Regex { regex })
     }
   }
+}
+
+fn get_or_compile_regex(pattern: &str) -> Result<Regex, String> {
+  REGEX_CACHE.with(|cache| {
+    let mut cache = cache.borrow_mut();
+    if let Some(regex) = cache.get(pattern).cloned() {
+      return Ok(regex);
+    }
+    let regex = Regex::new(pattern).map_err(|error| format!("regex parse error: {error}"))?;
+    if cache.len() >= REGEX_CACHE_SIZE {
+      cache.clear();
+    }
+    cache.insert(pattern.to_string(), regex.clone());
+    Ok(regex)
+  })
 }
 
 fn parse_extensions(raw: &[String]) -> Vec<String> {

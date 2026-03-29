@@ -13,6 +13,7 @@ All notable changes to this project will be documented in this file.
 - **[PERF-8]** Use `to_ascii_lowercase()` for extension matching - faster than `to_lowercase()` for ASCII.
 - **[PERF-11]** Added parallel metadata enrichment using rayon - speeds up batch metadata retrieval.
 - **[PERF-12]** Added thread-local regex cache for wildcard/regex patterns - avoids recompilation on repeated searches.
+- **[PERF-13]** Added regex caching to index_service.rs - same cache mechanism as search_service.
 
 ### Stability
 - **[STAB-1]** Thread panic now sets cancel flag - prevents search from hanging when worker thread panics.
@@ -36,6 +37,8 @@ All notable changes to this project will be documented in this file.
 - **[UX-20]** Added smooth scrolling for keyboard navigation in results.
 - **[UX-22]** Added confirmation dialog before clearing search history.
 - **[UX-24]** Added col-resize cursor feedback during splitter drag.
+- **[UX-26]** Added aria-label to filters toggle button for accessibility.
+- **[UX-28]** Removed sortMode from live search triggers - changing sort no longer triggers new search.
 
 ### Code Quality
 - **[PERF-6]** Improved NaN handling in relevance sorting - NaN scores are now sorted to the end instead of being treated as equal.

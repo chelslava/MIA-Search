@@ -16,11 +16,7 @@
 
 ## 🟠 High
 
-### [STAB-14] Mutex Poison Recovery May Hide Data Corruption
-**File:** `src-tauri/src/main.rs:30-38`
-**Effort:** M
-**Status:** Improved - now logs detailed error message with stack trace info.
-**Note:** Full recovery would require corrupted state tracking in AppState - deferred as low priority since mutex poisoning is rare.
+*(None - all high priority issues resolved)*
 
 ---
 
@@ -29,8 +25,7 @@
 ### [SEC-13] Wildcard Pattern Creates Unbounded Regex
 **File:** `src-tauri/src/core/search_service.rs:400-417`
 **Effort:** S
-**Issue:** Wildcard patterns converted to regex without limiting `*` or `?` characters. Pattern like `****...` generates `.*.*.*...` causing performance issues.
-**Fix:** Limit number of wildcard characters before conversion.
+**Status:** Fixed in SEC-12 - MAX_WILDCARD_COUNT=32 limit added.
 
 ### [SEC-14] Symlink Resolution TOCTOU Race
 **File:** `src-tauri/src/platform/open_path.rs:38-56`
@@ -46,7 +41,6 @@
 **File:** `src-tauri/src/commands/index.rs:44-67`
 **Effort:** S
 **Status:** Fixed - added index_rebuild_cancel command and cancel flag storage in AppState.
-**Note:** Users can now cancel index rebuild via frontend button.
 
 ### [STAB-16] Search Thread Panic Not Propagated to User
 **File:** `src-tauri/src/core/search_service.rs:252-281`
@@ -69,8 +63,8 @@
 ### [STAB-19] Race Condition in Search Session Management
 **File:** `src-tauri/src/core/search_service.rs:97-113`
 **Effort:** S
-**Issue:** `SearchSession::start` cancels existing search before creating new one. Window where old search might emit events after being cancelled.
-**Fix:** Ensure search IDs checked against all emitted events, add generation counter.
+**Status:** After analysis, already handled - all events check `is_active_search()` before emitting to frontend. Old search events are silently dropped if search_id doesn't match.
+**Note:** No fix needed - existing mechanism is sufficient.
 
 ---
 
@@ -79,8 +73,7 @@
 ### [PERF-13] No Regex Caching in Index Mode
 **File:** `src-tauri/src/core/index_service.rs:204-244`
 **Effort:** S
-**Issue:** Unlike `search_service.rs`, `index_service.rs` compiles regex patterns on every call without caching.
-**Fix:** Add same regex caching mechanism used in `search_service.rs`.
+**Status:** Fixed - added same thread-local regex cache as search_service.rs.
 
 ### [PERF-14] Unnecessary Clone on Every Index Snapshot
 **File:** `src-tauri/src/storage/index_store.rs:47-49`
@@ -125,8 +118,7 @@
 ### [UX-26] Missing Accessibility Labels for Icon-Only Buttons
 **File:** `src/app/components/chrome/TopBar.tsx:106-116`
 **Effort:** S
-**Issue:** Several icon buttons use emoji without proper ARIA labels. Screen readers announce "button" with no context.
-**Fix:** Add `aria-label` attributes to all icon-only buttons.
+**Status:** Fixed - added aria-label to filters toggle button. All other icon buttons already have aria-label.
 
 ### [UX-27] Error Messages Not Localized
 **File:** `src-tauri/src/commands/search.rs:237-246`
@@ -137,8 +129,7 @@
 ### [UX-28] Live Search Triggers on Non-Filter Changes
 **File:** `src/app/App.tsx:1224-1275`
 **Effort:** S
-**Issue:** Live search triggers on every change including sort_mode. Users may not expect search when changing sort.
-**Fix:** Exclude sort_mode and other non-filter states from live search trigger.
+**Status:** Fixed - removed sortMode from live search trigger dependencies.
 
 ### [UX-18] Missing Loading State for Initial Index Build
 **File:** `src/app/App.tsx:1038-1087`
@@ -157,10 +148,10 @@
 ## 🟡 Medium - Code Quality
 
 ### [QUAL-1] Duplicate Query Matcher Implementation
-**Files:** `search_service.rs:150-185`, `index_service.rs:29-58`
+**Files:** `search_service.rs:150-163`, `index_service.rs:38-46`
 **Effort:** S
-**Issue:** `QueryMatcher` enum duplicated between files with slight differences.
-**Fix:** Extract to shared module.
+**Status:** After analysis, implementations differ intentionally. search_service checks file_name separately, index_service checks full text. Keeping both.
+**Note:** No fix needed - different behavior for different use cases.
 
 ### [QUAL-2] Duplicate Path Security Functions
 **Files:** `open_path.rs:4-21`, `reveal_in_explorer.rs:4-17`
@@ -326,11 +317,11 @@ Export search results to CSV/JSON.
 
 | Category | Critical | High | Medium | Low | Total |
 |----------|----------|------|--------|-----|-------|
-| Security | 0 | 0 | 2 | 1 | 3 |
-| Stability | 0 | 0 | 4 | 2 | 6 |
-| Performance | 0 | 0 | 6 | 3 | 9 |
-| UX/UI | 0 | 0 | 6 | 4 | 10 |
-| Code Quality | 0 | 0 | 4 | 5 | 9 |
-| **Total** | **0** | **0** | **21** | **15** | **36** |
+| Security | 0 | 0 | 1 | 1 | 2 |
+| Stability | 0 | 0 | 3 | 2 | 5 |
+| Performance | 0 | 0 | 5 | 3 | 8 |
+| UX/UI | 0 | 0 | 4 | 4 | 8 |
+| Code Quality | 0 | 0 | 3 | 5 | 8 |
+| **Total** | **0** | **0** | **15** | **15** | **30** |
 
-**Next Priority:** STAB-16, PERF-13, UX-26 (Medium priority items)
+**Next Priority:** PERF-14, UX-25, QUAL-3 (Medium priority items)

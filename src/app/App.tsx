@@ -1270,7 +1270,6 @@ export function App() {
     sizeFilterEnabled,
     sizeUnit,
     sizeValue,
-    sortMode,
     strict
   ]);
 
