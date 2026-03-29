@@ -62,7 +62,7 @@ fn history_clear_inner(history: &Mutex<HistoryStore>) -> Result<HistorySnapshot,
   let mut store = history
     .lock()
     .map_err(|_| "history lock poisoned".to_string())?;
-  store.queries.clear();
+  store.query_entries.clear();
   store.opened_paths.clear();
   store.persist()?;
   Ok(store.snapshot())
@@ -125,9 +125,9 @@ mod tests {
         locked.record_opened_path("C:/tmp");
       }
 
-      assert_eq!(history_list_inner(&history).expect("list").queries.len(), 1);
+      assert_eq!(history_list_inner(&history).expect("list").query_entries.len(), 1);
       let cleared = history_clear_inner(&history).expect("clear");
-      assert!(cleared.queries.is_empty());
+      assert!(cleared.query_entries.is_empty());
       assert!(cleared.opened_paths.is_empty());
     });
   }
@@ -145,7 +145,7 @@ mod tests {
         },
       )
       .expect("record with disabled history");
-      assert!(history.lock().expect("lock").queries.is_empty());
+      assert!(history.lock().expect("lock").query_entries.is_empty());
 
       record_query_with_settings(
         &history,
@@ -158,7 +158,7 @@ mod tests {
       .expect("record enabled");
       record_opened_with_settings(&history, &settings(true, 1), "C:/ok").expect("opened");
       let snapshot = history.lock().expect("lock").snapshot();
-      assert_eq!(snapshot.queries.len(), 1);
+      assert_eq!(snapshot.query_entries.len(), 1);
       assert_eq!(snapshot.opened_paths.len(), 1);
     });
   }

@@ -22,10 +22,7 @@
 
 ## 🟠 HIGH - Security
 
-### [SEC-8] Sensitive Data in History Persistence
-**File:** `src-tauri/src/storage/history_store.rs:28-30`
-**Issue:** SearchRequest with potentially sensitive paths persisted to disk in plain JSON.
-**Fix:** Add privacy setting or encrypt sensitive fields.
+(No high security issues remaining)
 
 ---
 
@@ -211,11 +208,10 @@ Export search results to CSV/JSON.
 
 | Category | Critical | High | Medium | Low |
 |----------|----------|------|--------|-----|
-| Security | 0 | 1 | 1 | 1 |
+| Security | 0 | 0 | 1 | 1 |
 | Stability | 0 | 0 | 3 | 3 |
 | Performance | 0 | 0 | 4 | 2 |
 | UX/UI | 0 | 0 | 2 | 7 |
 
 **Priority Order:**
-1. SEC-8: Sensitive data in history (High)
-2. STAB-11: Unbounded seen_paths memory (Medium)
+1. STAB-11: Unbounded seen_paths memory (Medium)

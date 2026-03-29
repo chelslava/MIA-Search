@@ -104,8 +104,12 @@ export interface SearchProfile {
   pinned: boolean;
 }
 
+export interface HistoryQueryEntry {
+  query: string;
+}
+
 export interface HistorySnapshot {
-  queries: SearchRequest[];
+  query_entries: HistoryQueryEntry[];
   opened_paths: string[];
 }
 

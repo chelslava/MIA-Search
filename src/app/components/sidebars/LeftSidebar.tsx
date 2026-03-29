@@ -265,7 +265,7 @@ export function LeftSidebar({
               {tr("app.history.clear", "Очистить историю")}
             </Button>
             <ul className="space-y-1">
-              {history.queries.slice(0, 10).map((item, index) => (
+              {history.query_entries.slice(0, 10).map((item, index) => (
                 <li key={`${item.query}-${index}`} className="rounded-sm border border-[var(--border)] bg-[var(--surface)] px-1 py-0.5">
                   <Button
                     type="button"

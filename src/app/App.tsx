@@ -249,7 +249,7 @@ export function App() {
   const [ttfrMs, setTtfrMs] = useState<number | null>(null);
   const [searchErrorCount, setSearchErrorCount] = useState(0);
   const [favorites, setFavorites] = useState<string[]>([]);
-  const [history, setHistory] = useState<HistorySnapshot>({ queries: [], opened_paths: [] });
+  const [history, setHistory] = useState<HistorySnapshot>({ query_entries: [], opened_paths: [] });
   const [historyOpen, setHistoryOpen] = useState(false);
   const [profiles, setProfiles] = useState<SearchProfile[]>([]);
   const [computerRoots, setComputerRoots] = useState<FsTreeNode[]>([]);

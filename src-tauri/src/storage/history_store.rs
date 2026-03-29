@@ -5,14 +5,27 @@ use serde::{Deserialize, Serialize};
 const HISTORY_FILE: &str = "history.json";
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct HistoryQueryEntry {
+  pub query: String,
+}
+
+impl From<SearchRequest> for HistoryQueryEntry {
+  fn from(request: SearchRequest) -> Self {
+    Self { query: request.query }
+  }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct HistorySnapshot {
-  pub queries: Vec<SearchRequest>,
+  #[serde(default)]
+  pub query_entries: Vec<HistoryQueryEntry>,
+  #[serde(default)]
   pub opened_paths: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct HistoryStore {
-  pub queries: Vec<SearchRequest>,
+  pub query_entries: Vec<HistoryQueryEntry>,
   pub opened_paths: Vec<String>,
 }
 
@@ -20,18 +33,18 @@ impl HistoryStore {
   pub fn load() -> Self {
     let snapshot: HistorySnapshot = persistence::load_json(HISTORY_FILE);
     Self {
-      queries: snapshot.queries,
+      query_entries: snapshot.query_entries,
       opened_paths: snapshot.opened_paths,
     }
   }
 
   pub fn record_query(&mut self, request: SearchRequest) {
-    self.queries.push(request);
+    self.query_entries.push(request.into());
   }
 
   pub fn record_query_with_limit(&mut self, request: SearchRequest, limit: usize) {
-    self.queries.push(request);
-    trim_oldest(&mut self.queries, limit);
+    self.query_entries.push(request.into());
+    trim_oldest(&mut self.query_entries, limit);
   }
 
   pub fn record_opened_path(&mut self, path: impl Into<String>) {
@@ -45,7 +58,7 @@ impl HistoryStore {
 
   pub fn snapshot(&self) -> HistorySnapshot {
     HistorySnapshot {
-      queries: self.queries.clone(),
+      query_entries: self.query_entries.clone(),
       opened_paths: self.opened_paths.clone(),
     }
   }
@@ -84,9 +97,9 @@ mod tests {
     store.record_query(request("one"));
     store.record_query_with_limit(request("two"), 2);
     store.record_query_with_limit(request("three"), 2);
-    assert_eq!(store.queries.len(), 2);
-    assert_eq!(store.queries[0].query, "two");
-    assert_eq!(store.queries[1].query, "three");
+    assert_eq!(store.query_entries.len(), 2);
+    assert_eq!(store.query_entries[0].query, "two");
+    assert_eq!(store.query_entries[1].query, "three");
 
     store.record_opened_path("a");
     store.record_opened_path_with_limit("b", 1);
@@ -109,10 +122,22 @@ mod tests {
       store.persist().expect("persist");
 
       let loaded = HistoryStore::load();
-      assert_eq!(loaded.queries.len(), 1);
-      assert_eq!(loaded.queries[0].query, "abc");
+      assert_eq!(loaded.query_entries.len(), 1);
+      assert_eq!(loaded.query_entries[0].query, "abc");
       assert_eq!(loaded.opened_paths, vec!["C:/tmp/file.txt".to_string()]);
-      assert_eq!(loaded.snapshot().queries.len(), 1);
+      assert_eq!(loaded.snapshot().query_entries.len(), 1);
     });
+  }
+
+  #[test]
+  fn history_entry_excludes_sensitive_data() {
+    let request = SearchRequest {
+      query: "secret document".to_string(),
+      roots: vec!["/home/user/secret".to_string()],
+      exclude_paths: vec!["/home/user/secret/excluded".to_string()],
+      ..SearchRequest::default()
+    };
+    let entry: HistoryQueryEntry = request.into();
+    assert_eq!(entry.query, "secret document");
   }
 }
