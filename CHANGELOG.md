@@ -42,6 +42,7 @@ All notable changes to this project will be documented in this file.
 
 ### Stability
 - **[STAB-10]** Fixed TOCTOU race condition in path canonicalization - re-validates canonicalized path for symlinks, traversal sequences, and unsafe characters after resolution.
+- **[STAB-11]** Added memory cap for seen_paths deduplication - clears and resizes when exceeding limit*10 to prevent unbounded memory growth.
 
 ### Fixed
 - **[BUG-1]** Fixed sort order for Size and Modified columns. Now sorts descending (largest/newest first) instead of ascending.

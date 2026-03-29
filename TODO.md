@@ -58,11 +58,6 @@
 **Status:** After analysis, this is correct behavior - workers hold cloned senders.
 **Note:** No fix needed - pattern is correct.
 
-### [STAB-11] Unbounded seen_paths Memory Growth
-**File:** `src-tauri/src/core/search_service.rs:229`
-**Issue:** HashSet can grow unbounded for large searches without limit.
-**Fix:** Cap the dedup set size or use bounded cache.
-
 ### [STAB-12] Workers Don't Check shutting_down Flag
 **File:** `src-tauri/src/core/search_service.rs:245-268`
 **Issue:** Worker threads check `cancel_flag` but not `shutting_down`.
@@ -209,9 +204,9 @@ Export search results to CSV/JSON.
 | Category | Critical | High | Medium | Low |
 |----------|----------|------|--------|-----|
 | Security | 0 | 0 | 1 | 1 |
-| Stability | 0 | 0 | 3 | 3 |
+| Stability | 0 | 0 | 2 | 3 |
 | Performance | 0 | 0 | 4 | 2 |
 | UX/UI | 0 | 0 | 2 | 7 |
 
 **Priority Order:**
-1. STAB-11: Unbounded seen_paths memory (Medium)
+1. STAB-12: Workers don't check shutting_down (Medium)

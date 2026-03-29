@@ -287,6 +287,13 @@ impl SearchService {
         continue;
       }
 
+      if let Some(limit) = request.options.limit {
+        if seen_paths.len() > limit.saturating_mul(10) {
+          seen_paths.clear();
+          seen_paths.reserve(limit.saturating_mul(2));
+        }
+      }
+
       let source_root = resolve_source_root(&roots_for_source, &path, &cwd).unwrap_or_else(|| default_root.clone());
       let mut item = MetadataService::lightweight_path(&path, source_root);
       if matches!(request.options.sort_mode, SortMode::Relevance) && !query.is_empty() {
