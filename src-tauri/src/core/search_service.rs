@@ -167,7 +167,7 @@ impl QueryMatcher {
           .unwrap_or(path);
         if *ignore_case {
           let query_lower = query_lower.as_deref().unwrap_or(query);
-          name.to_lowercase().contains(query_lower) || path.to_lowercase().contains(query_lower)
+          name.to_ascii_lowercase().contains(query_lower) || path.to_ascii_lowercase().contains(query_lower)
         } else {
           name.contains(query) || path.contains(query)
         }
@@ -224,7 +224,8 @@ impl SearchService {
     }
     let mut limit_reached = false;
     let mut total_results = 0usize;
-    let mut seen_paths = HashSet::with_capacity(request.options.limit.unwrap_or(1000));
+    let estimated_capacity = request.options.limit.unwrap_or(10000).min(100000);
+    let mut seen_paths = HashSet::with_capacity(estimated_capacity);
     let mut batch = Vec::with_capacity(BATCH_SIZE);
     let mut current_batch_limit = FIRST_BATCH_SIZE;
     let tasks = build_scan_tasks(request, &roots);
@@ -285,14 +286,6 @@ impl SearchService {
         continue;
       }
 
-      if let Some(limit) = request.options.limit {
-        if total_results >= limit {
-          limit_reached = true;
-          cancel_flag.store(true, Ordering::Release);
-          break;
-        }
-      }
-
       let source_root = resolve_source_root(&roots_for_source, &path).unwrap_or_else(|| default_root.clone());
       let mut item = MetadataService::lightweight_path(&path, source_root);
       if matches!(request.options.sort_mode, SortMode::Relevance) && !query.is_empty() {
@@ -302,6 +295,14 @@ impl SearchService {
       batch.push(item);
       total_results = total_results.saturating_add(1);
 
+      if let Some(limit) = request.options.limit {
+        if total_results >= limit {
+          limit_reached = true;
+          cancel_flag.store(true, Ordering::Release);
+          break;
+        }
+      }
+
       if batch.len() >= current_batch_limit {
         if cancel_flag.load(Ordering::Acquire) && !limit_reached {
           break;
@@ -310,20 +311,18 @@ impl SearchService {
         on_batch(std::mem::take(&mut batch));
         current_batch_limit = BATCH_SIZE;
       }
-
-      if let Some(limit) = request.options.limit {
-        if total_results >= limit {
-          limit_reached = true;
-          cancel_flag.store(true, Ordering::Release);
-          break;
-        }
-      }
     }
 
+    let mut worker_panicked = false;
     for handle in workers {
       if let Err(panic) = handle.join() {
         eprintln!("Worker thread panicked: {:?}", panic);
+        worker_panicked = true;
       }
+    }
+
+    if worker_panicked {
+      cancel_flag.store(true, Ordering::Release);
     }
 
     if cancel_flag.load(Ordering::Acquire) && !limit_reached {

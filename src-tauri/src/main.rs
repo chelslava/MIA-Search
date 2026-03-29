@@ -26,6 +26,16 @@ pub struct AppState {
   pub index_rebuild_in_progress: AtomicBool,
 }
 
+pub fn lock_or_recover<T>(mutex: &Mutex<T>) -> Result<std::sync::MutexGuard<T>, String> {
+  match mutex.lock() {
+    Ok(guard) => Ok(guard),
+    Err(poisoned) => {
+      eprintln!("Mutex poisoned, recovering...");
+      Ok(poisoned.into_inner())
+    }
+  }
+}
+
 impl AppState {
   pub fn new() -> Self {
     Self {

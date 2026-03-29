@@ -205,11 +205,31 @@ export function ResultsWorkspace({
             <thead className="sticky top-0 z-10 bg-[var(--surface-alt)]">
               <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
                 <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium whitespace-nowrap">{t("app.labels.colIcon", "Иконка")}</th>
-                <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium whitespace-nowrap">{t("app.labels.colName", "Имя")}</th>
+                <th
+                  className="border-b border-[var(--border)] px-2 py-1.5 font-medium whitespace-nowrap cursor-pointer hover:text-[var(--text)] select-none"
+                  onClick={() => setSortMode(sortMode === "Name" ? "Name" : "Name")}
+                >
+                  {t("app.labels.colName", "Имя")} {sortMode === "Name" ? "▲" : ""}
+                </th>
                 <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium whitespace-nowrap">{t("app.labels.colPath", "Полный путь")}</th>
-                <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium whitespace-nowrap">{t("app.labels.colSize", "Размер")}</th>
-                <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium whitespace-nowrap">{t("app.labels.colModified", "Дата изменения")}</th>
-                <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium whitespace-nowrap">{t("app.labels.colType", "Тип")}</th>
+                <th
+                  className="border-b border-[var(--border)] px-2 py-1.5 font-medium whitespace-nowrap cursor-pointer hover:text-[var(--text)] select-none"
+                  onClick={() => setSortMode(sortMode === "Size" ? "Size" : "Size")}
+                >
+                  {t("app.labels.colSize", "Размер")} {sortMode === "Size" ? "▼" : ""}
+                </th>
+                <th
+                  className="border-b border-[var(--border)] px-2 py-1.5 font-medium whitespace-nowrap cursor-pointer hover:text-[var(--text)] select-none"
+                  onClick={() => setSortMode(sortMode === "Modified" ? "Modified" : "Modified")}
+                >
+                  {t("app.labels.colModified", "Дата изменения")} {sortMode === "Modified" ? "▼" : ""}
+                </th>
+                <th
+                  className="border-b border-[var(--border)] px-2 py-1.5 font-medium whitespace-nowrap cursor-pointer hover:text-[var(--text)] select-none"
+                  onClick={() => setSortMode(sortMode === "Type" ? "Type" : "Type")}
+                >
+                  {t("app.labels.colType", "Тип")} {sortMode === "Type" ? "▲" : ""}
+                </th>
               </tr>
             </thead>
             <tbody>

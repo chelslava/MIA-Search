@@ -1382,8 +1382,15 @@ export function App() {
         return;
       }
       if (key === "arrowdown" || key === "arrowup") {
-        const activeTag = (event.target as HTMLElement | null)?.tagName.toLowerCase();
-        if (activeTag === "input" || activeTag === "textarea" || activeTag === "select") return;
+        const target = event.target as HTMLElement | null;
+        const activeTag = target?.tagName.toLowerCase();
+        if (activeTag === "input" || activeTag === "textarea" || activeTag === "select") {
+          if (activeTag !== "select") {
+            const input = target as HTMLInputElement | HTMLTextAreaElement;
+            if (input.selectionStart !== input.selectionEnd) return;
+          }
+          return;
+        }
         if (results.length === 0) return;
         event.preventDefault();
         const currentIndex = selectedPath ? results.findIndex((item) => item.full_path === selectedPath) : -1;
