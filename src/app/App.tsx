@@ -1286,37 +1286,37 @@ export function App() {
       .slice(0, 64);
     if (targetPaths.length === 0) return;
 
-    for (const path of targetPaths) {
-      metadataInFlightPathsRef.current.add(path);
-    }
+    const timer = window.setTimeout(() => {
+      for (const path of targetPaths) {
+        metadataInFlightPathsRef.current.add(path);
+      }
 
-    let cancelled = false;
-    void searchEnrichMetadata(targetPaths)
-      .then((patches) => {
-        if (cancelled) return;
-        for (const path of targetPaths) {
-          metadataLoadedPathsRef.current.add(path);
-        }
-        if (patches.length === 0) return;
-        setResults((prev) => {
-          const next = mergeMetadataIntoResults(prev, patches);
-          if (incrementalSearchRef.current) {
-            incrementalSearchRef.current = { ...incrementalSearchRef.current, results: next };
+      void searchEnrichMetadata(targetPaths)
+        .then((patches) => {
+          for (const path of targetPaths) {
+            metadataLoadedPathsRef.current.add(path);
           }
-          return next;
+          if (patches.length === 0) return;
+          setResults((prev) => {
+            const next = mergeMetadataIntoResults(prev, patches);
+            if (incrementalSearchRef.current) {
+              incrementalSearchRef.current = { ...incrementalSearchRef.current, results: next };
+            }
+            return next;
+          });
+        })
+        .catch(() => {
+          // metadata enrichment is best-effort
+        })
+        .finally(() => {
+          for (const path of targetPaths) {
+            metadataInFlightPathsRef.current.delete(path);
+          }
         });
-      })
-      .catch(() => {
-        // metadata enrichment is best-effort
-      })
-      .finally(() => {
-        for (const path of targetPaths) {
-          metadataInFlightPathsRef.current.delete(path);
-        }
-      });
+    }, 100);
 
     return () => {
-      cancelled = true;
+      window.clearTimeout(timer);
     };
   }, [displayMode, isSearching, visibleRows.items]);
 

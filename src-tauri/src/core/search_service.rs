@@ -86,6 +86,7 @@ pub struct SearchStreamSummary {
   pub total_results: usize,
   pub limit_reached: bool,
   pub cancelled: bool,
+  pub worker_panicked: bool,
 }
 
 #[derive(Debug, Default)]
@@ -231,6 +232,7 @@ impl SearchService {
         total_results: 0,
         limit_reached: true,
         cancelled: false,
+        worker_panicked: false,
       });
     }
     let mut limit_reached = false;
@@ -244,6 +246,7 @@ impl SearchService {
     let request_ref = Arc::new(request.clone());
     let task_queue = Arc::new(Mutex::new(VecDeque::from(tasks)));
     let (tx, rx) = mpsc::channel::<String>();
+    let panic_flag = Arc::new(AtomicBool::new(false));
     let mut workers = Vec::with_capacity(worker_count);
 
     for _ in 0..worker_count {
@@ -251,6 +254,7 @@ impl SearchService {
       let worker_request = request_ref.clone();
       let worker_queue = task_queue.clone();
       let worker_cancel = cancel_flag.clone();
+      let worker_panic_flag = panic_flag.clone();
       workers.push(thread::spawn(move || {
         let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
           loop {
@@ -280,6 +284,7 @@ impl SearchService {
         }));
         if result.is_err() {
           eprintln!("Worker thread panicked during filesystem scan");
+          worker_panic_flag.store(true, Ordering::Release);
         }
       }));
     }
@@ -354,6 +359,7 @@ impl SearchService {
         total_results,
         limit_reached,
         cancelled: true,
+        worker_panicked: panic_flag.load(Ordering::Acquire),
       });
     }
 
@@ -364,6 +370,7 @@ impl SearchService {
           total_results,
           limit_reached,
           cancelled: true,
+          worker_panicked: panic_flag.load(Ordering::Acquire),
         });
       }
       sort_stream_batch(&mut batch, &request.options.sort_mode, &query);
@@ -376,6 +383,7 @@ impl SearchService {
       total_results,
       limit_reached,
       cancelled: false,
+      worker_panicked: panic_flag.load(Ordering::Acquire),
     })
   }
 }

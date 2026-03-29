@@ -31,6 +31,7 @@ pub struct IndexSearchSummary {
   pub total_results: usize,
   pub limit_reached: bool,
   pub cancelled: bool,
+  pub worker_panicked: bool,
 }
 
 pub struct IndexService;
@@ -128,6 +129,7 @@ impl IndexService {
         total_results: 0,
         limit_reached: true,
         cancelled: false,
+        worker_panicked: false,
       });
     }
 
@@ -144,6 +146,7 @@ impl IndexService {
           total_results,
           limit_reached,
           cancelled: true,
+          worker_panicked: false,
         });
       }
 
@@ -206,6 +209,7 @@ impl IndexService {
       total_results,
       limit_reached,
       cancelled: false,
+      worker_panicked: false,
     })
   }
 }

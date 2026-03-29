@@ -14,6 +14,8 @@ All notable changes to this project will be documented in this file.
 - **[PERF-11]** Added parallel metadata enrichment using rayon - speeds up batch metadata retrieval.
 - **[PERF-12]** Added thread-local regex cache for wildcard/regex patterns - avoids recompilation on repeated searches.
 - **[PERF-13]** Added regex caching to index_service.rs - same cache mechanism as search_service.
+- **[PERF-14]** Changed IndexStore to use Arc<IndexSnapshot> for cheap snapshot cloning.
+- **[PERF-15]** Added 100ms debounce to frontend metadata enrichment requests.
 
 ### Stability
 - **[STAB-1]** Thread panic now sets cancel flag - prevents search from hanging when worker thread panics.
@@ -22,6 +24,13 @@ All notable changes to this project will be documented in this file.
 - **[STAB-4]** Added `shutting_down` flag to prevent search thread from emitting events after app shutdown.
 - **[STAB-6]** Individual event listener registration - if one fails, others still register correctly.
 - **[STAB-7]** Added `checkInProgress` flag to prevent concurrent index rebuild checks.
+- **[STAB-10]** Fixed TOCTOU race condition in path canonicalization - re-validates canonicalized path for symlinks, traversal sequences, and unsafe characters after resolution.
+- **[STAB-11]** Added memory cap for seen_paths deduplication - clears and resizes when exceeding limit*10 to prevent unbounded memory growth.
+- **[STAB-13]** Added max=999 limit on size filter input to prevent integer overflow.
+- **[STAB-14]** Improved mutex poison recovery logging - now reports detailed error info for debugging.
+- **[STAB-15]** Added index_rebuild_cancel command - users can now cancel index rebuild operation.
+- **[STAB-16]** Added worker_panicked flag to search summary - frontend can now warn users about incomplete results.
+- **[STAB-9]** Added error logging for failed directory reads in has_dir_children.
 
 ### UX/UI
 - **[UX-1]** Fixed keyboard navigation in inputs - arrow keys now work when cursor is at start/end of text input.

@@ -45,8 +45,8 @@
 ### [STAB-16] Search Thread Panic Not Propagated to User
 **File:** `src-tauri/src/core/search_service.rs:252-281`
 **Effort:** M
-**Issue:** Worker thread panics caught and logged, but search continues with partial results. Users unaware search was incomplete.
-**Fix:** Emit `search:warning` event when worker threads panic.
+**Status:** Fixed - added `worker_panicked` field to SearchStreamSummary and IndexSearchSummary. Panic flag tracked via Arc<AtomicBool>.
+**Note:** Frontend can now display warning when worker_panicked is true.
 
 ### [STAB-17] Potential Memory Exhaustion with Large Index
 **File:** `src-tauri/src/storage/index_store.rs`
@@ -83,8 +83,7 @@
 ### [PERF-15] Frontend Metadata Enrichment Creates Many Requests
 **File:** `src/app/App.tsx:1277-1322`
 **Effort:** S
-**Issue:** Metadata enrichment runs on every scroll/visibility change with up to 64 paths. No debouncing across renders.
-**Fix:** Add debouncing to metadata enrichment requests.
+**Status:** Fixed - added 100ms debounce to metadata enrichment requests.
 
 ### [PERF-16] Large App Component Causes Re-renders
 **File:** `src/app/App.tsx`
@@ -316,10 +315,10 @@ Export search results to CSV/JSON.
 | Category | Critical | High | Medium | Low | Total |
 |----------|----------|------|--------|-----|-------|
 | Security | 0 | 0 | 1 | 1 | 2 |
-| Stability | 0 | 0 | 3 | 2 | 5 |
-| Performance | 0 | 0 | 5 | 3 | 8 |
+| Stability | 0 | 0 | 2 | 2 | 4 |
+| Performance | 0 | 0 | 4 | 3 | 7 |
 | UX/UI | 0 | 0 | 4 | 4 | 8 |
 | Code Quality | 0 | 0 | 3 | 5 | 8 |
-| **Total** | **0** | **0** | **15** | **15** | **30** |
+| **Total** | **0** | **0** | **13** | **15** | **28** |
 
-**Next Priority:** PERF-14, UX-25, QUAL-3 (Medium priority items)
+**Next Priority:** SEC-14, STAB-17, STAB-18 (Medium priority items)

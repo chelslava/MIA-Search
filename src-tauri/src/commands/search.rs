@@ -281,6 +281,7 @@ fn run_search_stream(
             total_results: value.total_results,
             limit_reached: value.limit_reached,
             cancelled: value.cancelled,
+            worker_panicked: value.worker_panicked,
           })?;
         Ok(summary)
       }
@@ -357,6 +358,7 @@ mod tests {
         total_results: 0,
         limit_reached: false,
         cancelled: true,
+        worker_panicked: false,
       }),
     );
     assert!(matches!(cancelled, SearchTerminalEvent::Cancelled(_)));
@@ -367,6 +369,7 @@ mod tests {
         total_results: 10,
         limit_reached: true,
         cancelled: false,
+        worker_panicked: false,
       }),
     );
     match done {
