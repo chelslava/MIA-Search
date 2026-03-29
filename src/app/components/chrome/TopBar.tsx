@@ -220,7 +220,7 @@ export function TopBar({
                 type="button"
                 variant={item.active ? "default" : "ghost"}
                 size="sm"
-                className="h-5 rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] px-1 text-[10px] leading-none"
+                className={`h-5 rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] px-1 text-[10px] leading-none ${item.disabled ? "opacity-50 cursor-not-allowed" : ""}`}
                 onMouseEnter={() => setActiveHint(item.hint)}
                 onFocus={() => setActiveHint(item.hint)}
                 onMouseLeave={() => setActiveHint("")}

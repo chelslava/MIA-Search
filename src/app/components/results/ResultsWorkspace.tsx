@@ -253,7 +253,7 @@ export function ResultsWorkspace({
                   onContextMenu={(event: MouseEvent<HTMLTableRowElement>) => onResultContextMenu(event, item)}
                 >
                   <td className={`border-b border-[var(--border)] px-2 py-1.5 whitespace-nowrap ${item.hidden ? "text-[var(--muted)] opacity-60" : ""}`}>
-                    {item.is_dir ? "📁" : "📄"}
+                    <span aria-hidden="true">{item.is_dir ? "📁" : "📄"}</span>
                   </td>
                   <td className={`border-b border-[var(--border)] px-2 py-1.5 ${item.is_dir ? "font-medium text-[var(--text)]" : "text-[var(--text)]"}`}>
                     <span className="block truncate" title={item.name || t("app.labels.noName", "Без имени")}>

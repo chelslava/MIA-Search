@@ -791,6 +791,9 @@ export function App() {
       setActiveSearchId(response.search_id);
     } catch (error) {
       setIsSearching(false);
+      setSearchStartedAt(null);
+      setElapsedMs(null);
+      setTtfrMs(null);
       setStatus(tr("app.status.startError", "Ошибка запуска: {{error}}", { error: String(error) }));
       pushToast(tr("app.toast.searchStartFailed", "Не удалось запустить поиск"), "error");
     }
@@ -1037,30 +1040,36 @@ export function App() {
     if (indexRoots.length === 0) return;
 
     let cancelled = false;
+    let checkInProgress = false;
     const runCheck = async () => {
-      if (cancelled || isRebuildingIndex || isSearching) return;
-      const snapshot = await refreshIndexStatus();
-      if (cancelled || !snapshot) return;
+      if (cancelled || isRebuildingIndex || isSearching || checkInProgress) return;
+      checkInProgress = true;
+      try {
+        const snapshot = await refreshIndexStatus();
+        if (cancelled || !snapshot) return;
 
-      const stale = isIndexStale(snapshot.updated_at, indexTtlMs);
-      const rootsChanged = !arraysEqual(
-        [...snapshot.root_paths].sort(),
-        [...indexRoots].sort()
-      );
-      const shouldRebuild = snapshot.status === "empty" || rootsChanged || stale;
+        const stale = isIndexStale(snapshot.updated_at, indexTtlMs);
+        const rootsChanged = !arraysEqual(
+          [...snapshot.root_paths].sort(),
+          [...indexRoots].sort()
+        );
+        const shouldRebuild = snapshot.status === "empty" || rootsChanged || stale;
 
-      if (!shouldRebuild) {
-        setIndexHint(tr("app.index.ready", "Индекс готов"));
-        return;
+        if (!shouldRebuild) {
+          setIndexHint(tr("app.index.ready", "Индекс готов"));
+          return;
+        }
+
+        if (stale) {
+          setIndexHint(tr("app.index.rebuildStale", "Индекс устарел, запускаю авто-обновление"));
+        } else if (rootsChanged) {
+          setIndexHint(tr("app.index.rebuildRootsChanged", "Набор roots изменился, обновляю индекс"));
+        }
+
+        await handleRebuildIndex(indexRoots);
+      } finally {
+        checkInProgress = false;
       }
-
-      if (stale) {
-        setIndexHint(tr("app.index.rebuildStale", "Индекс устарел, запускаю авто-обновление"));
-      } else if (rootsChanged) {
-        setIndexHint(tr("app.index.rebuildRootsChanged", "Набор roots изменился, обновляю индекс"));
-      }
-
-      await handleRebuildIndex(indexRoots);
     };
 
     const startupTimer = window.setTimeout(() => {
@@ -1083,125 +1092,125 @@ export function App() {
     const unlisten: Array<() => void> = [];
     let mounted = true;
 
-    Promise.all([
-      onSearchBatch((payload) => {
-        if (activeSearchIdRef.current === null) {
-          activeSearchIdRef.current = payload.search_id;
-          setActiveSearchId(payload.search_id);
+    const registerListener = async <T,>(registration: Promise<() => void>) => {
+      try {
+        const handler = await registration;
+        if (mounted) {
+          unlisten.push(handler);
+        } else {
+          handler();
         }
-        if (payload.search_id !== activeSearchIdRef.current) {
-          return;
-        }
-        if (searchStartedAtRef.current !== null && ttfrMs === null) {
-          setTtfrMs(Date.now() - searchStartedAtRef.current);
-        }
-        bufferedBatchRef.current.push(...payload.results);
-        pendingCheckedDeltaRef.current += payload.results.length;
-        scheduleResultsFlush();
-      }),
-      onSearchDone((payload) => {
-        if (activeSearchIdRef.current === null) {
-          activeSearchIdRef.current = payload.search_id;
-          setActiveSearchId(payload.search_id);
-        }
-        if (payload.search_id !== activeSearchIdRef.current) {
-          return;
-        }
-        setStatus(tr("app.status.ready", "Готово"));
-        setLimitReached(payload.limit_reached);
-        setIsSearching(false);
-        if (batchFlushFrameRef.current !== null) {
-          window.cancelAnimationFrame(batchFlushFrameRef.current);
-          batchFlushFrameRef.current = null;
-        }
-        if (pendingCheckedDeltaRef.current > 0) {
-          const checkedDelta = pendingCheckedDeltaRef.current;
-          pendingCheckedDeltaRef.current = 0;
-          setCheckedPaths((prev) => prev + checkedDelta);
-        }
-        if (bufferedBatchRef.current.length > 0) {
-          const remaining = bufferedBatchRef.current;
-          bufferedBatchRef.current = [];
-          setResults((prev) => {
-            const next = sortResultsForMode(prev.concat(remaining), sortModeRef.current);
-            if (incrementalSearchRef.current) {
-              incrementalSearchRef.current = { ...incrementalSearchRef.current, results: next };
-            }
-            return next;
-          });
-        }
-        setActiveSearchId(null);
-        if (searchStartedAtRef.current !== null) {
-          setElapsedMs(Date.now() - searchStartedAtRef.current);
-        }
-        void refreshPersistenceData();
-      }),
-      onSearchCancelled((payload) => {
-        if (activeSearchIdRef.current === null) {
-          activeSearchIdRef.current = payload.search_id;
-          setActiveSearchId(payload.search_id);
-        }
-        if (payload.search_id !== activeSearchIdRef.current) {
-          return;
-        }
-        setStatus(tr("app.status.stopped", "Остановлено"));
-        setIsSearching(false);
-        if (pendingCheckedDeltaRef.current > 0) {
-          const checkedDelta = pendingCheckedDeltaRef.current;
-          pendingCheckedDeltaRef.current = 0;
-          setCheckedPaths((prev) => prev + checkedDelta);
-        }
+      } catch (error) {
+        console.error("Failed to register event listener:", error);
+      }
+    };
+
+    registerListener(onSearchBatch((payload) => {
+      if (activeSearchIdRef.current === null) {
+        activeSearchIdRef.current = payload.search_id;
+        setActiveSearchId(payload.search_id);
+      }
+      if (payload.search_id !== activeSearchIdRef.current) {
+        return;
+      }
+      if (searchStartedAtRef.current !== null && ttfrMs === null) {
+        setTtfrMs(Date.now() - searchStartedAtRef.current);
+      }
+      bufferedBatchRef.current.push(...payload.results);
+      pendingCheckedDeltaRef.current += payload.results.length;
+      scheduleResultsFlush();
+    }));
+
+    registerListener(onSearchDone((payload) => {
+      if (activeSearchIdRef.current === null) {
+        activeSearchIdRef.current = payload.search_id;
+        setActiveSearchId(payload.search_id);
+      }
+      if (payload.search_id !== activeSearchIdRef.current) {
+        return;
+      }
+      setStatus(tr("app.status.ready", "Готово"));
+      setLimitReached(payload.limit_reached);
+      setIsSearching(false);
+      if (batchFlushFrameRef.current !== null) {
+        window.cancelAnimationFrame(batchFlushFrameRef.current);
+        batchFlushFrameRef.current = null;
+      }
+      if (pendingCheckedDeltaRef.current > 0) {
+        const checkedDelta = pendingCheckedDeltaRef.current;
+        pendingCheckedDeltaRef.current = 0;
+        setCheckedPaths((prev) => prev + checkedDelta);
+      }
+      if (bufferedBatchRef.current.length > 0) {
+        const remaining = bufferedBatchRef.current;
         bufferedBatchRef.current = [];
-        if (batchFlushFrameRef.current !== null) {
-          window.cancelAnimationFrame(batchFlushFrameRef.current);
-          batchFlushFrameRef.current = null;
-        }
-        setActiveSearchId(null);
-        if (searchStartedAtRef.current !== null) {
-          setElapsedMs(Date.now() - searchStartedAtRef.current);
-        }
-      }),
-      onSearchError((payload) => {
-        if (activeSearchIdRef.current === null) {
-          activeSearchIdRef.current = payload.search_id;
-          setActiveSearchId(payload.search_id);
-        }
-        if (payload.search_id !== activeSearchIdRef.current) {
-          return;
-        }
-        setStatus(renderSearchErrorStatus(payload.message, tr));
-        setIsSearching(false);
-        setSearchErrorCount((prev) => prev + 1);
-        if (pendingCheckedDeltaRef.current > 0) {
-          const checkedDelta = pendingCheckedDeltaRef.current;
-          pendingCheckedDeltaRef.current = 0;
-          setCheckedPaths((prev) => prev + checkedDelta);
-        }
-        bufferedBatchRef.current = [];
-        if (batchFlushFrameRef.current !== null) {
-          window.cancelAnimationFrame(batchFlushFrameRef.current);
-          batchFlushFrameRef.current = null;
-        }
-        setActiveSearchId(null);
-        if (searchStartedAtRef.current !== null) {
-          setElapsedMs(Date.now() - searchStartedAtRef.current);
-        }
-      })
-    ])
-      .then((handlers) => {
-        if (!mounted) {
-          handlers.forEach((fn) => fn());
-          return;
-        }
-        unlisten.push(...handlers);
-      })
-      .catch((error) => {
-        setStatus(
-          tr("app.status.eventsError", "Ошибка подписки событий: {{message}}", {
-            message: String(error)
-          })
-        );
-      });
+        setResults((prev) => {
+          const next = sortResultsForMode(prev.concat(remaining), sortModeRef.current);
+          if (incrementalSearchRef.current) {
+            incrementalSearchRef.current = { ...incrementalSearchRef.current, results: next };
+          }
+          return next;
+        });
+      }
+      setActiveSearchId(null);
+      if (searchStartedAtRef.current !== null) {
+        setElapsedMs(Date.now() - searchStartedAtRef.current);
+      }
+      void refreshPersistenceData();
+    }));
+
+    registerListener(onSearchCancelled((payload) => {
+      if (activeSearchIdRef.current === null) {
+        activeSearchIdRef.current = payload.search_id;
+        setActiveSearchId(payload.search_id);
+      }
+      if (payload.search_id !== activeSearchIdRef.current) {
+        return;
+      }
+      setStatus(tr("app.status.stopped", "Остановлено"));
+      setIsSearching(false);
+      if (pendingCheckedDeltaRef.current > 0) {
+        const checkedDelta = pendingCheckedDeltaRef.current;
+        pendingCheckedDeltaRef.current = 0;
+        setCheckedPaths((prev) => prev + checkedDelta);
+      }
+      bufferedBatchRef.current = [];
+      if (batchFlushFrameRef.current !== null) {
+        window.cancelAnimationFrame(batchFlushFrameRef.current);
+        batchFlushFrameRef.current = null;
+      }
+      setActiveSearchId(null);
+      if (searchStartedAtRef.current !== null) {
+        setElapsedMs(Date.now() - searchStartedAtRef.current);
+      }
+    }));
+
+    registerListener(onSearchError((payload) => {
+      if (activeSearchIdRef.current === null) {
+        activeSearchIdRef.current = payload.search_id;
+        setActiveSearchId(payload.search_id);
+      }
+      if (payload.search_id !== activeSearchIdRef.current) {
+        return;
+      }
+      setStatus(renderSearchErrorStatus(payload.message, tr));
+      setIsSearching(false);
+      setSearchErrorCount((prev) => prev + 1);
+      if (pendingCheckedDeltaRef.current > 0) {
+        const checkedDelta = pendingCheckedDeltaRef.current;
+        pendingCheckedDeltaRef.current = 0;
+        setCheckedPaths((prev) => prev + checkedDelta);
+      }
+      bufferedBatchRef.current = [];
+      if (batchFlushFrameRef.current !== null) {
+        window.cancelAnimationFrame(batchFlushFrameRef.current);
+        batchFlushFrameRef.current = null;
+      }
+      setActiveSearchId(null);
+      if (searchStartedAtRef.current !== null) {
+        setElapsedMs(Date.now() - searchStartedAtRef.current);
+      }
+    }));
 
     return () => {
       mounted = false;
@@ -1218,6 +1227,21 @@ export function App() {
       if (tryIncrementalPlainSearch(request)) return;
       void handleSearch(request);
     }, adaptiveDebounce);
+    return () => window.clearTimeout(timer);
+  }, [
+    debounceMs,
+    liveSearch,
+    query,
+    searchBackend
+  ]);
+
+  useEffect(() => {
+    if (!liveSearch) return;
+    const request = buildCurrentRequest();
+    if (!request.query.trim()) return;
+    const timer = window.setTimeout(() => {
+      void handleSearch(request);
+    }, debounceMs);
     return () => window.clearTimeout(timer);
   }, [
     createdAfter,
@@ -1237,14 +1261,12 @@ export function App() {
     modifiedAfter,
     modifiedBefore,
     modifiedFilterEnabled,
-    query,
     regexEnabled,
     roots,
     sizeComparison,
     sizeFilterEnabled,
     sizeUnit,
     sizeValue,
-    searchBackend,
     sortMode,
     strict
   ]);
@@ -1478,7 +1500,9 @@ export function App() {
           tr={tr}
         />
 
-        {isSearching ? <div className="progress-line" /> : null}
+        {isSearching ? (
+          <div className="progress-line" title={tr("app.status.scanningProgress", "Проверено: {{count}}", { count: checkedPaths })} />
+        ) : null}
 
         {filtersOpen ? (
           <FiltersPanel

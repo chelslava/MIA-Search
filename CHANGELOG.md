@@ -12,10 +12,17 @@ All notable changes to this project will be documented in this file.
 ### Stability
 - **[STAB-1]** Thread panic now sets cancel flag - prevents search from hanging when worker thread panics.
 - **[STAB-2]** Added `lock_or_recover` helper for poisoned Mutex recovery - logs warning and recovers gracefully.
+- **[STAB-3]** Reset all search state atomically on search start error - prevents inconsistent UI state.
+- **[STAB-6]** Individual event listener registration - if one fails, others still register correctly.
+- **[STAB-7]** Added `checkInProgress` flag to prevent concurrent index rebuild checks.
 
 ### UX/UI
 - **[UX-1]** Fixed keyboard navigation in inputs - arrow keys now work when cursor is at start/end of text input.
 - **[UX-2]** Added sortable column headers - click on Name, Size, Modified, Type columns to sort results.
+- **[UX-3]** Split live search effects - query changes use adaptive debounce, filter changes use standard debounce.
+- **[UX-5]** Added visual feedback for disabled buttons - `opacity-50 cursor-not-allowed` classes.
+- **[UX-6]** Added title attribute to progress line showing checked paths count.
+- **[UX-11]** Added `aria-hidden="true"` to emoji icons for screen reader compatibility.
 
 ### Security
 - **[SEC-1]** Fixed shell command injection vulnerability in `open_path.rs`. Added path validation to reject shell metacharacters (`&`, `|`, `;`, `$`, backticks, newlines). Added canonicalization and URL rejection for non-local paths.
