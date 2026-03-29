@@ -592,6 +592,7 @@ export function App() {
         status: rebuilt.entries > 0 ? "ready" : "empty",
         entries: rebuilt.entries,
         roots: rebuilt.roots,
+        root_paths: rootsForIndex,
         updated_at: rebuilt.updated_at
       });
       setIndexHint(tr("app.index.rebuildDone", "Индекс обновлён"));
@@ -1042,7 +1043,10 @@ export function App() {
       if (cancelled || !snapshot) return;
 
       const stale = isIndexStale(snapshot.updated_at, indexTtlMs);
-      const rootsChanged = snapshot.roots !== indexRoots.length;
+      const rootsChanged = !arraysEqual(
+        [...snapshot.root_paths].sort(),
+        [...indexRoots].sort()
+      );
       const shouldRebuild = snapshot.status === "empty" || rootsChanged || stale;
 
       if (!shouldRebuild) {

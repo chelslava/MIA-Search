@@ -15,11 +15,17 @@ pub fn matches_size(item: &SearchResultItem, filter: &Option<SizeFilter>) -> boo
   let Some(filter) = filter else {
     return true;
   };
-  let size = item.size.unwrap_or(0);
-  match filter.comparison {
-    SizeComparison::Smaller => size < filter.bytes,
-    SizeComparison::Equal => size == filter.bytes,
-    SizeComparison::Greater => size > filter.bytes,
+  match item.size {
+    Some(size) => match filter.comparison {
+      SizeComparison::Smaller => size < filter.bytes,
+      SizeComparison::Equal => size == filter.bytes,
+      SizeComparison::Greater => size > filter.bytes,
+    },
+    None => match filter.comparison {
+      SizeComparison::Smaller => true,
+      SizeComparison::Equal => false,
+      SizeComparison::Greater => true,
+    },
   }
 }
 
@@ -77,7 +83,7 @@ mod tests {
   }
 
   #[test]
-  fn matches_size_accepts_missing_filter_and_treats_missing_size_as_zero() {
+  fn matches_size_accepts_missing_filter_and_handles_unknown_size() {
     assert!(matches_size(&sample_item(None), &None));
 
     let smaller = Some(SizeFilter {
@@ -94,8 +100,8 @@ mod tests {
     });
 
     assert!(matches_size(&sample_item(None), &smaller));
-    assert!(matches_size(&sample_item(None), &equal));
-    assert!(!matches_size(&sample_item(None), &greater));
+    assert!(!matches_size(&sample_item(None), &equal));
+    assert!(matches_size(&sample_item(None), &greater));
   }
 
   #[test]

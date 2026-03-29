@@ -120,6 +120,7 @@ export interface IndexStatusResponse {
   status: "empty" | "ready";
   entries: number;
   roots: number;
+  root_paths: string[];
   updated_at: string;
 }
 

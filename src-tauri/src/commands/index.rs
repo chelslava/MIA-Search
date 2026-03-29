@@ -20,6 +20,7 @@ pub struct IndexStatusResponse {
   pub status: String,
   pub entries: usize,
   pub roots: usize,
+  pub root_paths: Vec<String>,
   pub updated_at: String,
 }
 
@@ -88,6 +89,7 @@ fn status_from_snapshot(snapshot: &IndexSnapshot, rebuild_in_progress: bool) -> 
     },
     entries: snapshot.entries.len(),
     roots: snapshot.roots.len(),
+    root_paths: snapshot.roots.clone(),
     updated_at: snapshot.updated_at.clone(),
   }
 }
@@ -112,6 +114,7 @@ mod tests {
     assert_eq!(status_ready.status, "ready");
     assert_eq!(status_ready.entries, 1);
     assert_eq!(status_ready.roots, 1);
+    assert_eq!(status_ready.root_paths, vec!["C:\\"]);
   }
 
   #[test]

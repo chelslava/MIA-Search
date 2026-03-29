@@ -224,7 +224,7 @@ impl SearchService {
     }
     let mut limit_reached = false;
     let mut total_results = 0usize;
-    let mut seen_paths = HashSet::new();
+    let mut seen_paths = HashSet::with_capacity(request.options.limit.unwrap_or(1000));
     let mut batch = Vec::with_capacity(BATCH_SIZE);
     let mut current_batch_limit = FIRST_BATCH_SIZE;
     let tasks = build_scan_tasks(request, &roots);
@@ -321,7 +321,9 @@ impl SearchService {
     }
 
     for handle in workers {
-      let _ = handle.join();
+      if let Err(panic) = handle.join() {
+        eprintln!("Worker thread panicked: {:?}", panic);
+      }
     }
 
     if cancel_flag.load(Ordering::Acquire) && !limit_reached {

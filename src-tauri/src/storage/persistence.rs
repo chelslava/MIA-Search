@@ -43,9 +43,19 @@ where
   T: DeserializeOwned + Default,
 {
   let path = data_dir().join(file_name);
-  match fs::read_to_string(path) {
-    Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
-    Err(_) => T::default(),
+  match fs::read_to_string(&path) {
+    Ok(content) => {
+      serde_json::from_str(&content).unwrap_or_else(|error| {
+        eprintln!("Failed to parse {}: {}", file_name, error);
+        T::default()
+      })
+    }
+    Err(error) => {
+      if error.kind() != std::io::ErrorKind::NotFound {
+        eprintln!("Failed to read {}: {}", file_name, error);
+      }
+      T::default()
+    }
   }
 }
 
@@ -57,7 +67,16 @@ where
   fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
   let path = dir.join(file_name);
   let content = serde_json::to_string_pretty(value).map_err(|error| error.to_string())?;
-  fs::write(path, content).map_err(|error| error.to_string())
+  fs::write(&path, content).map_err(|error| error.to_string())?;
+
+  #[cfg(unix)]
+  {
+    use std::os::unix::fs::PermissionsExt;
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o600))
+      .map_err(|error| format!("Failed to set permissions: {}", error))?;
+  }
+
+  Ok(())
 }
 
 #[cfg(test)]
