@@ -156,7 +156,7 @@ export function FiltersPanel({
             max={10}
             value={maxDepth}
             disabled={maxDepthUnlimited}
-            onChange={(event) => onMaxDepthChange(Number(event.target.value))}
+            onChange={(event) => onMaxDepthChange(Math.min(10, Math.max(0, Number(event.target.value) || 0)))}
           />
         </fieldset>
 

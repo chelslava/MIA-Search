@@ -29,7 +29,6 @@ fn has_dir_children(path: &Path) -> bool {
     }
   }
 }
-}
 
 #[tauri::command]
 pub fn fs_list_roots() -> Result<Vec<FsTreeNode>, String> {

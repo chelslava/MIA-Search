@@ -91,14 +91,14 @@
 ## 🟢 LOW - Performance
 
 ### [PERF-8] Extension Parsing Creates New Strings
-**File:** `src-tauri/src/core/index_service.rs:245-250`
-**Issue:** Lowercase conversion for every extension check.
-**Fix:** Pre-normalize extensions once during request parsing.
+**File:** `src-tauri/src/core/index_service.rs:261-268`
+**Status:** Fixed - use `to_ascii_lowercase()` instead of `to_lowercase()` for faster ASCII conversion.
+**Note:** Extensions are typically ASCII, so this avoids Unicode overhead.
 
 ### [PERF-10] Redundant Clone in to_lightweight_item
-**File:** `src-tauri/src/commands/search.rs:279-284`
-**Issue:** Entire SearchResultItem cloned just to null out 3 fields.
-**Fix:** Consider `LightweightSearchResultItem` type or optimize clone.
+**File:** `src-tauri/src/commands/search.rs:291-296`
+**Status:** After analysis, no clone needed - function takes ownership and mutates in place.
+**Note:** Pattern is already optimal: `into_iter().map(to_lightweight_item).collect()` moves items.
 
 ---
 
@@ -130,19 +130,19 @@
 ## 🟢 LOW - UX/UI
 
 ### [UX-8] Hardcoded Breakpoint
-**File:** `src/app/App.tsx:1412-1416`
-**Issue:** Sidebars hidden at exactly 1024px without configuration.
-**Fix:** Make responsive breakpoint configurable.
+**File:** `src/app/App.tsx:1445-1448`
+**Status:** Fixed - extracted to RESPONSIVE_BREAKPOINT constant for easier maintenance.
+**Note:** Full configurability would require settings store changes.
 
 ### [UX-9] Range Slider and Number Input Desync
 **File:** `src/app/components/chrome/FiltersPanel.tsx:144-160`
-**Issue:** Two separate inputs for same value can desync.
-**Fix:** Use single controlled input or synchronize explicitly.
+**Status:** Fixed - added clamping to number input to keep values in sync with slider range (0-10).
+**Note:** Both inputs now always produce values within the same range.
 
 ### [UX-10] Toast Auto-Dismiss Time Hardcoded
-**File:** `src/app/App.tsx:518-523`
-**Issue:** 2400ms fixed, may be too short for long messages.
-**Fix:** Make dismiss time configurable or proportional to message length.
+**File:** `src/app/App.tsx:518-524`
+**Status:** Fixed - dismiss time now proportional to message length (50ms/char, min 2s, max 5s).
+**Note:** Longer messages get more time to read.
 
 ### [UX-20] No Visual Feedback for Keyboard Navigation
 **File:** `src/app/App.tsx:1406-1428`
@@ -209,11 +209,13 @@ Export search results to CSV/JSON.
 | Category | Critical | High | Medium | Low |
 |----------|----------|------|--------|-----|
 | Security | 0 | 0 | 0 | 0 |
-| Stability | 0 | 0 | 0 | 2 |
-| Performance | 0 | 0 | 2 | 2 |
-| UX/UI | 0 | 0 | 0 | 6 |
+| Stability | 0 | 0 | 0 | 1 |
+| Performance | 0 | 0 | 2 | 0 |
+| UX/UI | 0 | 0 | 0 | 3 |
 
 **All security issues resolved!**
 
-**Priority Order:**
-1. Remaining Low priority items (STAB-8, PERF-8, PERF-10, UX-8, UX-9, UX-10, UX-21, UX-23)
+**Remaining items:**
+- STAB-8: Silent Index Version Mismatch (deferred)
+- PERF-4, PERF-9: Require architectural changes
+- UX-21, UX-23: Minor UX improvements

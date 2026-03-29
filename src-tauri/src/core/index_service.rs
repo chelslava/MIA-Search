@@ -262,7 +262,10 @@ fn matches_extensions(item: &SearchResultItem, extensions: &[String]) -> bool {
   let ext = item
     .extension
     .as_ref()
-    .map(|value| value.trim().trim_start_matches('.').to_lowercase())
+    .map(|value| {
+      let trimmed = value.trim().trim_start_matches('.');
+      trimmed.to_ascii_lowercase()
+    })
     .unwrap_or_default();
   extensions.iter().any(|value| value == &ext)
 }

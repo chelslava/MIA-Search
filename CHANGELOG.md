@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - **[PERF-3]** Improved HashSet capacity estimation - now uses min(limit, 100000) to avoid frequent rehashing.
 - **[PERF-5]** Eliminated string allocation in index matching - matches name first, then path only if needed.
 - **[PERF-7]** Cache current directory at search start - avoids repeated `current_dir()` syscalls.
+- **[PERF-8]** Use `to_ascii_lowercase()` for extension matching - faster than `to_lowercase()` for ASCII.
 - **[PERF-11]** Added parallel metadata enrichment using rayon - speeds up batch metadata retrieval.
 - **[PERF-12]** Added thread-local regex cache for wildcard/regex patterns - avoids recompilation on repeated searches.
 
@@ -28,7 +29,13 @@ All notable changes to this project will be documented in this file.
 - **[UX-5]** Added visual feedback for disabled buttons - `opacity-50 cursor-not-allowed` classes.
 - **[UX-6]** Added title attribute to progress line showing checked paths count.
 - **[UX-7]** Removed redundant "Copy path" button from DetailsSidebar - kept inline copy button.
+- **[UX-8]** Extracted responsive breakpoint to constant for easier maintenance.
+- **[UX-9]** Added clamping to depth number input to keep in sync with slider range.
+- **[UX-10]** Toast dismiss time now proportional to message length (50ms/char, min 2s, max 5s).
 - **[UX-11]** Added `aria-hidden="true"` to emoji icons for screen reader compatibility.
+- **[UX-20]** Added smooth scrolling for keyboard navigation in results.
+- **[UX-22]** Added confirmation dialog before clearing search history.
+- **[UX-24]** Added col-resize cursor feedback during splitter drag.
 
 ### Code Quality
 - **[PERF-6]** Improved NaN handling in relevance sorting - NaN scores are now sorted to the end instead of being treated as equal.

@@ -84,6 +84,8 @@ function compareSearchItems(left: SearchResultItem, right: SearchResultItem, mod
   }
 }
 
+const RESPONSIVE_BREAKPOINT = 1024;
+
 function sortResultsForMode(items: SearchResultItem[], mode: SortMode): SearchResultItem[] {
   return [...items].sort((left, right) => compareSearchItems(left, right, mode));
 }
@@ -518,9 +520,10 @@ export function App() {
   function pushToast(text: string, kind: ToastItem["kind"] = "info"): void {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     setToasts((previous) => previous.concat({ id, text, kind }));
+    const dismissTime = Math.max(2000, Math.min(5000, text.length * 50));
     window.setTimeout(() => {
       setToasts((previous) => previous.filter((item) => item.id !== id));
-    }, 2400);
+    }, dismissTime);
   }
 
   function closeToast(id: string): void {
@@ -1441,7 +1444,7 @@ export function App() {
   }, [indexRoots, isRebuildingIndex, results, searchBackend, selectedPath, selectedResult]);
 
   useEffect(() => {
-    if (window.innerWidth < 1024) {
+    if (window.innerWidth < RESPONSIVE_BREAKPOINT) {
       setLeftVisible(false);
       setRightVisible(false);
     }
