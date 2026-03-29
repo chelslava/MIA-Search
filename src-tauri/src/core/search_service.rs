@@ -17,47 +17,6 @@ use std::thread;
 use std::time::SystemTime;
 use std::panic;
 
-impl PartialEq for crate::core::models::SearchOptions {
-  fn eq(&self, other: &Self) -> bool {
-    self.max_depth == other.max_depth
-      && self.limit == other.limit
-      && self.strict == other.strict
-      && self.ignore_case == other.ignore_case
-      && self.include_hidden == other.include_hidden
-      && self.entry_kind == other.entry_kind
-      && self.match_mode == other.match_mode
-      && self.sort_mode == other.sort_mode
-      && self.search_backend == other.search_backend
-      && option_size_filter_eq(&self.size_filter, &other.size_filter)
-      && option_date_filter_eq(&self.created_filter, &other.created_filter)
-      && option_date_filter_eq(&self.modified_filter, &other.modified_filter)
-  }
-}
-
-fn option_size_filter_eq(
-  left: &Option<crate::core::models::SizeFilter>,
-  right: &Option<crate::core::models::SizeFilter>,
-) -> bool {
-  match (left, right) {
-    (None, None) => true,
-    (Some(left), Some(right)) => left.bytes == right.bytes && left.comparison == right.comparison,
-    _ => false,
-  }
-}
-
-fn option_date_filter_eq(
-  left: &Option<crate::core::models::DateFilter>,
-  right: &Option<crate::core::models::DateFilter>,
-) -> bool {
-  match (left, right) {
-    (None, None) => true,
-    (Some(left), Some(right)) => {
-      left.field == right.field && left.comparison == right.comparison && left.value == right.value
-    }
-    _ => false,
-  }
-}
-
 const BATCH_SIZE: usize = 100;
 const FIRST_BATCH_SIZE: usize = 20;
 const MAX_SCAN_WORKERS: usize = 12;

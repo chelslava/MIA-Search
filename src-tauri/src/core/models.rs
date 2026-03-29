@@ -86,11 +86,23 @@ pub struct SizeFilter {
   pub bytes: u64,
 }
 
+impl PartialEq for SizeFilter {
+  fn eq(&self, other: &Self) -> bool {
+    self.bytes == other.bytes && self.comparison == other.comparison
+  }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DateFilter {
   pub field: DateField,
   pub comparison: DateComparison,
   pub value: String,
+}
+
+impl PartialEq for DateFilter {
+  fn eq(&self, other: &Self) -> bool {
+    self.field == other.field && self.comparison == other.comparison && self.value == other.value
+  }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -127,6 +139,23 @@ impl Default for SearchOptions {
       sort_mode: SortMode::Relevance,
       search_backend: SearchBackend::Scan,
     }
+  }
+}
+
+impl PartialEq for SearchOptions {
+  fn eq(&self, other: &Self) -> bool {
+    self.max_depth == other.max_depth
+      && self.limit == other.limit
+      && self.strict == other.strict
+      && self.ignore_case == other.ignore_case
+      && self.include_hidden == other.include_hidden
+      && self.entry_kind == other.entry_kind
+      && self.match_mode == other.match_mode
+      && self.sort_mode == other.sort_mode
+      && self.search_backend == other.search_backend
+      && self.size_filter == other.size_filter
+      && self.created_filter == other.created_filter
+      && self.modified_filter == other.modified_filter
   }
 }
 

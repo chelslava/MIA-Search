@@ -19,9 +19,13 @@ impl MetadataService {
       .and_then(|value| value.to_str().map(|text| text.to_string()))
       .unwrap_or_default();
     let extension = path.extension().and_then(|value| value.to_str()).map(|value| value.to_string());
-    let (is_file, is_dir) = std::fs::metadata(path)
-      .map(|meta| (meta.is_file(), meta.is_dir()))
-      .unwrap_or((false, false));
+    let (is_file, is_dir) = match std::fs::metadata(path) {
+      Ok(meta) => (meta.is_file(), meta.is_dir()),
+      Err(error) => {
+        log::debug!("metadata lookup failed for {}: {}", path.display(), error);
+        (false, false)
+      }
+    };
 
     SearchResultItem {
       name: file_name.clone(),
@@ -65,7 +69,10 @@ impl MetadataService {
           .map(|value| chrono::DateTime::<Utc>::from(value).to_rfc3339());
         (metadata.is_file(), metadata.is_dir(), Some(metadata.len()), modified_at, created_at)
       }
-      Err(_) => (false, false, None, None, None),
+      Err(error) => {
+        log::debug!("metadata lookup failed for {}: {}", path.display(), error);
+        (false, false, None, None, None)
+      }
     };
 
     SearchResultItem {

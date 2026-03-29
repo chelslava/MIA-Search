@@ -182,8 +182,7 @@
 ### [STAB-20] Missing Error Handling for Metadata Operations
 **File:** `src-tauri/src/core/metadata_service.rs:22-24`
 **Effort:** S
-**Issue:** Metadata failures silently ignored (returning default values). May lead to incorrect results without awareness.
-**Fix:** Log metadata failures at debug level, optionally expose count of items with missing metadata.
+**Status:** Fixed - added debug-level logging for metadata failures.
 
 ### [STAB-8] Silent Index Version Mismatch
 **File:** `src-tauri/src/storage/index_store.rs:37-43`
@@ -243,14 +242,12 @@
 ### [QUAL-5] Dead Code - search_mapper Module
 **File:** `src-tauri/src/core/search_mapper.rs`
 **Effort:** S
-**Issue:** `SearchPlan` and `request_to_plan` not imported anywhere.
-**Fix:** Either integrate into search flow or remove.
+**Status:** Fixed - removed unused search_mapper module.
 
 ### [QUAL-6] PartialEq Implementation in Wrong File
 **File:** `src-tauri/src/core/search_service.rs:20-59`
 **Effort:** S
-**Issue:** `PartialEq` for `SearchOptions` implemented in `search_service.rs` but type defined in `models.rs`.
-**Fix:** Move implementation to `models.rs`.
+**Status:** Fixed - moved PartialEq implementations to models.rs where types are defined.
 
 ### [QUAL-7] Hardcoded Default Language
 **File:** `src-tauri/src/storage/settings_store.rs:28`
