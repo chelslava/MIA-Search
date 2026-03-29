@@ -160,8 +160,9 @@ impl IndexService {
         continue;
       }
 
-      let haystack = format!("{} {}", item.name, item.full_path);
-      if !matcher.matches(&haystack) {
+      let name_matches = matcher.matches(&item.name);
+      let path_matches = name_matches || matcher.matches(&item.full_path);
+      if !path_matches {
         continue;
       }
 

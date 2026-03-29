@@ -210,7 +210,8 @@ impl SearchService {
   {
     let roots = normalized_roots(request);
     let exclude_tokens = normalized_exclude_tokens(request);
-    let roots_for_source = prepare_source_roots(&roots);
+    let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    let roots_for_source = prepare_source_roots(&roots, &cwd);
     let default_root = roots.first().cloned().unwrap_or_else(|| ".".to_string());
     let query = request.query.trim().to_string();
     let matcher = build_query_matcher(&request.options.match_mode, &query, request.options.ignore_case)?;
@@ -286,7 +287,7 @@ impl SearchService {
         continue;
       }
 
-      let source_root = resolve_source_root(&roots_for_source, &path).unwrap_or_else(|| default_root.clone());
+      let source_root = resolve_source_root(&roots_for_source, &path, &cwd).unwrap_or_else(|| default_root.clone());
       let mut item = MetadataService::lightweight_path(&path, source_root);
       if matches!(request.options.sort_mode, SortMode::Relevance) && !query.is_empty() {
         item.score = score_relevance(&item.name, &query);
@@ -580,23 +581,23 @@ fn parse_rfc3339_system_time(value: &str) -> Option<SystemTime> {
   Some(dt_utc.into())
 }
 
-fn prepare_source_roots(roots: &[String]) -> Vec<(String, PathBuf, usize)> {
+fn prepare_source_roots(roots: &[String], cwd: &Path) -> Vec<(String, PathBuf, usize)> {
   roots
     .iter()
     .cloned()
     .map(|root| {
-      let absolute = absolutize_path(Path::new(&root));
+      let absolute = absolutize_path(Path::new(&root), cwd);
       let specificity = absolute.components().count();
       (root, absolute, specificity)
     })
     .collect()
 }
 
-fn absolutize_path(path: &Path) -> PathBuf {
+fn absolutize_path(path: &Path, cwd: &Path) -> PathBuf {
   if path.is_absolute() {
     path.to_path_buf()
   } else {
-    std::env::current_dir().map(|cwd| cwd.join(path)).unwrap_or_else(|_| path.to_path_buf())
+    cwd.join(path)
   }
 }
 
@@ -611,8 +612,8 @@ fn dedup_path_key(path: &str) -> String {
   }
 }
 
-fn resolve_source_root(roots: &[(String, PathBuf, usize)], path: &str) -> Option<String> {
-  let absolute_path = absolutize_path(Path::new(path));
+fn resolve_source_root(roots: &[(String, PathBuf, usize)], path: &str, cwd: &Path) -> Option<String> {
+  let absolute_path = absolutize_path(Path::new(path), cwd);
   roots
     .iter()
     .filter(|(_, root_path, _)| absolute_path.starts_with(root_path))
@@ -859,17 +860,19 @@ mod tests {
 
   #[test]
   fn resolve_source_root_returns_matching_root() {
+    let cwd = PathBuf::from("/");
     let roots = vec!["C:/data".to_string(), "D:/logs".to_string()];
-    let prepared = prepare_source_roots(&roots);
-    let resolved = resolve_source_root(&prepared, "D:/logs/archive/app.log");
+    let prepared = prepare_source_roots(&roots, &cwd);
+    let resolved = resolve_source_root(&prepared, "D:/logs/archive/app.log", &cwd);
     assert_eq!(resolved.as_deref(), Some("D:/logs"));
   }
 
   #[test]
   fn resolve_source_root_prefers_most_specific_root() {
+    let cwd = PathBuf::from("/");
     let roots = vec!["C:/data".to_string(), "C:/data/project".to_string()];
-    let prepared = prepare_source_roots(&roots);
-    let resolved = resolve_source_root(&prepared, "C:/data/project/src/main.rs");
+    let prepared = prepare_source_roots(&roots, &cwd);
+    let resolved = resolve_source_root(&prepared, "C:/data/project/src/main.rs", &cwd);
     assert_eq!(resolved.as_deref(), Some("C:/data/project"));
   }
 

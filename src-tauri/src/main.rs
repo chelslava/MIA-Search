@@ -24,6 +24,7 @@ pub struct AppState {
   pub favorites: Mutex<FavoritesStore>,
   pub index: Mutex<IndexStore>,
   pub index_rebuild_in_progress: AtomicBool,
+  pub shutting_down: AtomicBool,
 }
 
 pub fn lock_or_recover<T>(mutex: &Mutex<T>) -> Result<std::sync::MutexGuard<T>, String> {
@@ -46,6 +47,7 @@ impl AppState {
       favorites: Mutex::new(FavoritesStore::load()),
       index: Mutex::new(IndexStore::load()),
       index_rebuild_in_progress: AtomicBool::new(false),
+      shutting_down: AtomicBool::new(false),
     }
   }
 

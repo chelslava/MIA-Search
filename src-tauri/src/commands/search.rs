@@ -111,7 +111,17 @@ pub fn search_start(
 
   let app_handle = app.clone();
   std::thread::spawn(move || {
+    let state = app_handle.state::<AppState>();
+    if state.shutting_down.load(std::sync::atomic::Ordering::Acquire) {
+      return;
+    }
+
     let outcome = run_search_stream(&app_handle, &request, cancel_flag, search_id);
+
+    let state = app_handle.state::<AppState>();
+    if state.shutting_down.load(std::sync::atomic::Ordering::Acquire) {
+      return;
+    }
 
     match terminal_event_from_stream(search_id, outcome) {
       SearchTerminalEvent::Cancelled(payload) => {

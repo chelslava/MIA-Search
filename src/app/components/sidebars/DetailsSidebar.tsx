@@ -115,14 +115,6 @@ export function DetailsSidebar({
             </Button>
             <Button
               type="button"
-              variant="ghost"
-              onClick={() => void onCopyPath(selectedResult.full_path)}
-              className="h-8 w-full px-2 text-[12px]"
-            >
-              {tr("app.details.copyPath", "Копировать путь")}
-            </Button>
-            <Button
-              type="button"
               variant="secondary"
               onClick={() => void onAddFavorite(selectedResult.full_path)}
               className="h-8 w-full px-2 text-[12px]"

@@ -1,13 +1,31 @@
 use crate::core::models::{SearchResultItem, SortMode};
 use std::cmp::Ordering;
 
+fn compare_scores(left: Option<f64>, right: Option<f64>) -> Ordering {
+  match (left, right) {
+    (Some(l), Some(r)) => r.partial_cmp(&l).unwrap_or_else(|| {
+      if l.is_nan() && r.is_nan() {
+        Ordering::Equal
+      } else if l.is_nan() {
+        Ordering::Greater
+      } else {
+        Ordering::Less
+      }
+    }),
+    (Some(_), None) => Ordering::Less,
+    (None, Some(_)) => Ordering::Greater,
+    (None, None) => Ordering::Equal,
+  }
+}
+
 pub fn sort_results(items: &mut [SearchResultItem], mode: &SortMode) {
   match mode {
-    SortMode::Relevance => items.sort_by(|left, right| match (right.score, left.score) {
-      (Some(right_score), Some(left_score)) => right_score
-        .partial_cmp(&left_score)
-        .unwrap_or(Ordering::Equal),
-      _ => left.name.cmp(&right.name),
+    SortMode::Relevance => items.sort_by(|left, right| {
+      let score_order = compare_scores(left.score, right.score);
+      if score_order != Ordering::Equal {
+        return score_order;
+      }
+      left.name.cmp(&right.name)
     }),
     SortMode::Name => items.sort_by(|left, right| left.name.cmp(&right.name)),
     SortMode::Size => items.sort_by(|left, right| right.size.cmp(&left.size)),
@@ -119,5 +137,25 @@ mod tests {
     sort_results(&mut items, &SortMode::Type);
     let names: Vec<_> = items.iter().map(|item| item.name.as_str()).collect();
     assert_eq!(names, vec!["a", "b"]);
+  }
+
+  #[test]
+  fn sort_results_by_relevance_handles_nan_scores() {
+    let mut items = vec![
+      SearchResultItem {
+        name: "nan_item".to_string(),
+        score: Some(f64::NAN),
+        ..SearchResultItem::default()
+      },
+      SearchResultItem {
+        name: "valid_item".to_string(),
+        score: Some(0.5),
+        ..SearchResultItem::default()
+      },
+    ];
+
+    sort_results(&mut items, &SortMode::Relevance);
+    assert_eq!(items[0].name, "valid_item");
+    assert_eq!(items[1].name, "nan_item");
   }
 }

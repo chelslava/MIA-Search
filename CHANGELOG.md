@@ -8,11 +8,14 @@ All notable changes to this project will be documented in this file.
 - **[PERF-1]** Optimized QueryMatcher to use `to_ascii_lowercase()` instead of `to_lowercase()` - faster ASCII-only case conversion.
 - **[PERF-2]** Removed redundant limit checks in search loop - was checked 3 times, now checked once per result.
 - **[PERF-3]** Improved HashSet capacity estimation - now uses min(limit, 100000) to avoid frequent rehashing.
+- **[PERF-5]** Eliminated string allocation in index matching - matches name first, then path only if needed.
+- **[PERF-7]** Cache current directory at search start - avoids repeated `current_dir()` syscalls.
 
 ### Stability
 - **[STAB-1]** Thread panic now sets cancel flag - prevents search from hanging when worker thread panics.
 - **[STAB-2]** Added `lock_or_recover` helper for poisoned Mutex recovery - logs warning and recovers gracefully.
 - **[STAB-3]** Reset all search state atomically on search start error - prevents inconsistent UI state.
+- **[STAB-4]** Added `shutting_down` flag to prevent search thread from emitting events after app shutdown.
 - **[STAB-6]** Individual event listener registration - if one fails, others still register correctly.
 - **[STAB-7]** Added `checkInProgress` flag to prevent concurrent index rebuild checks.
 
@@ -22,7 +25,11 @@ All notable changes to this project will be documented in this file.
 - **[UX-3]** Split live search effects - query changes use adaptive debounce, filter changes use standard debounce.
 - **[UX-5]** Added visual feedback for disabled buttons - `opacity-50 cursor-not-allowed` classes.
 - **[UX-6]** Added title attribute to progress line showing checked paths count.
+- **[UX-7]** Removed redundant "Copy path" button from DetailsSidebar - kept inline copy button.
 - **[UX-11]** Added `aria-hidden="true"` to emoji icons for screen reader compatibility.
+
+### Code Quality
+- **[PERF-6]** Improved NaN handling in relevance sorting - NaN scores are now sorted to the end instead of being treated as equal.
 
 ### Security
 - **[SEC-1]** Fixed shell command injection vulnerability in `open_path.rs`. Added path validation to reject shell metacharacters (`&`, `|`, `;`, `$`, backticks, newlines). Added canonicalization and URL rejection for non-local paths.

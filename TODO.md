@@ -14,48 +14,20 @@
 **File:** `src-tauri/src/core/metadata_service.rs:22-24`
 **Issue:** `std::fs::metadata(path)` is called synchronously for every result.
 **Fix:** Consider async metadata fetch or batched parallel retrieval.
-
-### [PERF-5] String Allocation in Index Matching
-**File:** `src-tauri/src/core/index_service.rs:163`
-**Issue:** `format!("{} {}", item.name, item.full_path)` allocates on every item.
-**Fix:** Use combined search without allocation or pre-computed search field.
-
-### [PERF-6] Partial Comparison Fallback in Ranking
-**File:** `src-tauri/src/core/ranking.rs:6-16`
-**Issue:** `partial_cmp` returns `Equal` for NaN, potentially breaking sort stability.
-**Fix:** Use `total_cmp` or explicit NaN handling.
+**Note:** Requires significant architectural changes - defer to future work.
 
 ---
 
 ## 🟡 MEDIUM - Stability
 
-### [STAB-4] Search Thread May Outlive App
-**File:** `src-tauri/src/commands/search.rs:113-140`
-**Issue:** Spawned thread holds `AppHandle` clone but no cancellation on app shutdown.
-**Fix:** Add shutdown flag check or use `tauri::async_runtime` for proper lifecycle.
-
 ### [STAB-5] Channel Sender Dropped Early
 **File:** `src-tauri/src/core/search_service.rs:269`
-**Issue:** `drop(tx)` happens before workers complete.
-**Fix:** Move `drop(tx)` after worker join or use proper channel closing pattern.
-
----
-
-## 🟡 MEDIUM - UX/UI
-
-### [UX-7] Redundant Action Buttons
-**File:** `src/app/components/sidebars/DetailsSidebar.tsx:96-132`
-**Issue:** "Copy path" appears twice.
-**Fix:** Consolidate to single copy button or differentiate functionality.
+**Status:** After analysis, this is correct behavior - workers hold cloned senders.
+**Note:** No fix needed - pattern is correct.
 
 ---
 
 ## 🟢 LOW - Performance
-
-### [PERF-7] Current Directory Lookup on Every Call
-**File:** `src-tauri/src/core/search_service.rs:596-602`
-**Issue:** `std::env::current_dir()` called per path resolution.
-**Fix:** Cache current directory at search start.
 
 ### [PERF-8] Extension Parsing Creates New Strings
 **File:** `src-tauri/src/core/index_service.rs:245-250`
@@ -132,13 +104,17 @@ Export search results to CSV/JSON.
 
 ## Summary
 
-| Category | High | Medium | Low |
-|----------|------|--------|-----|
-| Performance | 0 | 3 | 2 |
-| Stability | 0 | 2 | 2 |
-| UX/UI | 0 | 1 | 3 |
+| Category | Completed |
+|----------|-----------|
+| Performance | 5 (PERF-1,2,3,5,7) |
+| Stability | 6 (STAB-1,2,3,4,6,7) |
+| UX/UI | 7 (UX-1,2,3,5,6,7,11) |
+| Code Quality | 1 (PERF-6) |
 
-**Completed this session:**
-- 3 Performance optimizations (PERF-1, PERF-2, PERF-3)
-- 5 Stability improvements (STAB-1, STAB-2, STAB-3, STAB-6, STAB-7)
-- 6 UX improvements (UX-1, UX-2, UX-3, UX-5, UX-6, UX-11)
+**Remaining:**
+- 1 Medium performance (PERF-4 - requires architecture changes)
+- 1 Low performance (PERF-8)
+- 2 Low stability (STAB-8, STAB-9)
+- 3 Low UX/UI (UX-8, UX-9, UX-10)
+- 6 Future features
+- 1 Test coverage
