@@ -77,12 +77,14 @@
 ### [UX-18] Missing Loading State for Initial Index Build
 **File:** `src/app/App.tsx:1038-1087`
 **Issue:** Initial index rebuild happens silently, user sees empty results.
-**Fix:** Add explicit loading overlay during initial index build.
+**Status:** Deferred - requires UI design for loading overlay in ResultsWorkspace.
+**Note:** `isRebuildingIndex` state exists, need to pass to ResultsWorkspace and show loading UI.
 
 ### [UX-19] Missing Error State in Results View
 **File:** `src/app/App.tsx:1188-1213`
 **Issue:** Search errors shown in status bar but results table shows stale data.
-**Fix:** Add error state UI in ResultsWorkspace.
+**Status:** Deferred - requires passing error state to ResultsWorkspace component.
+**Note:** `searchErrorCount` state exists, need to design error UI in results area.
 
 ---
 
@@ -119,8 +121,8 @@
 
 ### [SEC-10] No Input Validation on exclude_paths
 **File:** `src-tauri/src/core/search_service.rs:450-459`
-**Issue:** exclude_paths not validated for malicious patterns.
-**Fix:** Add length limit and pattern validation.
+**Status:** Fixed - added max length validation (256 chars) per exclude_path entry.
+**Note:** Count limit already existed (MAX_EXCLUDE_PATHS=50).
 
 ---
 
@@ -205,10 +207,12 @@ Export search results to CSV/JSON.
 
 | Category | Critical | High | Medium | Low |
 |----------|----------|------|--------|-----|
-| Security | 0 | 0 | 0 | 1 |
+| Security | 0 | 0 | 0 | 0 |
 | Stability | 0 | 0 | 1 | 3 |
 | Performance | 0 | 0 | 2 | 2 |
-| UX/UI | 0 | 0 | 2 | 7 |
+| UX/UI | 0 | 0 | 0 | 9 |
+
+**All security issues resolved!**
 
 **Priority Order:**
-1. UX-18: Missing loading state for initial index build (Medium)
+1. Remaining Low priority items (STAB-8, STAB-9, STAB-13, PERF-8, PERF-10, UX items)

@@ -41,6 +41,7 @@ All notable changes to this project will be documented in this file.
 - **[SEC-6]** Added symlink rejection in `open_path.rs` and `reveal_in_explorer.rs` - prevents following malicious symlinks to sensitive system files.
 - **[SEC-7]** Added path traversal validation - rejects paths containing `..` components that could escape intended directories.
 - **[SEC-8]** Fixed sensitive data exposure in history - now stores only query text, not full SearchRequest with roots/exclude_paths.
+- **[SEC-10]** Added length validation for individual exclude_paths entries - max 256 chars each to prevent DoS.
 
 ### Stability
 - **[STAB-10]** Fixed TOCTOU race condition in path canonicalization - re-validates canonicalized path for symlinks, traversal sequences, and unsafe characters after resolution.

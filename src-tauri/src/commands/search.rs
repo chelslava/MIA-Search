@@ -59,6 +59,7 @@ const MAX_QUERY_LENGTH: usize = 1024;
 const MAX_ROOTS: usize = 50;
 const MAX_EXTENSIONS: usize = 20;
 const MAX_EXCLUDE_PATHS: usize = 50;
+const MAX_EXCLUDE_PATH_LENGTH: usize = 256;
 
 fn validate_request(request: &SearchRequest) -> Result<(), String> {
   if request.query.len() > MAX_QUERY_LENGTH {
@@ -88,6 +89,16 @@ fn validate_request(request: &SearchRequest) -> Result<(), String> {
       request.exclude_paths.len(),
       MAX_EXCLUDE_PATHS
     ));
+  }
+  for (i, path) in request.exclude_paths.iter().enumerate() {
+    if path.len() > MAX_EXCLUDE_PATH_LENGTH {
+      return Err(format!(
+        "exclude_paths[{}] too long: {} chars (max {})",
+        i,
+        path.len(),
+        MAX_EXCLUDE_PATH_LENGTH
+      ));
+    }
   }
   Ok(())
 }
@@ -478,5 +489,16 @@ mod tests {
     };
     let err = validate_request(&request).unwrap_err();
     assert!(err.contains("Too many exclude_paths"));
+  }
+
+  #[test]
+  fn validate_request_rejects_long_exclude_path() {
+    let long_path = "x".repeat(300);
+    let request = SearchRequest {
+      exclude_paths: vec![long_path],
+      ..SearchRequest::default()
+    };
+    let err = validate_request(&request).unwrap_err();
+    assert!(err.contains("exclude_paths[0] too long"));
   }
 }
