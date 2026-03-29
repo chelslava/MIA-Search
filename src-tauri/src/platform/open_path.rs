@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::path::{Component, Path};
 use std::process::Command;
 
 fn is_safe_path(path: &str) -> bool {
@@ -14,6 +14,16 @@ fn is_local_path(path: &str) -> bool {
     || lower.starts_with("file://"))
 }
 
+fn has_path_traversal(path: &str) -> bool {
+  Path::new(path)
+    .components()
+    .any(|c| matches!(c, Component::ParentDir))
+}
+
+fn is_symlink(path: &Path) -> bool {
+  path.symlink_metadata().map(|m| m.file_type().is_symlink()).unwrap_or(false)
+}
+
 pub fn open_path(path: &str) -> Result<(), String> {
   if !is_local_path(path) {
     return Err(format!("Refusing to open non-local path: {}", path));
@@ -21,10 +31,22 @@ pub fn open_path(path: &str) -> Result<(), String> {
   if !is_safe_path(path) {
     return Err(format!("Path contains unsafe characters: {}", path));
   }
+  if has_path_traversal(path) {
+    return Err(format!("Path contains traversal sequences: {}", path));
+  }
 
-  let canonical = Path::new(path)
+  let path_ref = Path::new(path);
+  if is_symlink(path_ref) {
+    return Err(format!("Refusing to follow symlink: {}", path));
+  }
+
+  let canonical = path_ref
     .canonicalize()
     .map_err(|error| format!("Invalid path {}: {}", path, error))?;
+
+  if !is_safe_path(&canonical.to_string_lossy()) {
+    return Err(format!("Resolved path contains unsafe characters: {}", canonical.to_string_lossy()));
+  }
 
   open_path_with(&canonical.to_string_lossy(), |safe_path| {
     let status = if cfg!(target_os = "windows") {
@@ -84,5 +106,14 @@ mod tests {
     assert!(!is_local_path("http://example.com/file"));
     assert!(!is_local_path("ftp://server/file"));
     assert!(!is_local_path("file:///etc/passwd"));
+  }
+
+  #[test]
+  fn has_path_traversal_detects_parent_dir() {
+    assert!(has_path_traversal("../etc/passwd"));
+    assert!(has_path_traversal("C:/safe/../windows/system32"));
+    assert!(has_path_traversal("/home/user/../../root"));
+    assert!(!has_path_traversal("C:/safe/path.txt"));
+    assert!(!has_path_traversal("/home/user/documents"));
   }
 }
