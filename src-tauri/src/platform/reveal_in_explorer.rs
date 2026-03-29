@@ -33,8 +33,15 @@ pub fn reveal_in_file_manager(path: &str) -> Result<(), String> {
     .canonicalize()
     .map_err(|error| format!("Invalid path {}: {}", path, error))?;
 
-  if !is_safe_path(&canonical.to_string_lossy()) {
-    return Err(format!("Resolved path contains unsafe characters"));
+  let canonical_str = canonical.to_string_lossy();
+  if !is_safe_path(&canonical_str) {
+    return Err(format!("Resolved path contains unsafe characters: {}", canonical_str));
+  }
+  if has_path_traversal(&canonical_str) {
+    return Err(format!("Resolved path contains traversal sequences: {}", canonical_str));
+  }
+  if is_symlink(&canonical) {
+    return Err(format!("Resolved path is a symlink: {}", canonical_str));
   }
 
   reveal_with(&canonical, |safe_path| {
@@ -95,5 +102,32 @@ mod tests {
     assert!(has_path_traversal("../etc/passwd"));
     assert!(has_path_traversal("C:/safe/../windows"));
     assert!(!has_path_traversal("C:/safe/path.txt"));
+  }
+
+  #[test]
+  fn is_safe_path_rejects_newlines_and_null() {
+    assert!(!is_safe_path("C:/path\ninjection"));
+    assert!(!is_safe_path("C:/path\rinjection"));
+    assert!(!is_safe_path("C:/path\0null"));
+  }
+
+  #[test]
+  fn reveal_rejects_unsafe_characters() {
+    let result = reveal_in_file_manager("C:/path&whoami");
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("unsafe characters"));
+  }
+
+  #[test]
+  fn reveal_rejects_path_traversal() {
+    let result = reveal_in_file_manager("../etc/passwd");
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("traversal"));
+  }
+
+  #[test]
+  fn reveal_rejects_nonexistent_path() {
+    let result = reveal_in_file_manager("/nonexistent/path/that/does/not/exist");
+    assert!(result.is_err());
   }
 }

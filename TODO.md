@@ -10,24 +10,13 @@
 
 ## 🔴 CRITICAL - Security
 
-### [SEC-6] Symlink Following Without Validation
-**File:** `src-tauri/src/platform/open_path.rs:25-27`
-**Issue:** `canonicalize()` follows symlinks. A malicious symlink could point to sensitive system files.
-**Fix:** Validate symlink targets or reject symlinks entirely.
-
-### [SEC-7] No Path Traversal Validation
-**File:** `src-tauri/src/platform/open_path.rs:17-42`
-**Issue:** `is_safe_path` only checks shell metacharacters, not path traversal (`../../etc/passwd`).
-**Fix:** Add path traversal validation.
+(No critical security issues remaining)
 
 ---
 
 ## 🟠 HIGH - Stability
 
-### [STAB-10] TOCTOU Race in open_path Canonicalization
-**File:** `src-tauri/src/platform/open_path.rs:25-27`
-**Issue:** File could be moved between validation and execution. Canonicalized path could differ from validated path.
-**Fix:** Re-validate canonicalized path after resolution.
+(No high stability issues remaining)
 
 ---
 
@@ -222,13 +211,11 @@ Export search results to CSV/JSON.
 
 | Category | Critical | High | Medium | Low |
 |----------|----------|------|--------|-----|
-| Security | 1 | 1 | 1 | 1 |
-| Stability | 0 | 1 | 3 | 3 |
+| Security | 0 | 1 | 1 | 1 |
+| Stability | 0 | 0 | 3 | 3 |
 | Performance | 0 | 0 | 4 | 2 |
 | UX/UI | 0 | 0 | 2 | 7 |
 
 **Priority Order:**
-1. SEC-6: Symlink validation (Critical)
-2. SEC-7: Path traversal validation (Critical)
-3. STAB-10: TOCTOU race (High)
-4. SEC-8: Sensitive data in history (High)
+1. SEC-8: Sensitive data in history (High)
+2. STAB-11: Unbounded seen_paths memory (Medium)

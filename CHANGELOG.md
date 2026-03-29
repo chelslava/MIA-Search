@@ -36,6 +36,11 @@ All notable changes to this project will be documented in this file.
 - **[SEC-2]** Fixed shell command injection vulnerability in `reveal_in_explorer.rs`. Added same path validation and canonicalization.
 - **[SEC-4]** Added restrictive file permissions (0o600) for config files on Unix systems.
 - **[SEC-5]** Added input validation for SearchRequest to prevent DoS attacks. Limits: max query length 1024, max roots 50, max extensions 20, max exclude_paths 50.
+- **[SEC-6]** Added symlink rejection in `open_path.rs` and `reveal_in_explorer.rs` - prevents following malicious symlinks to sensitive system files.
+- **[SEC-7]** Added path traversal validation - rejects paths containing `..` components that could escape intended directories.
+
+### Stability
+- **[STAB-10]** Fixed TOCTOU race condition in path canonicalization - re-validates canonicalized path for symlinks, traversal sequences, and unsafe characters after resolution.
 
 ### Fixed
 - **[BUG-1]** Fixed sort order for Size and Modified columns. Now sorts descending (largest/newest first) instead of ascending.
