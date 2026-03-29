@@ -62,6 +62,8 @@ const BATCH_SIZE: usize = 100;
 const FIRST_BATCH_SIZE: usize = 20;
 const MAX_SCAN_WORKERS: usize = 12;
 const REGEX_CACHE_SIZE: usize = 64;
+const MAX_REGEX_PATTERN_LENGTH: usize = 256;
+const MAX_WILDCARD_COUNT: usize = 32;
 
 thread_local! {
   static REGEX_CACHE: RefCell<HashMap<String, Regex>> = RefCell::new(HashMap::new());
@@ -389,6 +391,13 @@ fn build_query_matcher(mode: &MatchMode, query: &str, ignore_case: bool) -> Resu
       ignore_case,
     }),
     MatchMode::Regex => {
+      if query.len() > MAX_REGEX_PATTERN_LENGTH {
+        return Err(format!(
+          "Regex pattern too long: {} chars (max {})",
+          query.len(),
+          MAX_REGEX_PATTERN_LENGTH
+        ));
+      }
       let pattern = if ignore_case {
         format!("(?i){query}")
       } else {
@@ -398,6 +407,13 @@ fn build_query_matcher(mode: &MatchMode, query: &str, ignore_case: bool) -> Resu
       Ok(QueryMatcher::Regex { regex })
     }
     MatchMode::Wildcard => {
+      let wildcard_count = query.chars().filter(|&c| c == '*' || c == '?').count();
+      if wildcard_count > MAX_WILDCARD_COUNT {
+        return Err(format!(
+          "Too many wildcard characters: {} (max {})",
+          wildcard_count, MAX_WILDCARD_COUNT
+        ));
+      }
       let mut pattern = String::from("^");
       for ch in query.chars() {
         match ch {
@@ -1039,5 +1055,33 @@ mod tests {
     );
 
     assert!(elapsed.as_millis() > 0);
+  }
+
+  #[test]
+  fn build_query_matcher_rejects_long_regex_pattern() {
+    let long_pattern = "a".repeat(300);
+    let result = build_query_matcher(&MatchMode::Regex, &long_pattern, true);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("too long"));
+  }
+
+  #[test]
+  fn build_query_matcher_rejects_too_many_wildcards() {
+    let many_wildcards = "*".repeat(40);
+    let result = build_query_matcher(&MatchMode::Wildcard, &many_wildcards, true);
+    assert!(result.is_err());
+    assert!(result.unwrap_err().contains("Too many wildcard"));
+  }
+
+  #[test]
+  fn build_query_matcher_accepts_valid_regex() {
+    let result = build_query_matcher(&MatchMode::Regex, "test.*pattern", true);
+    assert!(result.is_ok());
+  }
+
+  #[test]
+  fn build_query_matcher_accepts_valid_wildcard() {
+    let result = build_query_matcher(&MatchMode::Wildcard, "*.txt", true);
+    assert!(result.is_ok());
   }
 }

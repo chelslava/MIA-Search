@@ -16,12 +16,6 @@
 
 ## 🟠 High
 
-### [SEC-12] Regex Denial of Service (ReDoS) Vulnerability
-**File:** `src-tauri/src/core/search_service.rs:391-418`
-**Effort:** M
-**Issue:** User-supplied regex patterns compiled without timeout or complexity limits. Malicious patterns like `(a+)+$` can cause catastrophic backtracking.
-**Fix:** Add timeout mechanism for regex execution, limit pattern length/complexity.
-
 ### [STAB-14] Mutex Poison Recovery May Hide Data Corruption
 **File:** `src-tauri/src/main.rs:30-38`
 **Effort:** M
@@ -332,11 +326,11 @@ Export search results to CSV/JSON.
 
 | Category | Critical | High | Medium | Low | Total |
 |----------|----------|------|--------|-----|-------|
-| Security | 0 | 1 | 2 | 1 | 5 |
+| Security | 0 | 0 | 2 | 1 | 3 |
 | Stability | 0 | 1 | 5 | 2 | 8 |
 | Performance | 0 | 0 | 6 | 3 | 9 |
 | UX/UI | 0 | 0 | 6 | 4 | 10 |
 | Code Quality | 0 | 0 | 4 | 5 | 9 |
-| **Total** | **0** | **2** | **22** | **15** | **39** |
+| **Total** | **0** | **1** | **22** | **15** | **38** |
 
-**Next Priority:** SEC-12, STAB-14 (High priority items)
+**Next Priority:** STAB-14, STAB-15 (High/Medium priority items)

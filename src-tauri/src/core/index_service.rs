@@ -10,6 +10,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 
 const INDEX_BATCH_SIZE: usize = 100;
+const MAX_REGEX_PATTERN_LENGTH: usize = 256;
+const MAX_WILDCARD_COUNT: usize = 32;
 
 #[derive(Debug, Clone, Default)]
 pub struct IndexBuildSummary {
@@ -212,6 +214,13 @@ fn build_matcher(mode: &MatchMode, query: &str, ignore_case: bool) -> Result<Que
       ignore_case,
     }),
     MatchMode::Regex => {
+      if query.len() > MAX_REGEX_PATTERN_LENGTH {
+        return Err(format!(
+          "Regex pattern too long: {} chars (max {})",
+          query.len(),
+          MAX_REGEX_PATTERN_LENGTH
+        ));
+      }
       let pattern = if ignore_case {
         format!("(?i){query}")
       } else {
@@ -222,6 +231,13 @@ fn build_matcher(mode: &MatchMode, query: &str, ignore_case: bool) -> Result<Que
         .map_err(|error| format!("regex parse error: {error}"))
     }
     MatchMode::Wildcard => {
+      let wildcard_count = query.chars().filter(|&c| c == '*' || c == '?').count();
+      if wildcard_count > MAX_WILDCARD_COUNT {
+        return Err(format!(
+          "Too many wildcard characters: {} (max {})",
+          wildcard_count, MAX_WILDCARD_COUNT
+        ));
+      }
       let mut pattern = String::from("^");
       for ch in query.chars() {
         match ch {
