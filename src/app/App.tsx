@@ -1334,6 +1334,7 @@ export function App() {
     const onMouseMove = (event: MouseEvent) => {
       const dragging = document.body.dataset.dragPanel;
       if (!dragging) return;
+      document.body.style.cursor = "col-resize";
       const viewportWidth = window.innerWidth;
       if (dragging === "left") {
         setLeftWidth(Math.max(200, Math.min(460, event.clientX - 8)));
@@ -1344,6 +1345,7 @@ export function App() {
     };
     const onMouseUp = () => {
       delete document.body.dataset.dragPanel;
+      document.body.style.cursor = "";
     };
     window.addEventListener("mousemove", onMouseMove);
     window.addEventListener("mouseup", onMouseUp);
@@ -1422,7 +1424,7 @@ export function App() {
         if (nextItem) {
           setSelectedPath(nextItem.full_path);
           const row = document.querySelector<HTMLTableRowElement>(`tr[data-path="${CSS.escape(nextItem.full_path)}"]`);
-          row?.scrollIntoView({ block: "nearest" });
+          row?.scrollIntoView({ block: "nearest", behavior: "smooth" });
         }
         return;
       }

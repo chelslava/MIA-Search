@@ -46,7 +46,13 @@ All notable changes to this project will be documented in this file.
 ### Stability
 - **[STAB-10]** Fixed TOCTOU race condition in path canonicalization - re-validates canonicalized path for symlinks, traversal sequences, and unsafe characters after resolution.
 - **[STAB-11]** Added memory cap for seen_paths deduplication - clears and resizes when exceeding limit*10 to prevent unbounded memory growth.
-- **[SEC-9]** Added panic::catch_unwind wrapper around worker threads to ensure graceful cleanup on panic.
+- **[STAB-13]** Added max=999 limit on size filter input to prevent integer overflow.
+- **[STAB-9]** Added error logging for failed directory reads in has_dir_children.
+
+### UX/UI
+- **[UX-20]** Added smooth scrolling for keyboard navigation in results.
+- **[UX-22]** Added confirmation dialog before clearing search history.
+- **[UX-24]** Added col-resize cursor feedback during splitter drag.
 
 ### Fixed
 - **[BUG-1]** Fixed sort order for Size and Modified columns. Now sorts descending (largest/newest first) instead of ascending.

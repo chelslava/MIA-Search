@@ -107,17 +107,18 @@
 ### [STAB-8] Silent Index Version Mismatch
 **File:** `src-tauri/src/storage/index_store.rs:37-43`
 **Issue:** Only prints to stderr, no user notification.
-**Fix:** Emit event to frontend about index rebuild need.
+**Status:** Deferred - version mismatch triggers index rebuild automatically. Adding event emission requires architectural changes (passing AppHandle to IndexStore).
+**Note:** Current behavior is functional - index rebuilds on version mismatch.
 
 ### [STAB-9] has_dir_children Ignores Errors
 **File:** `src-tauri/src/commands/actions.rs:23-28`
-**Issue:** Returns `false` on permission denied, may hide folders.
-**Fix:** Log permission errors or propagate with different semantics.
+**Status:** Fixed - added error logging for failed directory reads.
+**Note:** Still returns false on error (can't determine if children exist), but now logs the reason.
 
 ### [STAB-13] Integer Overflow in Size Filter
 **File:** `src-tauri/src/core/models.rs:86`
-**Issue:** Large size values (999TB) could overflow when multiplied by unit.
-**Fix:** Add overflow protection in frontend.
+**Status:** Fixed - added max=999 limit on size value input in frontend.
+**Note:** 999TB = ~1 exabyte, well within u64 range.
 
 ### [SEC-10] No Input Validation on exclude_paths
 **File:** `src-tauri/src/core/search_service.rs:450-459`
@@ -145,8 +146,8 @@
 
 ### [UX-20] No Visual Feedback for Keyboard Navigation
 **File:** `src/app/App.tsx:1406-1428`
-**Issue:** Arrow key navigation lacks smooth scroll.
-**Fix:** Add `behavior: "smooth"` to scrollIntoView.
+**Status:** Fixed - added `behavior: "smooth"` to scrollIntoView for arrow key navigation.
+**Note:** Smooth scrolling provides better visual feedback when navigating results.
 
 ### [UX-21] History List Shows Only Raw Query Text
 **File:** `src/app/components/sidebars/LeftSidebar.tsx:268-280`
@@ -155,8 +156,8 @@
 
 ### [UX-22] No Confirmation for Clear History
 **File:** `src/app/components/sidebars/LeftSidebar.tsx:264`
-**Issue:** Clearing history is immediate without confirmation.
-**Fix:** Add confirmation dialog.
+**Status:** Fixed - added `window.confirm` dialog before clearing history.
+**Note:** Uses native browser confirm for simplicity.
 
 ### [UX-23] Date Input Format Not Localized
 **File:** `src/app/components/chrome/FiltersPanel.tsx:219-230`
@@ -165,8 +166,8 @@
 
 ### [UX-24] Splitter Drag Cursor Feedback Missing
 **File:** `src/app/App.tsx:1334-1354`
-**Issue:** Cursor doesn't change to `col-resize` during splitter drag.
-**Fix:** Add cursor style to splitter.
+**Status:** Fixed - added `col-resize` cursor during splitter drag.
+**Note:** Cursor changes on mousedown and reverts on mouseup.
 
 ---
 
@@ -208,11 +209,11 @@ Export search results to CSV/JSON.
 | Category | Critical | High | Medium | Low |
 |----------|----------|------|--------|-----|
 | Security | 0 | 0 | 0 | 0 |
-| Stability | 0 | 0 | 1 | 3 |
+| Stability | 0 | 0 | 0 | 2 |
 | Performance | 0 | 0 | 2 | 2 |
-| UX/UI | 0 | 0 | 0 | 9 |
+| UX/UI | 0 | 0 | 0 | 6 |
 
 **All security issues resolved!**
 
 **Priority Order:**
-1. Remaining Low priority items (STAB-8, STAB-9, STAB-13, PERF-8, PERF-10, UX items)
+1. Remaining Low priority items (STAB-8, PERF-8, PERF-10, UX-8, UX-9, UX-10, UX-21, UX-23)

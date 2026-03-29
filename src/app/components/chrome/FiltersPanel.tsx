@@ -185,9 +185,10 @@ export function FiltersPanel({
             <Input
               type="number"
               min={0}
+              max={999}
               value={sizeValue}
               disabled={!sizeFilterEnabled}
-              onChange={(event) => onSizeValueChange(Math.max(0, Number(event.target.value) || 0))}
+              onChange={(event) => onSizeValueChange(Math.min(999, Math.max(0, Number(event.target.value) || 0)))}
             />
             <Select
               value={sizeUnit}

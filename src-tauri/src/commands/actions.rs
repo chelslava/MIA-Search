@@ -23,8 +23,12 @@ pub struct FsTreeNode {
 fn has_dir_children(path: &Path) -> bool {
   match fs::read_dir(path) {
     Ok(entries) => entries.flatten().any(|entry| entry.path().is_dir()),
-    Err(_) => false,
+    Err(error) => {
+      eprintln!("Failed to read directory {}: {}", path.display(), error);
+      false
+    }
   }
+}
 }
 
 #[tauri::command]

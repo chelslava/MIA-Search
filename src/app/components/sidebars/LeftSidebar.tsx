@@ -261,7 +261,11 @@ export function LeftSidebar({
         </Button>
         {historyOpen ? (
           <div className="mt-1 space-y-1">
-            <Button type="button" variant="ghost" size="sm" className="h-6 w-full justify-start px-1 text-[11px] font-normal" onClick={() => void onClearHistory()}>
+            <Button type="button" variant="ghost" size="sm" className="h-6 w-full justify-start px-1 text-[11px] font-normal" onClick={() => {
+              if (window.confirm(tr("app.history.clearConfirm", "Очистить историю поиска?"))) {
+                void onClearHistory();
+              }
+            }}>
               {tr("app.history.clear", "Очистить историю")}
             </Button>
             <ul className="space-y-1">
