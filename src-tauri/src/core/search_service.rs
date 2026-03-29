@@ -14,6 +14,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::SystemTime;
+use std::panic;
 
 impl PartialEq for crate::core::models::SearchOptions {
   fn eq(&self, other: &Self) -> bool {
@@ -242,29 +243,34 @@ impl SearchService {
       let worker_queue = task_queue.clone();
       let worker_cancel = cancel_flag.clone();
       workers.push(thread::spawn(move || {
-        loop {
-          if worker_cancel.load(Ordering::Acquire) {
-            break;
-          }
-
-          let next_task = worker_queue
-            .lock()
-            .ok()
-            .and_then(|mut queue| queue.pop_front());
-
-          let Some((task_root, task_ext)) = next_task else {
-            break;
-          };
-
-          let builder = build_builder(&worker_request, &task_root, task_ext.as_deref());
-          for path in builder.build() {
+        let result = panic::catch_unwind(panic::AssertUnwindSafe(|| {
+          loop {
             if worker_cancel.load(Ordering::Acquire) {
               break;
             }
-            if worker_tx.send(path).is_err() {
+
+            let next_task = worker_queue
+              .lock()
+              .ok()
+              .and_then(|mut queue| queue.pop_front());
+
+            let Some((task_root, task_ext)) = next_task else {
               break;
+            };
+
+            let builder = build_builder(&worker_request, &task_root, task_ext.as_deref());
+            for path in builder.build() {
+              if worker_cancel.load(Ordering::Acquire) {
+                break;
+              }
+              if worker_tx.send(path).is_err() {
+                break;
+              }
             }
           }
+        }));
+        if result.is_err() {
+          eprintln!("Worker thread panicked during filesystem scan");
         }
       }));
     }

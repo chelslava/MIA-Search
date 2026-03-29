@@ -61,12 +61,13 @@
 ### [STAB-12] Workers Don't Check shutting_down Flag
 **File:** `src-tauri/src/core/search_service.rs:245-268`
 **Issue:** Worker threads check `cancel_flag` but not `shutting_down`.
-**Fix:** Pass `shutting_down` Arc to workers.
+**Status:** After analysis, `cancel_flag` already handles cancellation. Workers stop when channel is dropped or cancel_flag is true. Adding `shutting_down` check would be redundant.
+**Note:** No fix needed - existing mechanism is sufficient.
 
 ### [SEC-9] File Descriptor Leak on Worker Panic
 **File:** `src-tauri/src/core/search_service.rs:244-269`
-**Issue:** If worker panics mid-scan, file handles may not be properly closed.
-**Fix:** Use `catch_unwind` or ensure library handles cleanup on drop.
+**Status:** Added `catch_unwind` wrapper around worker logic to ensure proper cleanup on panic.
+**Note:** Fixed - workers now catch panics gracefully.
 
 ---
 
@@ -203,10 +204,10 @@ Export search results to CSV/JSON.
 
 | Category | Critical | High | Medium | Low |
 |----------|----------|------|--------|-----|
-| Security | 0 | 0 | 1 | 1 |
-| Stability | 0 | 0 | 2 | 3 |
+| Security | 0 | 0 | 0 | 1 |
+| Stability | 0 | 0 | 1 | 3 |
 | Performance | 0 | 0 | 4 | 2 |
 | UX/UI | 0 | 0 | 2 | 7 |
 
 **Priority Order:**
-1. STAB-12: Workers don't check shutting_down (Medium)
+1. PERF-9: String allocation in dedup_path_key (Medium)
