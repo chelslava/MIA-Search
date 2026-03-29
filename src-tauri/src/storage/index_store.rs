@@ -4,6 +4,7 @@ use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
 const INDEX_FILE: &str = "search_index.json";
+const INDEX_VERSION: u32 = 1;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
@@ -17,7 +18,7 @@ pub struct IndexSnapshot {
 impl IndexSnapshot {
   pub fn fresh(roots: Vec<String>, entries: Vec<SearchResultItem>) -> Self {
     Self {
-      version: 1,
+      version: INDEX_VERSION,
       updated_at: Utc::now().to_rfc3339(),
       roots,
       entries,
@@ -32,9 +33,15 @@ pub struct IndexStore {
 
 impl IndexStore {
   pub fn load() -> Self {
-    Self {
-      value: persistence::load_json(INDEX_FILE),
+    let snapshot: IndexSnapshot = persistence::load_json(INDEX_FILE);
+    if snapshot.version != INDEX_VERSION && snapshot.version != 0 {
+      eprintln!(
+        "Index version mismatch: got {}, expected {}. Rebuilding...",
+        snapshot.version, INDEX_VERSION
+      );
+      return Self::default();
     }
+    Self { value: snapshot }
   }
 
   pub fn snapshot(&self) -> IndexSnapshot {

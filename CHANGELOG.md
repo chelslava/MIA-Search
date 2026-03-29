@@ -18,6 +18,7 @@ All notable changes to this project will be documented in this file.
 ### Stability
 - **[STAB-1]** Worker thread panics are now logged instead of silently ignored.
 - **[STAB-2]** JSON parse errors and file read errors are now logged with context.
+- **[STAB-3]** Added index version compatibility check. Index is rebuilt automatically if version mismatch detected.
 
 ### Performance
 - **[PERF-4]** Added capacity hint for HashSet deduplication to reduce rehashing during search.
@@ -25,3 +26,4 @@ All notable changes to this project will be documented in this file.
 
 ### Accessibility
 - **[A11Y-1]** Added ARIA attributes to cards view (`role="list"`, `aria-label`, `aria-selected`) and table rows (`aria-selected`).
+- **[A11Y-2]** Added ARIA live region to status bar (`role="status"`, `aria-live="polite"`, `aria-busy`) for screen reader announcements.
