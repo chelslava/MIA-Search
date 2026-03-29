@@ -149,6 +149,7 @@ impl SearchSession {
 #[derive(Debug, Clone, Default)]
 pub struct SearchService;
 
+#[derive(Debug)]
 enum QueryMatcher {
   MatchAll,
   Plain {

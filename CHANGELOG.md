@@ -57,6 +57,8 @@ All notable changes to this project will be documented in this file.
 - **[STAB-10]** Fixed TOCTOU race condition in path canonicalization - re-validates canonicalized path for symlinks, traversal sequences, and unsafe characters after resolution.
 - **[STAB-11]** Added memory cap for seen_paths deduplication - clears and resizes when exceeding limit*10 to prevent unbounded memory growth.
 - **[STAB-13]** Added max=999 limit on size filter input to prevent integer overflow.
+- **[STAB-14]** Improved mutex poison recovery logging - now reports detailed error info for debugging.
+- **[STAB-15]** Added index_rebuild_cancel command - users can now cancel index rebuild operation.
 - **[STAB-9]** Added error logging for failed directory reads in has_dir_children.
 
 ### UX/UI

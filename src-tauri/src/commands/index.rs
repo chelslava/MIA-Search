@@ -46,7 +46,25 @@ pub fn index_rebuild(state: State<'_, AppState>, roots: Vec<String>) -> Result<I
   let _guard = acquire_rebuild_guard(&state.index_rebuild_in_progress)?;
 
   let cancel = Arc::new(AtomicBool::new(false));
-  let (snapshot, summary) = IndexService::rebuild(&roots, cancel)?;
+  {
+    let mut cancel_slot = state
+      .index_rebuild_cancel
+      .lock()
+      .map_err(|_| "index cancel lock poisoned".to_string())?;
+    *cancel_slot = Some(cancel.clone());
+  }
+
+  let result = IndexService::rebuild(&roots, cancel.clone());
+
+  {
+    let mut cancel_slot = state
+      .index_rebuild_cancel
+      .lock()
+      .map_err(|_| "index cancel lock poisoned".to_string())?;
+    *cancel_slot = None;
+  }
+
+  let (snapshot, summary) = result?;
 
   let updated_at = snapshot.updated_at.clone();
   {
@@ -64,6 +82,18 @@ pub fn index_rebuild(state: State<'_, AppState>, roots: Vec<String>) -> Result<I
     entries: summary.entries,
     updated_at,
   })
+}
+
+#[tauri::command]
+pub fn index_rebuild_cancel(state: State<'_, AppState>) -> Result<(), String> {
+  let cancel_slot = state
+    .index_rebuild_cancel
+    .lock()
+    .map_err(|_| "index cancel lock poisoned".to_string())?;
+  if let Some(cancel) = cancel_slot.as_ref() {
+    cancel.store(true, Ordering::Release);
+  }
+  Ok(())
 }
 
 #[tauri::command]

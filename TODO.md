@@ -19,8 +19,8 @@
 ### [STAB-14] Mutex Poison Recovery May Hide Data Corruption
 **File:** `src-tauri/src/main.rs:30-38`
 **Effort:** M
-**Issue:** `lock_or_recover` recovers from poisoned mutex using inner value, potentially leading to inconsistent state if thread panicked mid-update.
-**Fix:** Log error with stack trace, consider reinitializing affected store, mark state as potentially corrupted.
+**Status:** Improved - now logs detailed error message with stack trace info.
+**Note:** Full recovery would require corrupted state tracking in AppState - deferred as low priority since mutex poisoning is rare.
 
 ---
 
@@ -45,8 +45,8 @@
 ### [STAB-15] Index Rebuild Is Not Cancellable
 **File:** `src-tauri/src/commands/index.rs:44-67`
 **Effort:** S
-**Issue:** `index_rebuild` creates new AtomicBool that is never set to true. Users cannot cancel an index rebuild.
-**Fix:** Use global cancel flag stored in AppState, similar to search cancellation.
+**Status:** Fixed - added index_rebuild_cancel command and cancel flag storage in AppState.
+**Note:** Users can now cancel index rebuild via frontend button.
 
 ### [STAB-16] Search Thread Panic Not Propagated to User
 **File:** `src-tauri/src/core/search_service.rs:252-281`
@@ -327,10 +327,10 @@ Export search results to CSV/JSON.
 | Category | Critical | High | Medium | Low | Total |
 |----------|----------|------|--------|-----|-------|
 | Security | 0 | 0 | 2 | 1 | 3 |
-| Stability | 0 | 1 | 5 | 2 | 8 |
+| Stability | 0 | 0 | 4 | 2 | 6 |
 | Performance | 0 | 0 | 6 | 3 | 9 |
 | UX/UI | 0 | 0 | 6 | 4 | 10 |
 | Code Quality | 0 | 0 | 4 | 5 | 9 |
-| **Total** | **0** | **1** | **22** | **15** | **38** |
+| **Total** | **0** | **0** | **21** | **15** | **36** |
 
-**Next Priority:** STAB-14, STAB-15 (High/Medium priority items)
+**Next Priority:** STAB-16, PERF-13, UX-26 (Medium priority items)

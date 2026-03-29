@@ -8,6 +8,7 @@ mod storage;
 use commands::{actions, favorites, history, index, profiles, search, settings};
 use std::sync::Mutex;
 use std::sync::atomic::AtomicBool;
+use std::sync::Arc;
 use storage::{
   favorites_store::FavoritesStore,
   history_store::HistoryStore,
@@ -24,6 +25,7 @@ pub struct AppState {
   pub favorites: Mutex<FavoritesStore>,
   pub index: Mutex<IndexStore>,
   pub index_rebuild_in_progress: AtomicBool,
+  pub index_rebuild_cancel: Mutex<Option<Arc<AtomicBool>>>,
   pub shutting_down: AtomicBool,
 }
 
@@ -31,7 +33,7 @@ pub fn lock_or_recover<T>(mutex: &Mutex<T>) -> Result<std::sync::MutexGuard<T>, 
   match mutex.lock() {
     Ok(guard) => Ok(guard),
     Err(poisoned) => {
-      eprintln!("Mutex poisoned, recovering...");
+      eprintln!("WARNING: Mutex poisoned, recovering. This may indicate data corruption.");
       Ok(poisoned.into_inner())
     }
   }
@@ -47,6 +49,7 @@ impl AppState {
       favorites: Mutex::new(FavoritesStore::load()),
       index: Mutex::new(IndexStore::load()),
       index_rebuild_in_progress: AtomicBool::new(false),
+      index_rebuild_cancel: Mutex::new(None),
       shutting_down: AtomicBool::new(false),
     }
   }
@@ -82,6 +85,7 @@ fn main() {
       actions::fs_list_children,
       actions::fs_pick_folder,
       index::index_rebuild,
+      index::index_rebuild_cancel,
       index::index_status
     ])
     .run(tauri::generate_context!())

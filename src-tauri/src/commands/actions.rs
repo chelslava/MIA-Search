@@ -90,20 +90,6 @@ pub fn fs_list_children(path: String) -> Result<Vec<FsTreeNode>, String> {
   children.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
   Ok(children)
 }
-      let full_path = entry_path.to_string_lossy().to_string();
-      let name = entry.file_name().to_string_lossy().to_string();
-      Some(FsTreeNode {
-        name: if name.is_empty() { full_path.clone() } else { name },
-        path: full_path,
-        is_drive: false,
-        has_children: has_dir_children(&entry_path),
-      })
-    })
-    .collect();
-
-  children.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
-  Ok(children)
-}
 
 #[tauri::command]
 pub fn fs_pick_folder() -> Result<Option<String>, String> {
