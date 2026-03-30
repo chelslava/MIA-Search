@@ -225,8 +225,7 @@
 ### [UX-29] Confirmation Dialog Uses Native confirm()
 **File:** `src/app/components/sidebars/LeftSidebar.tsx:264-267`
 **Effort:** M
-**Issue:** `window.confirm()` doesn't match application UI, may be blocked or styled differently.
-**Fix:** Implement custom confirmation modal.
+**Status:** Fixed - created ConfirmDialog component with proper styling and keyboard handling.
 
 ### [UX-30] No Progress Indicator During Index Rebuild
 **File:** `src-tauri/src/commands/index.rs:44-67`
@@ -305,10 +304,10 @@ Export search results to CSV/JSON.
 | Security | 0 | 0 | 0 | 0 | 0 |
 | Stability | 0 | 0 | 1 | 0 | 1 |
 | Performance | 0 | 0 | 4 | 2 | 6 |
-| UX/UI | 0 | 0 | 3 | 4 | 7 |
+| UX/UI | 0 | 0 | 3 | 3 | 6 |
 | Code Quality | 0 | 0 | 1 | 4 | 5 |
-| **Total** | **0** | **0** | **9** | **10** | **19** |
+| **Total** | **0** | **0** | **9** | **9** | **18** |
 
-**Completed this session:** UX-25, QUAL-8 (partial), STAB-8
+**Completed this session:** UX-25, QUAL-8 (partial), STAB-8, UX-29
 
-**Next Priority:** STAB-17, UX-27, QUAL-4 (Medium priority items)
+**Next Priority:** UX-23, UX-30 (Low priority items)

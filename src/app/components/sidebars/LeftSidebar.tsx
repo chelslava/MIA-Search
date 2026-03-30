@@ -1,8 +1,10 @@
 import type { FsTreeNode, HistorySnapshot, SearchProfile } from "../../../shared/search-types";
 import type { ContextMenuState, RootItem } from "../../types";
+import { useState } from "react";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Switch } from "../../../components/ui/switch";
+import { ConfirmDialog } from "../../../widgets/ConfirmDialog";
 
 export type TranslateFn = (key: string, defaultValue: string, values?: Record<string, unknown>) => string;
 
@@ -130,8 +132,23 @@ export function LeftSidebar({
   onSelectHistoryQuery,
   onDropRootPath
 }: LeftSidebarProps) {
+  const [confirmClearHistory, setConfirmClearHistory] = useState(false);
+
   return (
-    <aside
+    <>
+      <ConfirmDialog
+        open={confirmClearHistory}
+        title={tr("app.history.clearConfirmTitle", "Очистить историю")}
+        message={tr("app.history.clearConfirm", "Очистить историю поиска?")}
+        confirmLabel={tr("app.history.clear", "Очистить")}
+        cancelLabel={tr("app.dialog.cancel", "Отмена")}
+        onConfirm={() => {
+          setConfirmClearHistory(false);
+          void onClearHistory();
+        }}
+        onCancel={() => setConfirmClearHistory(false)}
+      />
+      <aside
       className="left-panel space-y-1 rounded-md border border-[var(--border)] bg-[var(--surface)] p-1.5 text-[var(--text)]"
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => {
@@ -261,11 +278,7 @@ export function LeftSidebar({
         </Button>
         {historyOpen ? (
           <div className="mt-1 space-y-1">
-            <Button type="button" variant="ghost" size="sm" className="h-6 w-full justify-start px-1 text-[11px] font-normal" onClick={() => {
-              if (window.confirm(tr("app.history.clearConfirm", "Очистить историю поиска?"))) {
-                void onClearHistory();
-              }
-            }}>
+            <Button type="button" variant="ghost" size="sm" className="h-6 w-full justify-start px-1 text-[11px] font-normal" onClick={() => setConfirmClearHistory(true)}>
               {tr("app.history.clear", "Очистить историю")}
             </Button>
             <ul className="space-y-1">
@@ -287,5 +300,6 @@ export function LeftSidebar({
         ) : null}
       </section>
     </aside>
+    </>
   );
 }

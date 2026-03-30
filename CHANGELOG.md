@@ -49,6 +49,7 @@ All notable changes to this project will be documented in this file.
 - **[UX-26]** Added aria-label to filters toggle button for accessibility.
 - **[UX-28]** Removed sortMode from live search triggers - changing sort no longer triggers new search.
 - **[UX-25]** Added date validation feedback - invalid date filters now show toast error instead of being silently ignored.
+- **[UX-29]** Replaced native confirm() with custom ConfirmDialog component - matches app styling and supports keyboard navigation.
 
 ### Performance
 - **[PERF-19]** Pre-calculate output size in wildcard-to-regex conversion - allocates once instead of per-character.
