@@ -578,6 +578,9 @@ export function App() {
     try {
       const snapshot = await indexStatus();
       setIndexStatusSnapshot(snapshot);
+      if (snapshot.version_mismatch) {
+        pushToast(tr("app.index.versionMismatch", "Индекс устарел и будет перестроен при следующем поиске"), "info");
+      }
       return snapshot;
     } catch {
       setIndexHint(tr("app.index.statusUnavailable", "Index status недоступен"));
@@ -596,7 +599,8 @@ export function App() {
         entries: rebuilt.entries,
         roots: rebuilt.roots,
         root_paths: rootsForIndex,
-        updated_at: rebuilt.updated_at
+        updated_at: rebuilt.updated_at,
+        version_mismatch: false
       });
       setIndexHint(tr("app.index.rebuildDone", "Индекс обновлён"));
     } catch {

@@ -185,8 +185,7 @@
 ### [STAB-8] Silent Index Version Mismatch
 **File:** `src-tauri/src/storage/index_store.rs:37-43`
 **Effort:** M
-**Issue:** Only prints to stderr, no user notification.
-**Note:** Current behavior functional - index rebuilds on version mismatch.
+**Status:** Fixed - added version_mismatch flag to IndexStore and IndexStatusResponse, frontend shows toast notification.
 
 ---
 
@@ -302,12 +301,12 @@ Export search results to CSV/JSON.
 | Category | Critical | High | Medium | Low | Total |
 |----------|----------|------|--------|-----|-------|
 | Security | 0 | 0 | 0 | 0 | 0 |
-| Stability | 0 | 0 | 2 | 1 | 3 |
+| Stability | 0 | 0 | 1 | 0 | 1 |
 | Performance | 0 | 0 | 4 | 2 | 6 |
 | UX/UI | 0 | 0 | 3 | 4 | 7 |
 | Code Quality | 0 | 0 | 1 | 4 | 5 |
-| **Total** | **0** | **0** | **10** | **11** | **21** |
+| **Total** | **0** | **0** | **9** | **10** | **19** |
 
-**Completed this session:** UX-25 (Medium UX), QUAL-8 (Medium Quality - partial)
+**Completed this session:** UX-25, QUAL-8 (partial), STAB-8
 
-**Next Priority:** UX-27, STAB-17 (Medium priority items)
+**Next Priority:** STAB-17, UX-27, QUAL-4 (Medium priority items)

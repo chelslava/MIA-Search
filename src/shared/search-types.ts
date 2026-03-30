@@ -126,6 +126,7 @@ export interface IndexStatusResponse {
   roots: number;
   root_paths: string[];
   updated_at: string;
+  version_mismatch: boolean;
 }
 
 export interface IndexRebuildResponse {

@@ -74,6 +74,7 @@ All notable changes to this project will be documented in this file.
 
 ### Stability
 - **[STAB-18]** Graceful shutdown on window close - cancels active searches and sets shutting_down flag.
+- **[STAB-8]** Added version_mismatch flag to index status - users now see toast notification when index needs rebuild.
 
 ### Stability
 - **[STAB-10]** Fixed TOCTOU race condition in path canonicalization - re-validates canonicalized path for symlinks, traversal sequences, and unsafe characters after resolution.

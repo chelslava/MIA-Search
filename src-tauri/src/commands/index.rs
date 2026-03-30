@@ -22,6 +22,7 @@ pub struct IndexStatusResponse {
   pub roots: usize,
   pub root_paths: Vec<String>,
   pub updated_at: String,
+  pub version_mismatch: bool,
 }
 
 struct RebuildFlagGuard<'a> {
@@ -99,16 +100,17 @@ pub fn index_rebuild_cancel(state: State<'_, AppState>) -> Result<(), String> {
 #[tauri::command]
 pub fn index_status(state: State<'_, AppState>) -> Result<IndexStatusResponse, String> {
   let rebuild_in_progress = state.index_rebuild_in_progress.load(Ordering::Acquire);
-  let snapshot = state
+  let index = state
     .index
     .lock()
-    .map_err(|_| "index store lock poisoned".to_string())?
-    .snapshot();
+    .map_err(|_| "index store lock poisoned".to_string())?;
+  let snapshot = index.snapshot();
+  let version_mismatch = index.version_mismatch();
 
-  Ok(status_from_snapshot(&snapshot, rebuild_in_progress))
+  Ok(status_from_snapshot(&snapshot, rebuild_in_progress, version_mismatch))
 }
 
-fn status_from_snapshot(snapshot: &IndexSnapshot, rebuild_in_progress: bool) -> IndexStatusResponse {
+fn status_from_snapshot(snapshot: &IndexSnapshot, rebuild_in_progress: bool, version_mismatch: bool) -> IndexStatusResponse {
   IndexStatusResponse {
     status: if rebuild_in_progress {
       "in_progress".to_string()
@@ -121,6 +123,7 @@ fn status_from_snapshot(snapshot: &IndexSnapshot, rebuild_in_progress: bool) -> 
     roots: snapshot.roots.len(),
     root_paths: snapshot.roots.clone(),
     updated_at: snapshot.updated_at.clone(),
+    version_mismatch,
   }
 }
 
@@ -131,7 +134,7 @@ mod tests {
   #[test]
   fn status_from_snapshot_reports_empty_and_ready() {
     let empty = IndexSnapshot::default();
-    let status_empty = status_from_snapshot(&empty, false);
+    let status_empty = status_from_snapshot(&empty, false, false);
     assert_eq!(status_empty.status, "empty");
 
     let ready = IndexSnapshot {
@@ -140,7 +143,7 @@ mod tests {
       roots: vec!["C:\\".to_string()],
       entries: vec![crate::core::models::SearchResultItem::default()],
     };
-    let status_ready = status_from_snapshot(&ready, false);
+    let status_ready = status_from_snapshot(&ready, false, false);
     assert_eq!(status_ready.status, "ready");
     assert_eq!(status_ready.entries, 1);
     assert_eq!(status_ready.roots, 1);
@@ -150,8 +153,15 @@ mod tests {
   #[test]
   fn status_from_snapshot_reports_in_progress() {
     let snapshot = IndexSnapshot::default();
-    let status = status_from_snapshot(&snapshot, true);
+    let status = status_from_snapshot(&snapshot, true, false);
     assert_eq!(status.status, "in_progress");
+  }
+
+  #[test]
+  fn status_from_snapshot_reports_version_mismatch() {
+    let snapshot = IndexSnapshot::default();
+    let status = status_from_snapshot(&snapshot, false, true);
+    assert!(status.version_mismatch);
   }
 
   #[test]
