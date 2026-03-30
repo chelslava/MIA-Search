@@ -7,6 +7,7 @@ use std::sync::Arc;
 use std::sync::atomic::AtomicBool;
 use tauri::State;
 
+/// Response returned after index rebuild completes.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IndexRebuildResponse {
   pub status: String,
@@ -15,6 +16,7 @@ pub struct IndexRebuildResponse {
   pub updated_at: String,
 }
 
+/// Current status of the search index.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IndexStatusResponse {
   pub status: String,
@@ -42,6 +44,9 @@ fn acquire_rebuild_guard<'a>(flag: &'a AtomicBool) -> Result<RebuildFlagGuard<'a
   Ok(RebuildFlagGuard { flag })
 }
 
+/// Rebuilds the search index from the specified root directories.
+///
+/// Only one rebuild can run at a time. Results are persisted to disk.
 #[tauri::command]
 pub fn index_rebuild(state: State<'_, AppState>, roots: Vec<String>) -> Result<IndexRebuildResponse, String> {
   let _guard = acquire_rebuild_guard(&state.index_rebuild_in_progress)?;
@@ -85,6 +90,7 @@ pub fn index_rebuild(state: State<'_, AppState>, roots: Vec<String>) -> Result<I
   })
 }
 
+/// Cancels an in-progress index rebuild operation.
 #[tauri::command]
 pub fn index_rebuild_cancel(state: State<'_, AppState>) -> Result<(), String> {
   let cancel_slot = state
@@ -97,6 +103,7 @@ pub fn index_rebuild_cancel(state: State<'_, AppState>) -> Result<(), String> {
   Ok(())
 }
 
+/// Returns the current index status including entry count and rebuild state.
 #[tauri::command]
 pub fn index_status(state: State<'_, AppState>) -> Result<IndexStatusResponse, String> {
   let rebuild_in_progress = state.index_rebuild_in_progress.load(Ordering::Acquire);

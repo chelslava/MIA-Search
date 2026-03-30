@@ -254,7 +254,7 @@
 ### [QUAL-8] Missing Documentation for Public APIs
 **Files:** All Rust files
 **Effort:** M
-**Status:** Partial - added rustdoc comments to models.rs and search_service.rs.
+**Status:** Fixed - added rustdoc comments to models.rs, search_service.rs, search.rs, and index.rs.
 
 ### [QUAL-9] Frontend Test Coverage Minimal
 **File:** `src/app/search-request.test.ts`
@@ -305,9 +305,9 @@ Export search results to CSV/JSON.
 | Stability | 0 | 0 | 1 | 0 | 1 |
 | Performance | 0 | 0 | 4 | 2 | 6 |
 | UX/UI | 0 | 0 | 3 | 3 | 6 |
-| Code Quality | 0 | 0 | 1 | 4 | 5 |
-| **Total** | **0** | **0** | **9** | **9** | **18** |
+| Code Quality | 0 | 0 | 0 | 4 | 4 |
+| **Total** | **0** | **0** | **8** | **9** | **17** |
 
-**Completed this session:** UX-25, QUAL-8 (partial), STAB-8, UX-29
+**Completed this session:** UX-25, QUAL-8, STAB-8, UX-29
 
-**Next Priority:** UX-23, UX-30 (Low priority items)
+**Next Priority:** UX-23, UX-30, QUAL-9 (Low priority items)

@@ -13,24 +13,28 @@ use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tauri::{AppHandle, Emitter, Manager, State};
 
+/// Response returned when a search is started.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchCommandResponse {
   pub search_id: u64,
   pub status: String,
 }
 
+/// Response returned when a search is cancelled.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchCancelResponse {
   pub search_id: Option<u64>,
   pub status: String,
 }
 
+/// Event payload for search batch results.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchBatchEvent {
   pub search_id: u64,
   pub results: Vec<SearchResultItem>,
 }
 
+/// Event payload for search completion.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchDoneEvent {
   pub search_id: u64,
@@ -38,11 +42,13 @@ pub struct SearchDoneEvent {
   pub limit_reached: bool,
 }
 
+/// Event payload for search cancellation.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchCancelledEvent {
   pub search_id: u64,
 }
 
+/// Event payload for search errors.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchErrorEvent {
   pub search_id: u64,
@@ -103,6 +109,10 @@ fn validate_request(request: &SearchRequest) -> Result<(), String> {
   Ok(())
 }
 
+/// Starts a new search operation.
+///
+/// Validates the request, records it in history, and spawns a background
+/// thread that streams results via `search:batch` events.
 #[tauri::command]
 pub fn search_start(
   app: AppHandle,
@@ -176,6 +186,7 @@ fn is_active_search(app_handle: &AppHandle, search_id: u64) -> bool {
     .unwrap_or(false)
 }
 
+/// Cancels the currently active search, if any.
 #[tauri::command]
 pub fn search_cancel(state: State<'_, AppState>) -> Result<SearchCancelResponse, String> {
   let mut session = state
@@ -189,6 +200,9 @@ pub fn search_cancel(state: State<'_, AppState>) -> Result<SearchCancelResponse,
   })
 }
 
+/// Enriches search results with file metadata (size, dates).
+///
+/// Called by the frontend to populate metadata for visible results.
 #[tauri::command]
 pub async fn search_enrich_metadata(
   state: State<'_, AppState>,

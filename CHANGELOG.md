@@ -71,6 +71,7 @@ All notable changes to this project will be documented in this file.
 - **[SEC-14]** Fixed TOCTOU race in symlink resolution - removed pre-canonicalization symlink check, now only validates resolved path.
 - **[QUAL-2]** Extracted path security functions to shared `path_security.rs` module for code reuse.
 - **[QUAL-7]** Auto-detect system language for default setting instead of hardcoding "ru".
+- **[QUAL-8]** Added rustdoc comments to public APIs in models.rs, search_service.rs, search.rs, and index.rs.
 - **[QUAL-8]** Added rustdoc comments to public APIs in models.rs and search_service.rs.
 
 ### Stability
