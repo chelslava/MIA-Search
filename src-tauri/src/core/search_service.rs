@@ -28,18 +28,21 @@ thread_local! {
   static REGEX_CACHE: RefCell<HashMap<String, Regex>> = RefCell::new(HashMap::new());
 }
 
+/// Result of a synchronous search execution.
 #[derive(Debug, Clone, Default)]
 pub struct SearchExecution {
   pub items: Vec<SearchResultItem>,
   pub limit_reached: bool,
 }
 
+/// Information returned when starting a new search.
 #[derive(Debug, Clone)]
 pub struct SearchStart {
   pub search_id: u64,
   pub cancel_flag: Arc<AtomicBool>,
 }
 
+/// Summary of a streamed search operation.
 #[derive(Debug, Clone, Default)]
 pub struct SearchStreamSummary {
   pub total_results: usize,
@@ -48,6 +51,7 @@ pub struct SearchStreamSummary {
   pub worker_panicked: bool,
 }
 
+/// Manages the state of active and recent search sessions.
 #[derive(Debug, Default)]
 pub struct SearchSession {
   next_search_id: u64,
@@ -57,6 +61,7 @@ pub struct SearchSession {
 }
 
 impl SearchSession {
+  /// Starts a new search session, returning the search ID and cancel flag.
   pub fn start(&mut self, request: SearchRequest) -> SearchStart {
     self.next_search_id = self.next_search_id.saturating_add(1);
     self.active_search_id = Some(self.next_search_id);
@@ -74,6 +79,7 @@ impl SearchSession {
     }
   }
 
+  /// Cancels the active search, returning its ID if one was active.
   pub fn cancel(&mut self) -> Option<u64> {
     if let Some(flag) = &self.active_cancel_flag {
       flag.store(true, Ordering::Release);
@@ -82,6 +88,7 @@ impl SearchSession {
     self.active_search_id.take()
   }
 
+  /// Marks the search as complete if it matches the active search ID.
   pub fn complete_if_active(&mut self, search_id: u64) {
     if self.active_search_id == Some(search_id) {
       self.active_search_id = None;
@@ -89,6 +96,7 @@ impl SearchSession {
     }
   }
 
+  /// Returns a snapshot of the current session state.
   pub fn snapshot(&self) -> SearchSessionSnapshot {
     SearchSessionSnapshot {
       active_search_id: self.active_search_id,
@@ -106,6 +114,7 @@ impl SearchSession {
   }
 }
 
+/// Main search service providing both synchronous and streaming search operations.
 #[derive(Debug, Clone, Default)]
 pub struct SearchService;
 
@@ -148,6 +157,7 @@ impl QueryMatcher {
 }
 
 impl SearchService {
+  /// Executes a search synchronously, collecting all results into memory.
   pub fn execute(request: &SearchRequest) -> SearchExecution {
     let mut all_items = Vec::new();
     let mut limit_reached = false;
@@ -168,6 +178,10 @@ impl SearchService {
     }
   }
 
+  /// Executes a search with streaming results via callback.
+  ///
+  /// Results are delivered in batches to the `on_batch` callback.
+  /// The `on_limit` callback is called when the result limit is reached.
   pub fn stream<F, G>(
     request: &SearchRequest,
     cancel_flag: Arc<AtomicBool>,

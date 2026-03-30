@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+/// Type of filesystem entry to search for.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum EntryKind {
   Any,
@@ -13,6 +14,7 @@ impl Default for EntryKind {
   }
 }
 
+/// Sorting mode for search results.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum SortMode {
   Relevance,
@@ -22,6 +24,7 @@ pub enum SortMode {
   Type,
 }
 
+/// Pattern matching mode for search queries.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum MatchMode {
   Plain,
@@ -41,6 +44,7 @@ impl Default for SortMode {
   }
 }
 
+/// Search backend to use for executing queries.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum SearchBackend {
   Scan,
@@ -53,6 +57,7 @@ impl Default for SearchBackend {
   }
 }
 
+/// Comparison operator for size filtering.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum SizeComparison {
   Smaller,
@@ -60,18 +65,21 @@ pub enum SizeComparison {
   Greater,
 }
 
+/// Date field to filter on.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum DateField {
   Created,
   Modified,
 }
 
+/// Comparison operator for date filtering.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum DateComparison {
   Before,
   After,
 }
 
+/// Status of a command execution.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum CommandStatus {
   Idle,
@@ -80,6 +88,7 @@ pub enum CommandStatus {
   NotFound,
 }
 
+/// Size filter configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SizeFilter {
   pub comparison: SizeComparison,
@@ -92,6 +101,7 @@ impl PartialEq for SizeFilter {
   }
 }
 
+/// Date filter configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DateFilter {
   pub field: DateField,
@@ -105,6 +115,7 @@ impl PartialEq for DateFilter {
   }
 }
 
+/// Search options for customizing query behavior.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchOptions {
   pub max_depth: Option<usize>,
@@ -159,6 +170,7 @@ impl PartialEq for SearchOptions {
   }
 }
 
+/// Search filter combining extension and size/date filters.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchFilter {
   pub extension: Option<String>,
@@ -178,6 +190,7 @@ impl Default for SearchFilter {
   }
 }
 
+/// Search request containing query and options.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchRequest {
   pub query: String,
@@ -200,6 +213,7 @@ impl Default for SearchRequest {
   }
 }
 
+/// Single search result item with file/directory metadata.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchResultItem {
   pub name: String,
@@ -235,6 +249,7 @@ impl Default for SearchResultItem {
   }
 }
 
+/// Snapshot of the current search session state.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchSessionSnapshot {
   pub active_search_id: Option<u64>,
@@ -252,6 +267,7 @@ impl Default for SearchSessionSnapshot {
   }
 }
 
+/// Saved search profile with a name and request configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchProfile {
   pub id: String,

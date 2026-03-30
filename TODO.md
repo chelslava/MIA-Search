@@ -254,8 +254,7 @@
 ### [QUAL-8] Missing Documentation for Public APIs
 **Files:** All Rust files
 **Effort:** M
-**Issue:** No rustdoc comments on public functions, structs, or enums.
-**Fix:** Add `///` documentation comments to all public items.
+**Status:** Partial - added rustdoc comments to models.rs and search_service.rs.
 
 ### [QUAL-9] Frontend Test Coverage Minimal
 **File:** `src/app/search-request.test.ts`
@@ -306,9 +305,9 @@ Export search results to CSV/JSON.
 | Stability | 0 | 0 | 2 | 1 | 3 |
 | Performance | 0 | 0 | 4 | 2 | 6 |
 | UX/UI | 0 | 0 | 3 | 4 | 7 |
-| Code Quality | 0 | 0 | 2 | 5 | 7 |
-| **Total** | **0** | **0** | **11** | **12** | **23** |
+| Code Quality | 0 | 0 | 1 | 4 | 5 |
+| **Total** | **0** | **0** | **10** | **11** | **21** |
 
-**Completed this session:** UX-25 (Medium UX)
+**Completed this session:** UX-25 (Medium UX), QUAL-8 (Medium Quality - partial)
 
-**Next Priority:** UX-27, QUAL-4 (Medium priority items)
+**Next Priority:** UX-27, STAB-17 (Medium priority items)
