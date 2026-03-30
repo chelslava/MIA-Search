@@ -230,4 +230,18 @@ mod tests {
     let roots = fs_list_roots().expect("roots");
     assert!(!roots.is_empty());
   }
+
+  #[test]
+  fn fs_list_children_rejects_path_traversal() {
+    let result = fs_list_children("/etc/../etc/passwd".to_string());
+    assert!(result.is_err());
+    let error = result.unwrap_err();
+    assert!(error.contains("traversal") || error.contains("not a directory") || error.contains("not found"));
+  }
+
+  #[test]
+  fn fs_list_children_rejects_shell_metacharacters() {
+    let result = fs_list_children("/tmp; rm -rf /".to_string());
+    assert!(result.is_err());
+  }
 }

@@ -212,8 +212,10 @@
 
 ### [UX-21] History List Shows Only Raw Query Text
 **File:** `src/app/components/sidebars/LeftSidebar.tsx:268-280`
-**Effort:** S
+**Effort:** M
 **Issue:** Users cannot see roots or filters used in history items.
+**Note:** Requires changing HistoryQueryEntry structure - not S effort as originally estimated.
+**Blocked by:** SEC-8 - history intentionally excludes sensitive paths for security.
 
 ### [UX-23] Date Input Format Not Localized
 **File:** `src/app/components/chrome/FiltersPanel.tsx:219-230`
@@ -288,10 +290,10 @@ Export search results to CSV/JSON.
 ## Test Coverage Gaps
 
 ### [TEST-1] Missing Tests
-- `search_service.rs` - worker thread panic recovery
+- `search_service.rs` - worker thread panic recovery (requires mocking panic)
 - `App.tsx` - keyboard navigation edge cases
 - `index_service.rs` - concurrent search + rebuild
-- `actions.rs` - `actions_open_path` error handling
+- `actions.rs` - `actions_open_path` error handling - **Added tests for path traversal and shell metacharacters**
 - `FiltersPanel.tsx` - date filter edge cases
 
 ---
