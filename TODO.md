@@ -108,8 +108,7 @@
 ### [UX-25] No Feedback for Invalid Date Filters
 **File:** `src-tauri/src/core/filters.rs:32-53`
 **Effort:** M
-**Issue:** Invalid date filter values silently ignored, treated as matching all results. Users don't know filter isn't working.
-**Fix:** Return validation errors for invalid dates, display to user.
+**Status:** Fixed - added getDateValidationErrors() function and toast notification for invalid date filters.
 
 ### [UX-26] Missing Accessibility Labels for Icon-Only Buttons
 **File:** `src/app/components/chrome/TopBar.tsx:106-116`
@@ -306,10 +305,10 @@ Export search results to CSV/JSON.
 | Security | 0 | 0 | 0 | 0 | 0 |
 | Stability | 0 | 0 | 2 | 1 | 3 |
 | Performance | 0 | 0 | 4 | 2 | 6 |
-| UX/UI | 0 | 0 | 4 | 4 | 8 |
+| UX/UI | 0 | 0 | 3 | 4 | 7 |
 | Code Quality | 0 | 0 | 2 | 5 | 7 |
-| **Total** | **0** | **0** | **12** | **12** | **24** |
+| **Total** | **0** | **0** | **11** | **12** | **23** |
 
-**Completed this session:** SEC-14 (Medium Security)
+**Completed this session:** UX-25 (Medium UX)
 
-**Next Priority:** STAB-17, STAB-18, UX-25 (Medium priority items)
+**Next Priority:** UX-27, QUAL-4 (Medium priority items)

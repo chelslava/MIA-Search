@@ -1,6 +1,11 @@
 import type { EntryKind, MatchMode, SearchBackend, SearchRequest, SizeComparison, SortMode } from "../shared/search-types";
 import { toIsoOrNull } from "./formatters";
 
+export type DateValidationError = {
+  field: "modifiedAfter" | "modifiedBefore" | "createdAfter" | "createdBefore";
+  rawValue: string;
+};
+
 type BuildSearchRequestInput = {
   query: string;
   enabledRoots: string[];
@@ -36,6 +41,25 @@ const sizeUnitMultipliers: Record<string, number> = {
   GB: 1024 ** 3,
   TB: 1024 ** 4
 };
+
+export function getDateValidationErrors(input: BuildSearchRequestInput): DateValidationError[] {
+  const errors: DateValidationError[] = [];
+
+  const check = (enabled: boolean, rawValue: string, field: DateValidationError["field"]) => {
+    if (!enabled || !rawValue || !rawValue.trim()) return;
+    const iso = toIsoOrNull(rawValue);
+    if (iso === null) {
+      errors.push({ field, rawValue });
+    }
+  };
+
+  check(input.createdFilterEnabled, input.createdAfter, "createdAfter");
+  check(input.createdFilterEnabled, input.createdBefore, "createdBefore");
+  check(input.modifiedFilterEnabled, input.modifiedAfter, "modifiedAfter");
+  check(input.modifiedFilterEnabled, input.modifiedBefore, "modifiedBefore");
+
+  return errors;
+}
 
 export function buildSearchRequest(input: BuildSearchRequestInput): SearchRequest {
   const fallbackRoot =

@@ -53,7 +53,7 @@ import { ResultsWorkspace } from "./components/results/ResultsWorkspace";
 import { DetailsSidebar } from "./components/sidebars/DetailsSidebar";
 import { LeftSidebar } from "./components/sidebars/LeftSidebar";
 import { formatBytes, formatDate } from "./formatters";
-import { buildSearchRequest } from "./search-request";
+import { buildSearchRequest, getDateValidationErrors } from "./search-request";
 import { applyThemeColors, builtInThemes, darkenHex, tintHex } from "./theme";
 import type { ContextMenuState, DisplayMode, FilterChip, RootItem, ThemePreset } from "./types";
 import "./styles.css";
@@ -703,6 +703,36 @@ export function App() {
     });
   }
 
+  function validateCurrentDateFilters() {
+    return getDateValidationErrors({
+      query,
+      enabledRoots,
+      primaryRoot,
+      extensionsRaw,
+      excludePathsRaw,
+      maxDepthUnlimited,
+      maxDepth,
+      limit,
+      strict,
+      ignoreCase,
+      includeHidden,
+      entryKind,
+      matchMode,
+      sizeFilterEnabled,
+      sizeComparison,
+      sizeValue,
+      sizeUnit,
+      modifiedFilterEnabled,
+      modifiedAfter,
+      modifiedBefore,
+      createdFilterEnabled,
+      createdAfter,
+      createdBefore,
+      sortMode,
+      searchBackend
+    });
+  }
+
   function applyProfile(profile: SearchProfile): void {
     const req = profile.request;
     setQuery(req.query);
@@ -767,6 +797,25 @@ export function App() {
       setStatus(tr("app.status.tauriUnavailable", "Tauri runtime не обнаружен"));
       return;
     }
+
+    if (!preparedRequest) {
+      const dateErrors = validateCurrentDateFilters();
+      if (dateErrors.length > 0) {
+        const fieldNames: Record<string, string> = {
+          modifiedAfter: tr("app.filters.modified.legend", "Дата изменения"),
+          modifiedBefore: tr("app.filters.modified.legend", "Дата изменения"),
+          createdAfter: tr("app.filters.created.legend", "Дата создания"),
+          createdBefore: tr("app.filters.created.legend", "Дата создания"),
+        };
+        const fieldList = [...new Set(dateErrors.map((e) => fieldNames[e.field]))].join(", ");
+        pushToast(
+          tr("app.toast.invalidDateFilter", "Некорректная дата в фильтре: {{fields}}", { fields: fieldList }),
+          "error"
+        );
+        return;
+      }
+    }
+
     const request = preparedRequest ?? buildCurrentRequest();
     setResults([]);
     setScrollTop(0);
