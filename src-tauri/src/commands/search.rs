@@ -52,6 +52,7 @@ pub struct SearchCancelledEvent {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SearchErrorEvent {
   pub search_id: u64,
+  pub code: String,
   pub message: String,
 }
 
@@ -241,14 +242,18 @@ fn terminal_event_from_stream(
       total_results: summary.total_results,
       limit_reached: summary.limit_reached,
     }),
-    Err(message) => SearchTerminalEvent::Error(SearchErrorEvent {
-      search_id,
-      message: format_search_error(&message),
-    }),
+    Err(message) => {
+      let (code, formatted) = format_search_error(&message);
+      SearchTerminalEvent::Error(SearchErrorEvent {
+        search_id,
+        code,
+        message: formatted,
+      })
+    }
   }
 }
 
-fn format_search_error(message: &str) -> String {
+fn format_search_error(message: &str) -> (String, String) {
   let code = if message.contains("regex parse error") || message.contains("wildcard parse error") {
     "SEARCH_INVALID_QUERY"
   } else if message.contains("index store lock poisoned") || message.contains("search session lock poisoned") {
@@ -256,7 +261,7 @@ fn format_search_error(message: &str) -> String {
   } else {
     "SEARCH_EXECUTION_ERROR"
   };
-  format!("[{code}] {message}")
+  (code.to_string(), message.to_string())
 }
 
 fn run_search_stream(

@@ -99,6 +99,23 @@ export function isIndexStale(updatedAt: string, ttlMs: number, now = Date.now())
 
 type SearchErrorCode = "SEARCH_INVALID_QUERY" | "SEARCH_STATE_ERROR" | "SEARCH_EXECUTION_ERROR";
 
+export function renderSearchErrorFromCode(
+  code: string,
+  message: string,
+  tr: (key: string, defaultValue: string, values?: Record<string, unknown>) => string
+): string {
+  if (code === "SEARCH_INVALID_QUERY") {
+    return tr("app.status.errorInvalidQuery", "Ошибка запроса поиска: {{message}}", { message });
+  }
+  if (code === "SEARCH_STATE_ERROR") {
+    return tr("app.status.errorState", "Внутренняя ошибка состояния поиска: {{message}}", { message });
+  }
+  if (code === "SEARCH_EXECUTION_ERROR") {
+    return tr("app.status.errorExecution", "Ошибка выполнения поиска: {{message}}", { message });
+  }
+  return tr("app.status.error", "Ошибка: {{message}}", { message });
+}
+
 export function parseSearchErrorMessage(raw: string): { code: SearchErrorCode | null; message: string } {
   const match = raw.match(/^\[(SEARCH_[A-Z_]+)\]\s*(.*)$/);
   if (!match) {

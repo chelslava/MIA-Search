@@ -116,8 +116,7 @@
 ### [UX-27] Error Messages Not Localized
 **File:** `src-tauri/src/commands/search.rs:237-246`
 **Effort:** M
-**Issue:** Error codes returned as strings, frontend only does basic pattern matching. Full error messages remain in English.
-**Fix:** Return structured error types that can be localized in frontend.
+**Status:** Fixed - SearchErrorEvent now includes structured `code` field for frontend localization.
 
 ### [UX-28] Live Search Triggers on Non-Filter Changes
 **File:** `src/app/App.tsx:1224-1275`

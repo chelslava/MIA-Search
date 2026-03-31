@@ -129,20 +129,20 @@ function parseSearchErrorMessage(raw: string): ParsedSearchError {
 }
 
 function renderSearchErrorStatus(
-  rawMessage: string,
+  code: string,
+  message: string,
   tr: (key: string, defaultValue: string, values?: Record<string, unknown>) => string
 ): string {
-  const parsed = parseSearchErrorMessage(rawMessage);
-  if (parsed.code === "SEARCH_INVALID_QUERY") {
-    return tr("app.status.errorInvalidQuery", "Ошибка запроса поиска: {{message}}", { message: parsed.message });
+  if (code === "SEARCH_INVALID_QUERY") {
+    return tr("app.status.errorInvalidQuery", "Ошибка запроса поиска: {{message}}", { message });
   }
-  if (parsed.code === "SEARCH_STATE_ERROR") {
-    return tr("app.status.errorState", "Внутренняя ошибка состояния поиска: {{message}}", { message: parsed.message });
+  if (code === "SEARCH_STATE_ERROR") {
+    return tr("app.status.errorState", "Внутренняя ошибка состояния поиска: {{message}}", { message });
   }
-  if (parsed.code === "SEARCH_EXECUTION_ERROR") {
-    return tr("app.status.errorExecution", "Ошибка выполнения поиска: {{message}}", { message: parsed.message });
+  if (code === "SEARCH_EXECUTION_ERROR") {
+    return tr("app.status.errorExecution", "Ошибка выполнения поиска: {{message}}", { message });
   }
-  return tr("app.status.error", "Ошибка: {{message}}", { message: rawMessage });
+  return tr("app.status.error", "Ошибка: {{message}}", { message });
 }
 
 function filterPlainResults(items: SearchResultItem[], query: string, ignoreCase: boolean): SearchResultItem[] {
@@ -1250,7 +1250,7 @@ export function App() {
       if (payload.search_id !== activeSearchIdRef.current) {
         return;
       }
-      setStatus(renderSearchErrorStatus(payload.message, tr));
+      setStatus(renderSearchErrorStatus(payload.code, payload.message, tr));
       setIsSearching(false);
       setSearchErrorCount((prev) => prev + 1);
       if (pendingCheckedDeltaRef.current > 0) {

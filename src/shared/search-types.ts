@@ -94,6 +94,7 @@ export interface SearchCancelledEvent {
 
 export interface SearchErrorEvent {
   search_id: number;
+  code: string;
   message: string;
 }
 
