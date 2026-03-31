@@ -134,4 +134,6 @@ export interface IndexRebuildResponse {
   roots: number;
   entries: number;
   updated_at: string;
+  memory_mb: number;
+  truncated: boolean;
 }

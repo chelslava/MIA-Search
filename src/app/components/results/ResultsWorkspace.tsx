@@ -32,6 +32,8 @@ type ResultsWorkspaceProps = {
   formatBytes: (size: number | null) => string;
   formatDate: (date: string | null) => string;
   t: (key: string, defaultValue: string, values?: Record<string, unknown>) => string;
+  isLoading?: boolean;
+  error?: string | null;
 };
 
 function useVisibleCards(
@@ -80,9 +82,43 @@ export function ResultsWorkspace({
   visibleRows,
   formatBytes,
   formatDate,
-  t
+  t,
+  isLoading,
+  error
 }: ResultsWorkspaceProps) {
   const visibleCards = useVisibleCards(results, scrollTop, listHeight);
+
+  const renderEmptyState = () => {
+    if (isLoading) {
+      return (
+        <div className="flex h-full flex-col items-center justify-center gap-3 text-[var(--muted)]">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
+          <span>{t("app.status.loading", "Загрузка...")}</span>
+        </div>
+      );
+    }
+    if (error) {
+      return (
+        <div className="flex h-full flex-col items-center justify-center gap-3 text-center">
+          <span className="text-2xl" aria-hidden="true">⚠️</span>
+          <div>
+            <div className="font-medium text-[var(--text)]">{t("app.status.errorTitle", "Ошибка")}</div>
+            <div className="text-sm text-[var(--muted)]">{error}</div>
+          </div>
+        </div>
+      );
+    }
+    if (results.length === 0) {
+      return (
+        <div className="flex h-full flex-col items-center justify-center gap-3 text-[var(--muted)]">
+          <span className="text-2xl" aria-hidden="true">🔍</span>
+          <span>{t("app.status.noResults", "Нет результатов")}</span>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <section ref={containerRef} className="flex h-full min-h-0 flex-col gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] p-2">
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-alt)] p-2">
@@ -148,6 +184,11 @@ export function ResultsWorkspace({
       </div>
 
       {displayMode === "cards" ? (
+        results.length === 0 || isLoading || error ? (
+          <div className="min-h-0 flex-1 flex items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface-alt)]">
+            {renderEmptyState()}
+          </div>
+        ) : (
         <div
           role="list"
           aria-label={t("app.labels.results", "Результаты поиска")}
@@ -187,6 +228,11 @@ export function ResultsWorkspace({
           {visibleCards.bottomSpacer > 0 ? (
             <div style={{ height: visibleCards.bottomSpacer, gridColumn: "1 / -1" }} />
           ) : null}
+        </div>
+        )
+      ) : results.length === 0 || isLoading || error ? (
+        <div className="min-h-0 flex-1 flex items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface-alt)]">
+          {renderEmptyState()}
         </div>
       ) : (
         <div

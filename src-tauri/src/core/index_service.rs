@@ -15,6 +15,18 @@ const INDEX_BATCH_SIZE: usize = 100;
 const MAX_REGEX_PATTERN_LENGTH: usize = 256;
 const MAX_WILDCARD_COUNT: usize = 32;
 const REGEX_CACHE_SIZE: usize = 64;
+const MAX_INDEX_ENTRIES: usize = 1_000_000;
+const MAX_INDEX_SIZE_MB: usize = 500;
+const ENTRY_OVERHEAD_BYTES: usize = 512;
+
+fn estimate_entry_size(entry: &SearchResultItem) -> usize {
+  entry.full_path.len()
+    + entry.name.len()
+    + entry.extension.as_ref().map_or(0, |e| e.len())
+    + entry.created_at.as_ref().map_or(0, |c| c.len())
+    + entry.modified_at.as_ref().map_or(0, |m| m.len())
+    + ENTRY_OVERHEAD_BYTES
+}
 
 thread_local! {
   static REGEX_CACHE: RefCell<HashMap<String, Regex>> = RefCell::new(HashMap::new());
@@ -24,6 +36,8 @@ thread_local! {
 pub struct IndexBuildSummary {
   pub roots: usize,
   pub entries: usize,
+  pub memory_bytes: usize,
+  pub truncated: bool,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -81,32 +95,55 @@ impl IndexService {
       normalized_roots
     };
 
+    let max_bytes = MAX_INDEX_SIZE_MB * 1024 * 1024;
     let mut entries = Vec::new();
+    let mut total_size = 0usize;
+    let mut truncated = false;
+
     for root in &roots {
-      if cancel_flag.load(Ordering::Acquire) {
-        let summary = IndexBuildSummary {
-          roots: roots.len(),
-          entries: entries.len(),
-        };
-        return Ok((IndexSnapshot::fresh(roots, entries), summary));
+      if truncated || cancel_flag.load(Ordering::Acquire) {
+        break;
       }
 
       let builder = SearchBuilder::default().location(root).hidden();
       for path in builder.build() {
         if cancel_flag.load(Ordering::Acquire) {
-          let summary = IndexBuildSummary {
-            roots: roots.len(),
-            entries: entries.len(),
-          };
-          return Ok((IndexSnapshot::fresh(roots, entries), summary));
+          break;
         }
-        entries.push(MetadataService::enrich_path(&path, root.clone()));
+
+        if entries.len() >= MAX_INDEX_ENTRIES {
+          truncated = true;
+          eprintln!(
+            "Index rebuild truncated at {} entries (max {})",
+            entries.len(),
+            MAX_INDEX_ENTRIES
+          );
+          break;
+        }
+
+        let entry = MetadataService::enrich_path(&path, root.clone());
+        let entry_size = estimate_entry_size(&entry);
+
+        if total_size.saturating_add(entry_size) > max_bytes {
+          truncated = true;
+          eprintln!(
+            "Index rebuild truncated at {} MB (max {} MB)",
+            total_size / (1024 * 1024),
+            MAX_INDEX_SIZE_MB
+          );
+          break;
+        }
+
+        total_size = total_size.saturating_add(entry_size);
+        entries.push(entry);
       }
     }
 
     let summary = IndexBuildSummary {
       roots: roots.len(),
       entries: entries.len(),
+      memory_bytes: total_size,
+      truncated,
     };
 
     Ok((IndexSnapshot::fresh(roots, entries), summary))

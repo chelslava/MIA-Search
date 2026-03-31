@@ -14,6 +14,8 @@ pub struct IndexRebuildResponse {
   pub roots: usize,
   pub entries: usize,
   pub updated_at: String,
+  pub memory_mb: usize,
+  pub truncated: bool,
 }
 
 /// Current status of the search index.
@@ -87,6 +89,8 @@ pub fn index_rebuild(state: State<'_, AppState>, roots: Vec<String>) -> Result<I
     roots: summary.roots,
     entries: summary.entries,
     updated_at,
+    memory_mb: summary.memory_bytes / (1024 * 1024),
+    truncated: summary.truncated,
   })
 }
 
