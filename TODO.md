@@ -255,8 +255,7 @@
 ### [QUAL-9] Frontend Test Coverage Minimal
 **File:** `src/app/search-request.test.ts`
 **Effort:** L
-**Issue:** Only one test file with single test case. No tests for App.tsx, formatters, components.
-**Fix:** Add tests for critical frontend logic.
+**Status:** Partial - added search-utils.test.ts with 22 new tests. Total frontend tests increased from 10 to 32.
 
 ---
 
@@ -300,10 +299,10 @@ Export search results to CSV/JSON.
 | Security | 0 | 0 | 0 | 0 | 0 |
 | Stability | 0 | 0 | 0 | 0 | 0 |
 | Performance | 0 | 0 | 4 | 2 | 6 |
-| UX/UI | 0 | 0 | 1 | 3 | 4 |
-| Code Quality | 0 | 0 | 0 | 4 | 4 |
-| **Total** | **0** | **0** | **5** | **9** | **14** |
+| UX/UI | 0 | 0 | 0 | 2 | 2 |
+| Code Quality | 0 | 0 | 0 | 3 | 3 |
+| **Total** | **0** | **0** | **4** | **7** | **11** |
 
-**Completed this session:** STAB-17, UX-18, UX-19, PERF-16 (partial)
+**Completed this session:** STAB-17, UX-18, UX-19, UX-30, QUAL-9 (partial), PERF-16 (partial)
 
-**Next Priority:** PERF-16 (complete integration), UX-23, UX-30, QUAL-9
+**Next Priority:** PERF-16 (complete integration), UX-23, UX-27
