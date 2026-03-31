@@ -156,8 +156,7 @@
 ### [QUAL-4] Large useEffect Dependencies
 **File:** `src/app/App.tsx:1234-1275`
 **Effort:** M
-**Issue:** Live search useEffect has 20+ dependencies. Hook fragile and hard to reason about.
-**Fix:** Split into separate effects with smaller dependencies.
+**Status:** Partial - created hooks in src/app/hooks/ for state extraction. Full integration requires App.tsx refactor.
 
 ---
 
@@ -299,9 +298,9 @@ Export search results to CSV/JSON.
 | Stability | 0 | 0 | 0 | 0 | 0 |
 | Performance | 0 | 0 | 4 | 2 | 6 |
 | UX/UI | 0 | 0 | 0 | 0 | 0 |
-| Code Quality | 0 | 0 | 0 | 3 | 3 |
-| **Total** | **0** | **0** | **4** | **3** | **7** |
+| Code Quality | 0 | 0 | 0 | 2 | 2 |
+| **Total** | **0** | **0** | **4** | **2** | **6** |
 
-**Completed this session:** STAB-17, UX-18, UX-19, UX-23, UX-27, UX-30, QUAL-9 (partial), PERF-16 (partial)
+**Completed this session:** STAB-17, UX-18, UX-19, UX-23, UX-27, UX-30, QUAL-4 (partial), QUAL-9 (partial), PERF-16 (partial)
 
-**Next Priority:** PERF-16 (complete integration), PERF-4, PERF-9, QUAL-4
+**Next Priority:** PERF-16 (complete hooks integration), PERF-4, PERF-9
