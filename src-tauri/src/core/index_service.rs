@@ -363,3 +363,104 @@ fn score_relevance(name: &str, query: &str) -> Option<f64> {
     Some(0.2)
   }
 }
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn estimate_entry_size_includes_all_components() {
+    let item = SearchResultItem {
+      full_path: "/path/to/file.txt".to_string(),
+      name: "file.txt".to_string(),
+      parent_path: "/path/to".to_string(),
+      is_file: true,
+      is_dir: false,
+      extension: Some("txt".to_string()),
+      size: Some(100),
+      created_at: Some("2026-01-01T00:00:00Z".to_string()),
+      modified_at: Some("2026-01-01T00:00:00Z".to_string()),
+      hidden: false,
+      score: None,
+      source_root: "/".to_string(),
+    };
+    
+    let size = estimate_entry_size(&item);
+    assert!(size > 0);
+    assert!(size >= item.full_path.len() + item.name.len());
+  }
+
+  #[test]
+  fn build_matcher_plain_mode_creates_plain_matcher() {
+    let matcher = build_matcher(&MatchMode::Plain, "test", true).unwrap();
+    assert!(matcher.matches("this is a test string"));
+    assert!(matcher.matches("TEST"));
+  }
+
+  #[test]
+  fn build_matcher_empty_query_matches_all() {
+    let matcher = build_matcher(&MatchMode::Plain, "", true).unwrap();
+    assert!(matcher.matches("anything"));
+    assert!(matcher.matches(""));
+  }
+
+  #[test]
+  fn parse_extensions_normalizes_extensions() {
+    let exts = parse_extensions(&[".TXT".to_string(), "pdf".to_string(), "..doc".to_string()]);
+    assert_eq!(exts, vec!["txt", "pdf", "doc"]);
+  }
+
+  #[test]
+  fn matches_roots_returns_true_for_matching_root() {
+    let item = SearchResultItem {
+      full_path: "/home/user/file.txt".to_string(),
+      name: "file.txt".to_string(),
+      parent_path: "/home/user".to_string(),
+      is_file: true,
+      is_dir: false,
+      extension: Some("txt".to_string()),
+      size: None,
+      created_at: None,
+      modified_at: None,
+      hidden: false,
+      score: None,
+      source_root: "/".to_string(),
+    };
+    
+    assert!(matches_roots(&item, &["/home/user".to_string()]));
+    assert!(matches_roots(&item, &["/home".to_string()]));
+    assert!(!matches_roots(&item, &["/etc".to_string()]));
+    assert!(matches_roots(&item, &[]));
+  }
+
+  #[test]
+  fn matches_extensions_checks_extension_case_insensitively() {
+    let item = SearchResultItem {
+      full_path: "/file.TXT".to_string(),
+      name: "file.TXT".to_string(),
+      parent_path: "/".to_string(),
+      is_file: true,
+      is_dir: false,
+      extension: Some("TXT".to_string()),
+      size: None,
+      created_at: None,
+      modified_at: None,
+      hidden: false,
+      score: None,
+      source_root: "/".to_string(),
+    };
+    
+    assert!(matches_extensions(&item, &["txt".to_string()]));
+    assert!(matches_extensions(&item, &["pdf".to_string(), "txt".to_string()]));
+    assert!(!matches_extensions(&item, &["pdf".to_string()]));
+  }
+
+  #[test]
+  fn score_relevance_returns_correct_scores() {
+    assert_eq!(score_relevance("file.txt", "file.txt"), Some(1.0));
+    assert_eq!(score_relevance("FILE.TXT", "file"), Some(0.85));
+    assert_eq!(score_relevance("myfile.txt", "file"), Some(0.6));
+    assert_eq!(score_relevance("other.txt", "file"), Some(0.2));
+    assert_eq!(score_relevance("anything", ""), None);
+  }
+}

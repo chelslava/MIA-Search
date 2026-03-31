@@ -39,18 +39,26 @@ impl IndexSnapshot {
   }
 
   pub fn with_limits(roots: Vec<String>, entries: Vec<SearchResultItem>) -> (Self, usize, bool) {
+    Self::with_limits_impl(roots, entries, MAX_INDEX_ENTRIES, MAX_INDEX_SIZE_MB * 1024 * 1024)
+  }
+
+  #[cfg(test)]
+  pub fn with_limits_with_max_entries(roots: Vec<String>, entries: Vec<SearchResultItem>, max_entries: usize) -> (Self, usize, bool) {
+    Self::with_limits_impl(roots, entries, max_entries, MAX_INDEX_SIZE_MB * 1024 * 1024)
+  }
+
+  fn with_limits_impl(roots: Vec<String>, entries: Vec<SearchResultItem>, max_entries: usize, max_bytes: usize) -> (Self, usize, bool) {
     let mut truncated = false;
     let mut total_size = 0usize;
-    let max_bytes = MAX_INDEX_SIZE_MB * 1024 * 1024;
-    let mut limited_entries = Vec::with_capacity(entries.len().min(MAX_INDEX_ENTRIES));
+    let mut limited_entries = Vec::with_capacity(entries.len().min(max_entries));
 
     for entry in entries {
-      if limited_entries.len() >= MAX_INDEX_ENTRIES {
+      if limited_entries.len() >= max_entries {
         truncated = true;
         eprintln!(
           "Index truncated at {} entries (max {})",
           limited_entries.len(),
-          MAX_INDEX_ENTRIES
+          max_entries
         );
         break;
       }
@@ -128,6 +136,75 @@ impl IndexStore {
 
   pub fn version_mismatch(&self) -> bool {
     self.version_mismatch
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  fn make_item(path: &str, name: &str) -> SearchResultItem {
+    SearchResultItem {
+      full_path: path.to_string(),
+      name: name.to_string(),
+      parent_path: "/".to_string(),
+      is_file: true,
+      is_dir: false,
+      extension: Some("txt".to_string()),
+      size: Some(100),
+      created_at: Some("2026-01-01T00:00:00Z".to_string()),
+      modified_at: Some("2026-01-01T00:00:00Z".to_string()),
+      hidden: false,
+      score: None,
+      source_root: "/".to_string(),
+    }
+  }
+
+  #[test]
+  fn estimate_entry_size_returns_reasonable_estimate() {
+    let item = make_item("/path/to/file.txt", "file.txt");
+    let size = estimate_entry_size(&item);
+    assert!(size > 0);
+    assert!(size >= item.full_path.len() + item.name.len() + ENTRY_OVERHEAD_BYTES);
+  }
+
+  #[test]
+  fn with_limits_returns_all_entries_when_within_limits() {
+    let entries: Vec<SearchResultItem> = (0..10)
+      .map(|i| make_item(&format!("/path/file{}.txt", i), &format!("file{}.txt", i)))
+      .collect();
+    
+    let (snapshot, total_size, truncated) = IndexSnapshot::with_limits(vec!["/".to_string()], entries.clone());
+    
+    assert!(!truncated);
+    assert_eq!(snapshot.entries.len(), 10);
+    assert!(total_size > 0);
+  }
+
+  #[test]
+  fn with_limits_truncates_at_entry_count() {
+    let entries: Vec<SearchResultItem> = (0..10)
+      .map(|i| make_item(&format!("/path/file{}.txt", i), &format!("file{}.txt", i)))
+      .collect();
+    
+    let (snapshot, _, truncated) = IndexSnapshot::with_limits_with_max_entries(vec!["/".to_string()], entries, 5);
+    
+    assert!(truncated);
+    assert_eq!(snapshot.entries.len(), 5);
+  }
+
+  #[test]
+  fn estimated_memory_bytes_matches_individual_estimates() {
+    let entries: Vec<SearchResultItem> = vec![
+      make_item("/a.txt", "a.txt"),
+      make_item("/b.txt", "b.txt"),
+    ];
+    
+    let snapshot = IndexSnapshot::fresh(vec!["/".to_string()], entries);
+    let estimated = snapshot.estimated_memory_bytes();
+    
+    assert!(estimated > 0);
+    assert_eq!(estimated, snapshot.entries.iter().map(estimate_entry_size).sum::<usize>());
   }
 }
 
