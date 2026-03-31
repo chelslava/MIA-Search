@@ -414,13 +414,16 @@ mod tests {
   fn format_search_error_uses_consistent_codes() {
     assert_eq!(
       format_search_error("regex parse error: ["),
-      "[SEARCH_INVALID_QUERY] regex parse error: ["
+      ("SEARCH_INVALID_QUERY".to_string(), "regex parse error: [".to_string())
     );
     assert_eq!(
       format_search_error("search session lock poisoned"),
-      "[SEARCH_STATE_ERROR] search session lock poisoned"
+      ("SEARCH_STATE_ERROR".to_string(), "search session lock poisoned".to_string())
     );
-    assert_eq!(format_search_error("boom"), "[SEARCH_EXECUTION_ERROR] boom");
+    assert_eq!(
+      format_search_error("boom"),
+      ("SEARCH_EXECUTION_ERROR".to_string(), "boom".to_string())
+    );
   }
 
   #[test]
