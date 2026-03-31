@@ -9,7 +9,7 @@ use commands::{actions, favorites, history, index, profiles, search, settings};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicUsize};
 use std::sync::Arc;
-use tauri::Manager;
+
 use storage::{
   favorites_store::FavoritesStore,
   history_store::HistoryStore,
@@ -32,7 +32,7 @@ pub struct AppState {
   pub shutting_down: Arc<AtomicBool>,
 }
 
-pub fn lock_or_recover<T>(mutex: &Mutex<T>) -> Result<std::sync::MutexGuard<T>, String> {
+pub fn lock_or_recover<T>(mutex: &Mutex<T>) -> Result<std::sync::MutexGuard<'_, T>, String> {
   match mutex.lock() {
     Ok(guard) => Ok(guard),
     Err(poisoned) => {
