@@ -404,7 +404,8 @@ mod tests {
     match error {
       SearchTerminalEvent::Error(payload) => {
         assert_eq!(payload.search_id, 3);
-        assert_eq!(payload.message, "[SEARCH_EXECUTION_ERROR] boom");
+        assert_eq!(payload.code, "SEARCH_EXECUTION_ERROR");
+        assert_eq!(payload.message, "boom");
       }
       _ => panic!("expected error event"),
     }
