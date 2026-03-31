@@ -7,7 +7,7 @@ mod storage;
 
 use commands::{actions, favorites, history, index, profiles, search, settings};
 use std::sync::Mutex;
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, AtomicUsize};
 use std::sync::Arc;
 use tauri::Manager;
 use storage::{
@@ -28,6 +28,7 @@ pub struct AppState {
   pub index: Arc<Mutex<IndexStore>>,
   pub index_rebuild_in_progress: Arc<AtomicBool>,
   pub index_rebuild_cancel: Arc<Mutex<Option<Arc<AtomicBool>>>>,
+  pub index_rebuild_entries: Arc<AtomicUsize>,
   pub shutting_down: Arc<AtomicBool>,
 }
 
@@ -52,6 +53,7 @@ impl AppState {
       index: Arc::new(Mutex::new(IndexStore::load())),
       index_rebuild_in_progress: Arc::new(AtomicBool::new(false)),
       index_rebuild_cancel: Arc::new(Mutex::new(None)),
+      index_rebuild_entries: Arc::new(AtomicUsize::new(0)),
       shutting_down: Arc::new(AtomicBool::new(false)),
     }
   }

@@ -600,7 +600,8 @@ export function App() {
         roots: rebuilt.roots,
         root_paths: rootsForIndex,
         updated_at: rebuilt.updated_at,
-        version_mismatch: false
+        version_mismatch: false,
+        rebuild_entries_count: 0
       });
       setIndexHint(tr("app.index.rebuildDone", "Индекс обновлён"));
     } catch {

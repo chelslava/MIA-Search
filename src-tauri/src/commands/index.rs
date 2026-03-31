@@ -27,6 +27,7 @@ pub struct IndexStatusResponse {
   pub root_paths: Vec<String>,
   pub updated_at: String,
   pub version_mismatch: bool,
+  pub rebuild_entries_count: usize,
 }
 
 struct RebuildFlagGuard<'a> {
@@ -53,6 +54,8 @@ fn acquire_rebuild_guard<'a>(flag: &'a AtomicBool) -> Result<RebuildFlagGuard<'a
 pub fn index_rebuild(state: State<'_, AppState>, roots: Vec<String>) -> Result<IndexRebuildResponse, String> {
   let _guard = acquire_rebuild_guard(&state.index_rebuild_in_progress)?;
 
+  state.index_rebuild_entries.store(0, Ordering::Release);
+
   let cancel = Arc::new(AtomicBool::new(false));
   {
     let mut cancel_slot = state
@@ -62,7 +65,10 @@ pub fn index_rebuild(state: State<'_, AppState>, roots: Vec<String>) -> Result<I
     *cancel_slot = Some(cancel.clone());
   }
 
-  let result = IndexService::rebuild(&roots, cancel.clone());
+  let progress_counter = state.index_rebuild_entries.clone();
+  let result = IndexService::rebuild(&roots, cancel.clone(), Some(progress_counter));
+
+  state.index_rebuild_entries.store(0, Ordering::Release);
 
   {
     let mut cancel_slot = state
@@ -111,6 +117,7 @@ pub fn index_rebuild_cancel(state: State<'_, AppState>) -> Result<(), String> {
 #[tauri::command]
 pub fn index_status(state: State<'_, AppState>) -> Result<IndexStatusResponse, String> {
   let rebuild_in_progress = state.index_rebuild_in_progress.load(Ordering::Acquire);
+  let rebuild_entries_count = state.index_rebuild_entries.load(Ordering::Acquire);
   let index = state
     .index
     .lock()
@@ -118,10 +125,10 @@ pub fn index_status(state: State<'_, AppState>) -> Result<IndexStatusResponse, S
   let snapshot = index.snapshot();
   let version_mismatch = index.version_mismatch();
 
-  Ok(status_from_snapshot(&snapshot, rebuild_in_progress, version_mismatch))
+  Ok(status_from_snapshot(&snapshot, rebuild_in_progress, version_mismatch, rebuild_entries_count))
 }
 
-fn status_from_snapshot(snapshot: &IndexSnapshot, rebuild_in_progress: bool, version_mismatch: bool) -> IndexStatusResponse {
+fn status_from_snapshot(snapshot: &IndexSnapshot, rebuild_in_progress: bool, version_mismatch: bool, rebuild_entries_count: usize) -> IndexStatusResponse {
   IndexStatusResponse {
     status: if rebuild_in_progress {
       "in_progress".to_string()
@@ -135,6 +142,7 @@ fn status_from_snapshot(snapshot: &IndexSnapshot, rebuild_in_progress: bool, ver
     root_paths: snapshot.roots.clone(),
     updated_at: snapshot.updated_at.clone(),
     version_mismatch,
+    rebuild_entries_count,
   }
 }
 
@@ -145,7 +153,7 @@ mod tests {
   #[test]
   fn status_from_snapshot_reports_empty_and_ready() {
     let empty = IndexSnapshot::default();
-    let status_empty = status_from_snapshot(&empty, false, false);
+    let status_empty = status_from_snapshot(&empty, false, false, 0);
     assert_eq!(status_empty.status, "empty");
 
     let ready = IndexSnapshot {
@@ -154,7 +162,7 @@ mod tests {
       roots: vec!["C:\\".to_string()],
       entries: vec![crate::core::models::SearchResultItem::default()],
     };
-    let status_ready = status_from_snapshot(&ready, false, false);
+    let status_ready = status_from_snapshot(&ready, false, false, 0);
     assert_eq!(status_ready.status, "ready");
     assert_eq!(status_ready.entries, 1);
     assert_eq!(status_ready.roots, 1);
@@ -164,14 +172,15 @@ mod tests {
   #[test]
   fn status_from_snapshot_reports_in_progress() {
     let snapshot = IndexSnapshot::default();
-    let status = status_from_snapshot(&snapshot, true, false);
+    let status = status_from_snapshot(&snapshot, true, false, 500);
     assert_eq!(status.status, "in_progress");
+    assert_eq!(status.rebuild_entries_count, 500);
   }
 
   #[test]
   fn status_from_snapshot_reports_version_mismatch() {
     let snapshot = IndexSnapshot::default();
-    let status = status_from_snapshot(&snapshot, false, true);
+    let status = status_from_snapshot(&snapshot, false, true, 0);
     assert!(status.version_mismatch);
   }
 

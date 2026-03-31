@@ -8,7 +8,7 @@ use rust_search::SearchBuilder;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::Path;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 
 const INDEX_BATCH_SIZE: usize = 100;
@@ -82,7 +82,7 @@ impl QueryMatcher {
 }
 
 impl IndexService {
-  pub fn rebuild(roots: &[String], cancel_flag: Arc<AtomicBool>) -> Result<(IndexSnapshot, IndexBuildSummary), String> {
+  pub fn rebuild(roots: &[String], cancel_flag: Arc<AtomicBool>, progress_counter: Option<Arc<AtomicUsize>>) -> Result<(IndexSnapshot, IndexBuildSummary), String> {
     let normalized_roots: Vec<String> = roots
       .iter()
       .map(|root| root.trim().to_string())
@@ -99,6 +99,10 @@ impl IndexService {
     let mut entries = Vec::new();
     let mut total_size = 0usize;
     let mut truncated = false;
+
+    if let Some(ref counter) = progress_counter {
+      counter.store(0, Ordering::Release);
+    }
 
     for root in &roots {
       if truncated || cancel_flag.load(Ordering::Acquire) {
@@ -136,6 +140,10 @@ impl IndexService {
 
         total_size = total_size.saturating_add(entry_size);
         entries.push(entry);
+
+        if let Some(ref counter) = progress_counter {
+          counter.store(entries.len(), Ordering::Release);
+        }
       }
     }
 

@@ -226,7 +226,7 @@
 ### [UX-30] No Progress Indicator During Index Rebuild
 **File:** `src-tauri/src/commands/index.rs:44-67`
 **Effort:** M
-**Issue:** Index rebuild shows "Rebuilding..." but no progress percentage or item count.
+**Status:** Fixed - added rebuild_entries_count to IndexStatusResponse and progress counter in AppState.
 
 ---
 
