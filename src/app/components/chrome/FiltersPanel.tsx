@@ -222,12 +222,16 @@ export function FiltersPanel({
               disabled={!modifiedFilterEnabled}
               value={modifiedAfter}
               onChange={(event) => onModifiedAfterChange(event.target.value)}
+              title={tr("app.filters.date.formatHint", "Формат: ГГГГ-ММ-ДД ЧЧ:ММ")}
+              placeholder={tr("app.filters.date.placeholder", "ГГГГ-ММ-ДД")}
             />
             <Input
               type="datetime-local"
               disabled={!modifiedFilterEnabled}
               value={modifiedBefore}
               onChange={(event) => onModifiedBeforeChange(event.target.value)}
+              title={tr("app.filters.date.formatHint", "Формат: ГГГГ-ММ-ДД ЧЧ:ММ")}
+              placeholder={tr("app.filters.date.placeholder", "ГГГГ-ММ-ДД")}
             />
           </div>
         </fieldset>
@@ -250,12 +254,16 @@ export function FiltersPanel({
               disabled={!createdFilterEnabled}
               value={createdAfter}
               onChange={(event) => onCreatedAfterChange(event.target.value)}
+              title={tr("app.filters.date.formatHint", "Формат: ГГГГ-ММ-ДД ЧЧ:ММ")}
+              placeholder={tr("app.filters.date.placeholder", "ГГГГ-ММ-ДД")}
             />
             <Input
               type="datetime-local"
               disabled={!createdFilterEnabled}
               value={createdBefore}
               onChange={(event) => onCreatedBeforeChange(event.target.value)}
+              title={tr("app.filters.date.formatHint", "Формат: ГГГГ-ММ-ДД ЧЧ:ММ")}
+              placeholder={tr("app.filters.date.placeholder", "ГГГГ-ММ-ДД")}
             />
           </div>
         </fieldset>
