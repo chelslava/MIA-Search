@@ -115,7 +115,8 @@ describe("App smoke", () => {
     await act(async () => {
       mocks.searchErrorHandler?.({
         search_id: 42,
-        message: "[SEARCH_INVALID_QUERY] regex parse error: ["
+        code: "SEARCH_INVALID_QUERY",
+        message: "regex parse error: ["
       });
     });
 
