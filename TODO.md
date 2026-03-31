@@ -50,8 +50,7 @@
 ### [STAB-17] Potential Memory Exhaustion with Large Index
 **File:** `src-tauri/src/storage/index_store.rs`
 **Effort:** L
-**Issue:** Entire index loaded into memory with no size limits. For very large filesystems, could cause memory exhaustion.
-**Fix:** Implement index size limits, pagination, or memory-mapped file approach.
+**Status:** Fixed - added MAX_INDEX_ENTRIES=1M and MAX_INDEX_SIZE_MB=500 limits. IndexBuildSummary now includes memory_bytes and truncated fields.
 
 ### [STAB-18] No Graceful Shutdown for In-Progress Searches
 **File:** `src-tauri/src/commands/search.rs:125-162`
@@ -86,8 +85,7 @@
 ### [PERF-16] Large App Component Causes Re-renders
 **File:** `src/app/App.tsx`
 **Effort:** L
-**Issue:** App component has 50+ useState hooks. Any state change triggers full re-render. Component is 1700+ lines.
-**Fix:** Split into smaller components with memoization. Use useReducer for related state.
+**Status:** Partial - created hooks (useSearchState, useThemeState, usePersistence, useFilterState, useIndex, useRoots, useActions) in src/app/hooks/. Integration pending.
 
 ### [PERF-4] Blocking Metadata Call in Hot Path
 **File:** `src-tauri/src/core/metadata_service.rs:22-24`
@@ -129,14 +127,12 @@
 ### [UX-18] Missing Loading State for Initial Index Build
 **File:** `src/app/App.tsx:1038-1087`
 **Effort:** M
-**Issue:** Initial index rebuild happens silently, user sees empty results.
-**Blocked by:** Requires UI design for loading overlay.
+**Status:** Fixed - added loading spinner and empty state to ResultsWorkspace component.
 
 ### [UX-19] Missing Error State in Results View
 **File:** `src/app/App.tsx:1188-1213`
 **Effort:** M
-**Issue:** Search errors shown in status bar but results table shows stale data.
-**Blocked by:** Requires passing error state to ResultsWorkspace.
+**Status:** Fixed - added error prop to ResultsWorkspace with visual error display.
 
 ---
 
@@ -302,12 +298,12 @@ Export search results to CSV/JSON.
 | Category | Critical | High | Medium | Low | Total |
 |----------|----------|------|--------|-----|-------|
 | Security | 0 | 0 | 0 | 0 | 0 |
-| Stability | 0 | 0 | 1 | 0 | 1 |
+| Stability | 0 | 0 | 0 | 0 | 0 |
 | Performance | 0 | 0 | 4 | 2 | 6 |
-| UX/UI | 0 | 0 | 3 | 3 | 6 |
+| UX/UI | 0 | 0 | 1 | 3 | 4 |
 | Code Quality | 0 | 0 | 0 | 4 | 4 |
-| **Total** | **0** | **0** | **8** | **9** | **17** |
+| **Total** | **0** | **0** | **5** | **9** | **14** |
 
-**Completed this session:** UX-25, QUAL-8, STAB-8, UX-29
+**Completed this session:** STAB-17, UX-18, UX-19, PERF-16 (partial)
 
-**Next Priority:** UX-23, UX-30, QUAL-9 (Low priority items)
+**Next Priority:** PERF-16 (complete integration), UX-23, UX-30, QUAL-9
