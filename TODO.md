@@ -52,6 +52,11 @@
 **Effort:** L
 **Status:** Fixed - added MAX_INDEX_ENTRIES=1M and MAX_INDEX_SIZE_MB=500 limits. IndexBuildSummary now includes memory_bytes and truncated fields.
 
+### [STAB-20] Missing Error Handling for Metadata Operations
+**File:** `src-tauri/src/core/metadata_service.rs:22-24`
+**Effort:** S
+**Status:** Fixed - added debug-level logging for metadata failures.
+
 ### [STAB-18] No Graceful Shutdown for In-Progress Searches
 **File:** `src-tauri/src/commands/search.rs:125-162`
 **Effort:** M
