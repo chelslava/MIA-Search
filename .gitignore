@@ -23,5 +23,4 @@ src-tauri/target/
 .env
 .env.*
 
-# Lock files (generated at runtime)
-package-lock.json
+# Lock files are committed for reproducible builds
