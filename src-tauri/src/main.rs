@@ -72,6 +72,7 @@ fn main() {
     .manage(app_state)
     .on_window_event(move |_window, event| {
       if let tauri::WindowEvent::CloseRequested { .. } = event {
+        log::info!("Shutdown requested, signalling cancellation...");
         shutdown_flag.store(true, std::sync::atomic::Ordering::Release);
         if let Ok(mut session) = search_session.lock() {
           session.cancel();
@@ -81,6 +82,8 @@ fn main() {
             flag.store(true, std::sync::atomic::Ordering::Release);
           }
         }
+        std::thread::sleep(std::time::Duration::from_millis(100));
+        log::info!("Grace period elapsed, proceeding with shutdown");
       }
     })
     .invoke_handler(tauri::generate_handler![
