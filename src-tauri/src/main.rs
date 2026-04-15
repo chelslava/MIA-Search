@@ -18,6 +18,16 @@ use storage::{
   settings_store::SettingsStore,
 };
 
+#[macro_export]
+macro_rules! lock_mutex {
+  ($mutex:expr, $name:expr) => {
+    $mutex.lock().map_err(|e| {
+      log::error!("{} mutex poisoned: {:?}", $name, e);
+      format!("{} lock poisoned", $name)
+    })?
+  };
+}
+
 #[derive(Clone)]
 pub struct AppState {
   pub search_session: Arc<Mutex<core::search_service::SearchSession>>,
@@ -30,16 +40,6 @@ pub struct AppState {
   pub index_rebuild_cancel: Arc<Mutex<Option<Arc<AtomicBool>>>>,
   pub index_rebuild_entries: Arc<AtomicUsize>,
   pub shutting_down: Arc<AtomicBool>,
-}
-
-pub fn lock_or_recover<T>(mutex: &Mutex<T>) -> Result<std::sync::MutexGuard<'_, T>, String> {
-  match mutex.lock() {
-    Ok(guard) => Ok(guard),
-    Err(poisoned) => {
-      eprintln!("WARNING: Mutex poisoned, recovering. This may indicate data corruption.");
-      Ok(poisoned.into_inner())
-    }
-  }
 }
 
 impl AppState {

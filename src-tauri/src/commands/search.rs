@@ -123,10 +123,7 @@ pub fn search_start(
   validate_request(&request)?;
   record_query_if_enabled(&state, request.clone())?;
 
-  let mut session = state
-    .search_session
-    .lock()
-    .map_err(|_| "search session lock poisoned".to_string())?;
+  let mut session = crate::lock_mutex!(state.search_session, "search_session");
   let started = session.start(request.clone());
   let search_id = started.search_id;
   let cancel_flag = started.cancel_flag.clone();
@@ -190,10 +187,7 @@ fn is_active_search(app_handle: &AppHandle, search_id: u64) -> bool {
 /// Cancels the currently active search, if any.
 #[tauri::command]
 pub fn search_cancel(state: State<'_, AppState>) -> Result<SearchCancelResponse, String> {
-  let mut session = state
-    .search_session
-    .lock()
-    .map_err(|_| "search session lock poisoned".to_string())?;
+  let mut session = crate::lock_mutex!(state.search_session, "search_session");
   let search_id = session.cancel();
   Ok(SearchCancelResponse {
     search_id,
@@ -209,10 +203,7 @@ pub async fn search_enrich_metadata(
   state: State<'_, AppState>,
   paths: Vec<String>,
 ) -> Result<Vec<SearchResultItem>, String> {
-  let candidate_roots = state
-    .search_session
-    .lock()
-    .map_err(|_| "search session lock poisoned".to_string())?
+  let candidate_roots = crate::lock_mutex!(state.search_session, "search_session")
     .snapshot()
     .last_request
     .map(|request| request.roots)
