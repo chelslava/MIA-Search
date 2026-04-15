@@ -33,7 +33,7 @@ export function filterPlainResults(items: SearchResultItem[], query: string, ign
   });
 }
 
-export function mergeMetadataIntoResults(items: SearchResultItem[], patches: { full_path: string; extension?: string; size?: number; created_at?: string; modified_at?: string; hidden?: boolean }[]): SearchResultItem[] {
+export function mergeMetadataIntoResults(items: SearchResultItem[], patches: { full_path: string; extension?: string | null; size?: number | null; created_at?: string | null; modified_at?: string | null; hidden?: boolean }[]): SearchResultItem[] {
   if (patches.length === 0) return items;
   const patchByPath = new Map(patches.map((patch) => [patch.full_path, patch]));
 
@@ -60,7 +60,7 @@ export function arraysEqual(left: string[], right: string[]): boolean {
   return left.every((item, index) => item === right[index]);
 }
 
-export function sameSearchContextWithoutQuery(left: { roots: string[]; extensions: string[]; exclude_paths?: string[]; options: Record<string, unknown> }, right: { roots: string[]; extensions: string[]; exclude_paths?: string[]; options: Record<string, unknown> }): boolean {
+export function sameSearchContextWithoutQuery(left: { roots: string[]; extensions: string[]; exclude_paths?: string[]; options: object }, right: { roots: string[]; extensions: string[]; exclude_paths?: string[]; options: object }): boolean {
   return (
     arraysEqual(left.roots, right.roots) &&
     arraysEqual(left.extensions, right.extensions) &&

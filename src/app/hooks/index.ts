@@ -8,3 +8,5 @@ export { useActions } from "./useActions";
 export { useApp } from "./useApp";
 export { useSearchEvents } from "./useSearchEvents";
 export { useKeyboardShortcuts } from "./useKeyboardShortcuts";
+export { useToast } from "./useToast";
+export { useUIState } from "./useUIState";

@@ -1,32 +1,46 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type {
-  EntryKind,
-  IndexStatusResponse,
-  MatchMode,
-  SearchBackend,
   SearchProfile,
   SearchRequest,
   SearchResultItem,
-  SizeComparison,
-  SortMode
+  SizeComparison
 } from "../../shared/search-types";
 import {
+  actionOpenPath,
+  actionOpenParent,
+  actionRevealPath,
+  actionCopyToClipboard,
   cancelSearch,
+  favoritesAdd,
+  favoritesRemove,
+  fsPickFolder,
+  indexRebuildCancel,
   onSearchBatch,
   onSearchCancelled,
   onSearchDone,
   onSearchError,
-  startSearch,
+  profilesDelete,
+  profilesSave,
   searchEnrichMetadata,
+  startSearch,
   tauriRuntimeAvailable
 } from "../../shared/tauri-client";
-import { useSearchState, useSearchRefs, useThemeState, usePersistence, useFilesystemTree, useFilterState, useSettingsState, useLayoutState, useIndex, useRoots, useActions } from "../hooks";
+import { useSearchState, useSearchRefs, useThemeState, usePersistence, useFilesystemTree, useFilterState, useSettingsState, useLayoutState, useIndex, useRoots, useToast, useUIState } from "../hooks";
 import { useRoots as useRootsState } from "../hooks/useRoots";
 import { buildSearchRequest, getDateValidationErrors } from "../search-request";
-import { sortResultsForMode, filterPlainResults, sameSearchContextWithoutQuery, computeAdaptiveDebounce, renderSearchErrorStatus, mergeMetadataIntoResults, ROW_HEIGHT, RESPONSIVE_BREAKPOINT } from "../utils/search-utils";
-import type { ContextMenuState, DisplayMode, FilterChip, RootItem } from "../types";
-import type { ToastItem } from "../../widgets/ToastHost";
+import {
+  sortResultsForMode,
+  filterPlainResults,
+  sameSearchContextWithoutQuery,
+  computeAdaptiveDebounce,
+  renderSearchErrorStatus,
+  mergeMetadataIntoResults,
+  DEFAULT_ROOT_PATH,
+  ROW_HEIGHT,
+  RESPONSIVE_BREAKPOINT
+} from "../utils/search-utils";
+import type { FilterChip } from "../types";
 
 type IncrementalSearchContext = {
   request: SearchRequest;
@@ -38,6 +52,8 @@ export function useApp() {
   const tr = useCallback((key: string, defaultValue: string, values?: Record<string, unknown>) =>
     t(key, { defaultValue, ...(values ?? {}) }), [t]);
   
+  const language = i18n.resolvedLanguage === "en" ? "en" : "ru";
+  
   const searchState = useSearchState(tr("app.status.ready", "Готово"));
   const searchRefs = useSearchRefs();
   const themeState = useThemeState(tr);
@@ -47,18 +63,12 @@ export function useApp() {
   const settingsState = useSettingsState();
   const layoutState = useLayoutState();
   const roots = useRootsState();
+  const { toasts, pushToast, closeToast } = useToast();
+  const uiState = useUIState();
 
   const [query, setQuery] = useState("");
-  const [historyOpen, setHistoryOpen] = useState(false);
-  const [newProfileName, setNewProfileName] = useState("");
-  const [listHeight, setListHeight] = useState(460);
-  const [scrollTop, setScrollTop] = useState(0);
-  const [contextMenu, setContextMenu] = useState<ContextMenuState>(null);
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
-  const [newThemeName, setNewThemeName] = useState("");
-  const [newThemeBg, setNewThemeBg] = useState("#1b1f2a");
-  const [newThemeText, setNewThemeText] = useState("#e7edf8");
-  const [newThemeAccent, setNewThemeAccent] = useState("#4a8cff");
+  const [nowMs, setNowMs] = useState<number>(Date.now());
+  const [confirmClearHistory, setConfirmClearHistory] = useState(false);
   
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const resultPaneRef = useRef<HTMLDivElement | null>(null);
@@ -87,21 +97,6 @@ export function useApp() {
     tr
   );
 
-  const pushToast = useCallback((text: string, kind: ToastItem["kind"] = "info") => {
-    const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-    setToasts((prev) => prev.concat({ id, text, kind }));
-    const dismissTime = Math.max(2000, Math.min(5000, text.length * 50));
-    window.setTimeout(() => {
-      setToasts((prev) => prev.filter((item) => item.id !== id));
-    }, dismissTime);
-  }, []);
-
-  const closeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((item) => item.id !== id));
-  }, []);
-
-  const actions = useActions(pushToast, tr);
-
   const limit = useMemo(() => {
     if (filterState.limitMode === "100") return 100;
     if (filterState.limitMode === "500") return 500;
@@ -110,7 +105,7 @@ export function useApp() {
     return Math.max(1, filterState.customLimit);
   }, [filterState.limitMode, filterState.customLimit]);
 
-  const buildCurrentRequest = useCallback(() => {
+  const buildCurrentRequest = useCallback((): SearchRequest => {
     return buildSearchRequest({
       query,
       enabledRoots: roots.enabledRoots,
@@ -257,8 +252,8 @@ export function useApp() {
   }, [filterState, limit, tr]);
 
   const visibleRows = useMemo(() => {
-    const safeHeight = Math.max(200, listHeight);
-    const rawStart = Math.max(0, Math.floor(scrollTop / ROW_HEIGHT));
+    const safeHeight = Math.max(200, uiState.listHeight);
+    const rawStart = Math.max(0, Math.floor(uiState.scrollTop / ROW_HEIGHT));
     const maxStart = Math.max(0, searchState.results.length - 1);
     const startIndex = Math.min(rawStart, maxStart);
     const count = Math.ceil(safeHeight / ROW_HEIGHT) + 8;
@@ -270,10 +265,754 @@ export function useApp() {
       bottomSpacer: Math.max(0, (searchState.results.length - endIndex) * ROW_HEIGHT),
       items: searchState.results.slice(startIndex, endIndex)
     };
-  }, [listHeight, searchState.results, scrollTop]);
+  }, [uiState.listHeight, searchState.results, uiState.scrollTop]);
+
+  const scheduleResultsFlush = useCallback(() => {
+    if (searchRefs.batchFlushFrameRef.current !== null) return;
+    searchRefs.batchFlushFrameRef.current = window.requestAnimationFrame(() => {
+      searchRefs.batchFlushFrameRef.current = null;
+      if (searchRefs.bufferedBatchRef.current.length === 0) return;
+      const nextChunk = searchRefs.bufferedBatchRef.current;
+      searchRefs.bufferedBatchRef.current = [];
+      const checkedDelta = searchRefs.pendingCheckedDeltaRef.current;
+      searchRefs.pendingCheckedDeltaRef.current = 0;
+      if (checkedDelta > 0) {
+        searchState.setCheckedPaths((prev) => prev + checkedDelta);
+      }
+      searchState.setResults((prev) => {
+        const next = sortResultsForMode(prev.concat(nextChunk), searchRefs.sortModeRef.current);
+        if (incrementalSearchRef.current) {
+          incrementalSearchRef.current = { ...incrementalSearchRef.current, results: next };
+        }
+        return next;
+      });
+    });
+  }, [searchRefs, searchState]);
+
+  const tryIncrementalPlainSearch = useCallback((nextRequest: SearchRequest): boolean => {
+    if (searchState.isSearching) return false;
+    const previous = incrementalSearchRef.current;
+    if (!previous) return false;
+    if (!sameSearchContextWithoutQuery(previous.request, nextRequest)) return false;
+    if (previous.request.options.match_mode !== "Plain" || nextRequest.options.match_mode !== "Plain") return false;
+    if (previous.request.options.strict || nextRequest.options.strict) return false;
+
+    const previousQuery = previous.request.query.trim();
+    const nextQuery = nextRequest.query.trim();
+    if (!previousQuery || !nextQuery || nextQuery.length <= previousQuery.length) return false;
+
+    const normalize = (value: string) =>
+      nextRequest.options.ignore_case ? value.toLocaleLowerCase() : value;
+    if (!normalize(nextQuery).startsWith(normalize(previousQuery))) return false;
+
+    const filtered = sortResultsForMode(
+      filterPlainResults(previous.results, nextQuery, nextRequest.options.ignore_case),
+      searchRefs.sortModeRef.current
+    );
+    incrementalSearchRef.current = { request: nextRequest, results: filtered };
+    searchState.setResults(filtered);
+    searchState.setSelectedPath((prev) => (prev && filtered.some((item) => item.full_path === prev) ? prev : null));
+    uiState.setScrollTop(0);
+    searchState.setStatus(tr("app.status.ready", "Готово"));
+    searchState.setIsSearching(false);
+    return true;
+  }, [searchState, searchRefs, uiState, tr]);
+
+  const handleSearch = useCallback(async (preparedRequest?: SearchRequest): Promise<void> => {
+    if (!tauriRuntimeAvailable) {
+      searchState.setStatus(tr("app.status.tauriUnavailable", "Tauri runtime не обнаружен"));
+      return;
+    }
+
+    if (searchState.isSearching) {
+      return;
+    }
+
+    if (!preparedRequest) {
+      const dateErrors = validateCurrentDateFilters();
+      if (dateErrors.length > 0) {
+        const fieldNames: Record<string, string> = {
+          modifiedAfter: tr("app.filters.modified.legend", "Дата изменения"),
+          modifiedBefore: tr("app.filters.modified.legend", "Дата изменения"),
+          createdAfter: tr("app.filters.created.legend", "Дата создания"),
+          createdBefore: tr("app.filters.created.legend", "Дата создания"),
+        };
+        const fieldList = [...new Set(dateErrors.map((e) => fieldNames[e.field]))].join(", ");
+        pushToast(
+          tr("app.toast.invalidDateFilter", "Некорректная дата в фильтре: {{fields}}", { fields: fieldList }),
+          "error"
+        );
+        return;
+      }
+    }
+
+    const request = preparedRequest ?? buildCurrentRequest();
+    searchState.setResults([]);
+    uiState.setScrollTop(0);
+    searchState.setSelectedPath(null);
+    searchState.setCheckedPaths(0);
+    searchState.setLimitReached(false);
+    searchState.setStatus(tr("app.status.scanning", "Сканирование..."));
+    searchState.setIsSearching(true);
+    searchState.setSearchStartedAt(Date.now());
+    searchState.setElapsedMs(null);
+    searchState.setTtfrMs(null);
+    searchState.setSearchErrorCount(0);
+    incrementalSearchRef.current = { request, results: [] };
+    searchRefs.bufferedBatchRef.current = [];
+    searchRefs.pendingCheckedDeltaRef.current = 0;
+    if (searchRefs.batchFlushFrameRef.current !== null) {
+      window.cancelAnimationFrame(searchRefs.batchFlushFrameRef.current);
+      searchRefs.batchFlushFrameRef.current = null;
+    }
+    searchRefs.metadataLoadedPathsRef.current.clear();
+    searchRefs.metadataInFlightPathsRef.current.clear();
+
+    try {
+      const response = await startSearch(request);
+      searchState.setActiveSearchId(response.search_id);
+    } catch (error) {
+      searchState.setIsSearching(false);
+      searchState.setSearchStartedAt(null);
+      searchState.setElapsedMs(null);
+      searchState.setTtfrMs(null);
+      searchState.setStatus(tr("app.status.startError", "Ошибка запуска: {{error}}", { error: String(error) }));
+      pushToast(tr("app.toast.searchStartFailed", "Не удалось запустить поиск"), "error");
+    }
+  }, [searchState, searchRefs, uiState, validateCurrentDateFilters, buildCurrentRequest, pushToast, tr]);
+
+  const handleCancel = useCallback(async (): Promise<void> => {
+    if (!tauriRuntimeAvailable) return;
+    try {
+      await cancelSearch();
+      searchState.setStatus(tr("app.status.stopping", "Остановка..."));
+    } catch {
+      searchState.setStatus(tr("app.status.stopError", "Не удалось остановить поиск"));
+    }
+  }, [searchState, tr]);
+
+  const handleOpenPath = useCallback(async (path: string): Promise<void> => {
+    if (!tauriRuntimeAvailable) return;
+    try {
+      await actionOpenPath(path);
+      await persistence.refreshPersistenceData();
+    } catch {
+      pushToast(tr("app.toast.openFailed", "Не удалось открыть элемент"), "error");
+    }
+  }, [persistence, pushToast, tr]);
+
+  const handleOpenParent = useCallback(async (path: string): Promise<void> => {
+    if (!tauriRuntimeAvailable) return;
+    try {
+      await actionOpenParent(path);
+      await persistence.refreshPersistenceData();
+    } catch {
+      pushToast(tr("app.toast.openParentFailed", "Не удалось открыть родительскую папку"), "error");
+    }
+  }, [persistence, pushToast, tr]);
+
+  const handleRevealPath = useCallback(async (path: string): Promise<void> => {
+    if (!tauriRuntimeAvailable) return;
+    try {
+      await actionRevealPath(path);
+    } catch {
+      pushToast(tr("app.toast.revealFailed", "Не удалось показать в проводнике"), "error");
+    }
+  }, [pushToast, tr]);
+
+  const handleCopyPath = useCallback(async (path: string): Promise<void> => {
+    if (!tauriRuntimeAvailable) return;
+    try {
+      await actionCopyToClipboard(path);
+      pushToast(tr("app.toast.pathCopied", "Путь скопирован"), "success");
+    } catch {
+      pushToast(tr("app.toast.pathCopyFailed", "Не удалось скопировать путь"), "error");
+    }
+  }, [pushToast, tr]);
+
+  const handleCopyName = useCallback(async (name: string): Promise<void> => {
+    if (!tauriRuntimeAvailable) return;
+    try {
+      await actionCopyToClipboard(name);
+      pushToast(tr("app.toast.nameCopied", "Имя скопировано"), "success");
+    } catch {
+      pushToast(tr("app.toast.nameCopyFailed", "Не удалось скопировать имя"), "error");
+    }
+  }, [pushToast, tr]);
+
+  const handleAddFavorite = useCallback(async (path: string): Promise<void> => {
+    if (!tauriRuntimeAvailable) return;
+    try {
+      await favoritesAdd(path);
+      persistence.handleAddFavorite(path);
+      pushToast(tr("app.toast.favoriteAdded", "Добавлено в избранное"), "success");
+    } catch {
+      pushToast(tr("app.toast.favoriteAddFailed", "Не удалось добавить в избранное"), "error");
+    }
+  }, [persistence, pushToast, tr]);
+
+  const handleRemoveFavorite = useCallback(async (path: string): Promise<void> => {
+    if (!tauriRuntimeAvailable) return;
+    try {
+      await favoritesRemove(path);
+      persistence.handleRemoveFavorite(path);
+    } catch {
+      pushToast(tr("app.toast.favoriteRemoveFailed", "Не удалось удалить из избранного"), "error");
+    }
+  }, [persistence, pushToast, tr]);
+
+  const handleSaveProfile = useCallback(async (): Promise<void> => {
+    const name = uiState.newProfileName.trim();
+    if (!name || !tauriRuntimeAvailable) return;
+    try {
+      await profilesSave({
+        id: "",
+        name,
+        pinned: false,
+        request: buildCurrentRequest()
+      });
+      uiState.setNewProfileName("");
+      await persistence.refreshPersistenceData();
+      pushToast(tr("app.toast.profileSaved", "Профиль сохранен"), "success");
+    } catch {
+      pushToast(tr("app.toast.profileSaveFailed", "Не удалось сохранить профиль"), "error");
+    }
+  }, [uiState, buildCurrentRequest, persistence, pushToast, tr]);
+
+  const handleDeleteProfile = useCallback(async (profileId: string): Promise<void> => {
+    if (!tauriRuntimeAvailable) return;
+    try {
+      await profilesDelete(profileId);
+      persistence.handleDeleteProfile(profileId);
+    } catch {
+      pushToast(tr("app.toast.profileDeleteFailed", "Не удалось удалить профиль"), "error");
+    }
+  }, [persistence, pushToast, tr]);
+
+  const requestClearHistory = useCallback(() => {
+    setConfirmClearHistory(true);
+  }, []);
+
+  const handleClearHistory = useCallback(async (): Promise<void> => {
+    setConfirmClearHistory(false);
+    if (!tauriRuntimeAvailable) return;
+    try {
+      await persistence.handleClearHistory();
+      pushToast(tr("app.toast.historyCleared", "История очищена"), "success");
+    } catch {
+      pushToast(tr("app.toast.historyClearFailed", "Не удалось очистить историю"), "error");
+    }
+  }, [persistence, pushToast, tr]);
+
+  const applyProfile = useCallback((profile: SearchProfile): void => {
+    const req = profile.request;
+    setQuery(req.query);
+    const profileRoots = req.roots.length > 0 ? req.roots.map((path) => ({ path, enabled: true as const })) : [{ path: DEFAULT_ROOT_PATH, enabled: true as const }];
+    roots.setRoots(profileRoots);
+    roots.setPrimaryRoot(profileRoots[0]?.path ?? DEFAULT_ROOT_PATH);
+    filterState.setExtensionsRaw(req.extensions.join(","));
+    filterState.setExcludePathsRaw((req.exclude_paths ?? []).join(","));
+    filterState.setStrict(req.options.strict);
+    filterState.setIgnoreCase(req.options.ignore_case);
+    filterState.setIncludeHidden(req.options.include_hidden);
+    filterState.setEntryKind(req.options.entry_kind);
+    filterState.setMatchMode(req.options.match_mode);
+    filterState.setSortMode(req.options.sort_mode);
+    filterState.setSearchBackend(req.options.search_backend ?? "Scan");
+    filterState.setMaxDepthUnlimited(req.options.max_depth === null);
+    filterState.setMaxDepth(req.options.max_depth ?? 3);
+    if (req.options.limit === null) {
+      filterState.setLimitMode("none");
+    } else if (req.options.limit === 100) {
+      filterState.setLimitMode("100");
+    } else if (req.options.limit === 500) {
+      filterState.setLimitMode("500");
+    } else if (req.options.limit === 1000) {
+      filterState.setLimitMode("1000");
+    } else {
+      filterState.setLimitMode("custom");
+      filterState.setCustomLimit(req.options.limit);
+    }
+  }, [roots, filterState]);
+
+  const upsertRoot = useCallback((path: string): void => {
+    const normalized = path.trim();
+    if (!normalized) return;
+    if (roots.roots.some((root) => root.path === normalized)) return;
+    roots.setRoots((previous) => previous.concat({ path: normalized, enabled: true }));
+  }, [roots]);
+
+  const handlePickRootPath = useCallback(async (): Promise<void> => {
+    if (!tauriRuntimeAvailable) {
+      searchState.setStatus(tr("app.status.tauriUnavailable", "Tauri runtime не обнаружен"));
+      return;
+    }
+    try {
+      const selected = await fsPickFolder();
+      if (!selected) return;
+      upsertRoot(selected);
+      roots.setPrimaryRoot(selected);
+    } catch {
+      pushToast(tr("app.toast.pickFolderFailed", "Не удалось выбрать папку"), "error");
+    }
+  }, [searchState, roots, upsertRoot, pushToast, tr]);
+
+  const handleRemoveRoot = useCallback((path: string): void => {
+    roots.setRoots((previous) => {
+      const next = previous.filter((item) => item.path !== path);
+      if (next.length === 0) {
+        roots.setPrimaryRoot(DEFAULT_ROOT_PATH);
+        return [{ path: DEFAULT_ROOT_PATH, enabled: true }];
+      }
+      if (!next.some((item) => item.path === roots.primaryRoot)) {
+        roots.setPrimaryRoot(next[0]?.path ?? DEFAULT_ROOT_PATH);
+      }
+      return next;
+    });
+  }, [roots]);
+
+  const handleCancelRebuild = useCallback(async (): Promise<void> => {
+    if (!tauriRuntimeAvailable) return;
+    try {
+      await indexRebuildCancel();
+      pushToast(tr("app.index.rebuildCancelled", "Перестроение отменено"), "info");
+    } catch {
+      pushToast(tr("app.index.cancelFailed", "Не удалось отменить"), "error");
+    }
+  }, [pushToast, tr]);
+
+  const commandActions = useMemo(() => [
+    { id: "cmd-new", label: tr("app.commands.newSearch", "> Новый поиск"), run: () => void handleSearch() },
+    { id: "cmd-rebuild-index", label: tr("app.commands.rebuildIndex", "> Перестроить индекс"), run: () => void index.handleRebuildIndex(indexRoots) },
+    { id: "cmd-clear-history", label: tr("app.commands.clearHistory", "> Очистить историю"), run: requestClearHistory },
+    { id: "cmd-theme", label: tr("app.commands.toggleTheme", "> Переключить тему"), run: () => themeState.setThemeId((prev) => (prev === "dark" ? "light" : "dark")) },
+    { id: "cmd-focus", label: tr("app.commands.focusSearch", "/ Фокус в строку поиска"), run: () => searchInputRef.current?.focus() },
+    { id: "cmd-help", label: tr("app.commands.help", "? Горячие клавиши"), run: () => pushToast(tr("app.messages.hotkeys", "⌘K, ⌘F, Esc, F5, ↑/↓, Enter"), "info") },
+    ...persistence.profiles.map((profile) => ({
+      id: `profile-${profile.id}`,
+      label: `# ${profile.name}`,
+      run: () => applyProfile(profile)
+    }))
+  ], [handleSearch, index, indexRoots, requestClearHistory, themeState, pushToast, tr, persistence.profiles, applyProfile]);
+
+  useEffect(() => {
+    searchInputRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    searchRefs.activeSearchIdRef.current = searchState.activeSearchId;
+  }, [searchState.activeSearchId, searchRefs]);
+
+  useEffect(() => {
+    if (!searchState.isSearching) return;
+    const timer = window.setInterval(() => {
+      setNowMs(Date.now());
+    }, 500);
+    return () => window.clearInterval(timer);
+  }, [searchState.isSearching]);
+
+  useEffect(() => {
+    searchRefs.searchStartedAtRef.current = searchState.searchStartedAt;
+  }, [searchState.searchStartedAt, searchRefs]);
+
+  useEffect(() => {
+    searchRefs.sortModeRef.current = filterState.sortMode;
+    searchState.setResults((prev) => {
+      const next = sortResultsForMode(prev, filterState.sortMode);
+      if (incrementalSearchRef.current) {
+        incrementalSearchRef.current = { ...incrementalSearchRef.current, results: next };
+      }
+      return next;
+    });
+  }, [filterState.sortMode, searchState, searchRefs]);
+
+  useEffect(() => {
+    if (!tauriRuntimeAvailable) return;
+
+    const unlisten: Array<() => void> = [];
+    let mounted = true;
+    let ttfrSet = false;
+
+    const registerListener = async <T,>(registration: Promise<() => void>) => {
+      try {
+        const handler = await registration;
+        if (mounted) {
+          unlisten.push(handler);
+        } else {
+          handler();
+        }
+      } catch (error) {
+        console.error("Failed to register event listener:", error);
+      }
+    };
+
+    registerListener(onSearchBatch((payload) => {
+      if (searchRefs.activeSearchIdRef.current === null) {
+        searchRefs.activeSearchIdRef.current = payload.search_id;
+        searchState.setActiveSearchId(payload.search_id);
+      }
+      if (payload.search_id !== searchRefs.activeSearchIdRef.current) {
+        return;
+      }
+      if (searchRefs.searchStartedAtRef.current !== null && !ttfrSet) {
+        searchState.setTtfrMs(Date.now() - searchRefs.searchStartedAtRef.current);
+        ttfrSet = true;
+      }
+      searchRefs.bufferedBatchRef.current.push(...payload.results);
+      searchRefs.pendingCheckedDeltaRef.current += payload.results.length;
+      scheduleResultsFlush();
+    }));
+
+    registerListener(onSearchDone((payload) => {
+      if (searchRefs.activeSearchIdRef.current === null) {
+        searchRefs.activeSearchIdRef.current = payload.search_id;
+        searchState.setActiveSearchId(payload.search_id);
+      }
+      if (payload.search_id !== searchRefs.activeSearchIdRef.current) {
+        return;
+      }
+      searchState.setStatus(tr("app.status.ready", "Готово"));
+      searchState.setLimitReached(payload.limit_reached);
+      searchState.setIsSearching(false);
+      if (searchRefs.batchFlushFrameRef.current !== null) {
+        window.cancelAnimationFrame(searchRefs.batchFlushFrameRef.current);
+        searchRefs.batchFlushFrameRef.current = null;
+      }
+      if (searchRefs.pendingCheckedDeltaRef.current > 0) {
+        const checkedDelta = searchRefs.pendingCheckedDeltaRef.current;
+        searchRefs.pendingCheckedDeltaRef.current = 0;
+        searchState.setCheckedPaths((prev) => prev + checkedDelta);
+      }
+      if (searchRefs.bufferedBatchRef.current.length > 0) {
+        const remaining = searchRefs.bufferedBatchRef.current;
+        searchRefs.bufferedBatchRef.current = [];
+        searchState.setResults((prev) => {
+          const next = sortResultsForMode(prev.concat(remaining), searchRefs.sortModeRef.current);
+          if (incrementalSearchRef.current) {
+            incrementalSearchRef.current = { ...incrementalSearchRef.current, results: next };
+          }
+          return next;
+        });
+      }
+      searchState.setActiveSearchId(null);
+      if (searchRefs.searchStartedAtRef.current !== null) {
+        searchState.setElapsedMs(Date.now() - searchRefs.searchStartedAtRef.current);
+      }
+      void persistence.refreshPersistenceData();
+    }));
+
+    registerListener(onSearchCancelled((payload) => {
+      if (searchRefs.activeSearchIdRef.current === null) {
+        searchRefs.activeSearchIdRef.current = payload.search_id;
+        searchState.setActiveSearchId(payload.search_id);
+      }
+      if (payload.search_id !== searchRefs.activeSearchIdRef.current) {
+        return;
+      }
+      searchState.setStatus(tr("app.status.stopped", "Остановлено"));
+      searchState.setIsSearching(false);
+      if (searchRefs.pendingCheckedDeltaRef.current > 0) {
+        const checkedDelta = searchRefs.pendingCheckedDeltaRef.current;
+        searchRefs.pendingCheckedDeltaRef.current = 0;
+        searchState.setCheckedPaths((prev) => prev + checkedDelta);
+      }
+      searchRefs.bufferedBatchRef.current = [];
+      if (searchRefs.batchFlushFrameRef.current !== null) {
+        window.cancelAnimationFrame(searchRefs.batchFlushFrameRef.current);
+        searchRefs.batchFlushFrameRef.current = null;
+      }
+      searchState.setActiveSearchId(null);
+      if (searchRefs.searchStartedAtRef.current !== null) {
+        searchState.setElapsedMs(Date.now() - searchRefs.searchStartedAtRef.current);
+      }
+    }));
+
+    registerListener(onSearchError((payload) => {
+      if (searchRefs.activeSearchIdRef.current === null) {
+        searchRefs.activeSearchIdRef.current = payload.search_id;
+        searchState.setActiveSearchId(payload.search_id);
+      }
+      if (payload.search_id !== searchRefs.activeSearchIdRef.current) {
+        return;
+      }
+      searchState.setStatus(renderSearchErrorStatus(payload.message, tr));
+      searchState.setIsSearching(false);
+      searchState.setSearchErrorCount((prev) => prev + 1);
+      if (searchRefs.pendingCheckedDeltaRef.current > 0) {
+        const checkedDelta = searchRefs.pendingCheckedDeltaRef.current;
+        searchRefs.pendingCheckedDeltaRef.current = 0;
+        searchState.setCheckedPaths((prev) => prev + checkedDelta);
+      }
+      searchRefs.bufferedBatchRef.current = [];
+      if (searchRefs.batchFlushFrameRef.current !== null) {
+        window.cancelAnimationFrame(searchRefs.batchFlushFrameRef.current);
+        searchRefs.batchFlushFrameRef.current = null;
+      }
+      searchState.setActiveSearchId(null);
+      if (searchRefs.searchStartedAtRef.current !== null) {
+        searchState.setElapsedMs(Date.now() - searchRefs.searchStartedAtRef.current);
+      }
+    }));
+
+    return () => {
+      mounted = false;
+      unlisten.forEach((fn) => fn());
+    };
+  }, [tr, scheduleResultsFlush, persistence, searchState, searchRefs]);
+
+  useEffect(() => {
+    if (!settingsState.liveSearch) return;
+    const request = buildCurrentRequest();
+    if (!request.query.trim()) return;
+    const adaptiveDebounce = computeAdaptiveDebounce(request, settingsState.debounceMs);
+    const timer = window.setTimeout(() => {
+      if (tryIncrementalPlainSearch(request)) return;
+      void handleSearch(request);
+    }, adaptiveDebounce);
+    return () => window.clearTimeout(timer);
+  }, [settingsState.debounceMs, settingsState.liveSearch, query, filterState.searchBackend, buildCurrentRequest, handleSearch, tryIncrementalPlainSearch]);
+
+  useEffect(() => {
+    if (!settingsState.liveSearch) return;
+    const request = buildCurrentRequest();
+    if (!request.query.trim()) return;
+    const timer = window.setTimeout(() => {
+      void handleSearch(request);
+    }, settingsState.debounceMs);
+    return () => window.clearTimeout(timer);
+  }, [
+    filterState.createdAfter,
+    filterState.createdBefore,
+    filterState.createdFilterEnabled,
+    filterState.entryKind,
+    filterState.extensionsRaw,
+    filterState.excludePathsRaw,
+    filterState.ignoreCase,
+    filterState.includeHidden,
+    limit,
+    filterState.matchMode,
+    filterState.maxDepth,
+    filterState.maxDepthUnlimited,
+    filterState.modifiedAfter,
+    filterState.modifiedBefore,
+    filterState.modifiedFilterEnabled,
+    settingsState.regexEnabled,
+    roots.roots,
+    filterState.sizeComparison,
+    filterState.sizeFilterEnabled,
+    filterState.sizeUnit,
+    filterState.sizeValue,
+    filterState.strict,
+    settingsState.debounceMs,
+    settingsState.liveSearch,
+    buildCurrentRequest,
+    handleSearch
+  ]);
+
+  useEffect(() => {
+    if (!tauriRuntimeAvailable || searchState.isSearching || layoutState.displayMode === "cards" || visibleRows.items.length === 0) return;
+
+    const targetPaths = visibleRows.items
+      .map((item) => item.full_path)
+      .filter(
+        (path) =>
+          !searchRefs.metadataLoadedPathsRef.current.has(path) &&
+          !searchRefs.metadataInFlightPathsRef.current.has(path)
+      )
+      .slice(0, 64);
+    if (targetPaths.length === 0) return;
+
+    const timer = window.setTimeout(() => {
+      for (const path of targetPaths) {
+        searchRefs.metadataInFlightPathsRef.current.add(path);
+      }
+
+      void searchEnrichMetadata(targetPaths)
+        .then((patches) => {
+          for (const path of targetPaths) {
+            searchRefs.metadataLoadedPathsRef.current.add(path);
+          }
+          if (patches.length === 0) return;
+          searchState.setResults((prev) => {
+            const next = mergeMetadataIntoResults(prev, patches);
+            if (incrementalSearchRef.current) {
+              incrementalSearchRef.current = { ...incrementalSearchRef.current, results: next };
+            }
+            return next;
+          });
+        })
+        .catch(() => {})
+        .finally(() => {
+          for (const path of targetPaths) {
+            searchRefs.metadataInFlightPathsRef.current.delete(path);
+          }
+        });
+    }, 100);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [layoutState.displayMode, searchState.isSearching, visibleRows.items, searchState, searchRefs]);
+
+  useEffect(() => {
+    if (!resultPaneRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      const next = entries[0]?.contentRect.height;
+      if (typeof next === "number" && next > 0) {
+        uiState.setListHeight(next - 44);
+      }
+    });
+    observer.observe(resultPaneRef.current);
+    return () => observer.disconnect();
+  }, [uiState]);
+
+  useEffect(() => {
+    const onMouseMove = (event: MouseEvent) => {
+      const dragging = document.body.dataset.dragPanel;
+      if (!dragging) return;
+      document.body.style.cursor = "col-resize";
+      const viewportWidth = window.innerWidth;
+      if (dragging === "left") {
+        layoutState.setLeftWidth(Math.max(200, Math.min(460, event.clientX - 8)));
+      }
+      if (dragging === "right") {
+        layoutState.setRightWidth(Math.max(220, Math.min(500, viewportWidth - event.clientX - 8)));
+      }
+    };
+    const onMouseUp = () => {
+      delete document.body.dataset.dragPanel;
+      document.body.style.cursor = "";
+    };
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, [layoutState]);
+
+  useEffect(() => {
+    const onClick = () => uiState.setContextMenu(null);
+    window.addEventListener("click", onClick);
+    return () => window.removeEventListener("click", onClick);
+  }, [uiState]);
+
+  useEffect(
+    () => () => {
+      if (searchRefs.batchFlushFrameRef.current !== null) {
+        window.cancelAnimationFrame(searchRefs.batchFlushFrameRef.current);
+      }
+      searchRefs.pendingCheckedDeltaRef.current = 0;
+      searchRefs.bufferedBatchRef.current = [];
+    },
+    [searchRefs]
+  );
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+      const accel = event.ctrlKey || event.metaKey;
+
+      if (accel && key === "k") {
+        event.preventDefault();
+        layoutState.setPaletteOpen(true);
+        return;
+      }
+      if (accel && key === "f") {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        return;
+      }
+      if (key === "f5") {
+        event.preventDefault();
+        void handleSearch();
+        return;
+      }
+      if (accel && event.shiftKey && key === "r") {
+        event.preventDefault();
+        if (filterState.searchBackend === "Index" && indexRoots.length > 0 && !index.isRebuildingIndex) {
+          void index.handleRebuildIndex(indexRoots);
+        }
+        return;
+      }
+      if (key === "escape") {
+        layoutState.setPaletteOpen(false);
+        layoutState.setFiltersOpen(false);
+        uiState.setContextMenu(null);
+        return;
+      }
+      if (key === "arrowdown" || key === "arrowup") {
+        const target = event.target as HTMLElement | null;
+        const activeTag = target?.tagName.toLowerCase();
+        if (activeTag === "input" || activeTag === "textarea" || activeTag === "select") {
+          if (activeTag !== "select") {
+            const input = target as HTMLInputElement | HTMLTextAreaElement;
+            if (input.selectionStart !== input.selectionEnd) return;
+          }
+          return;
+        }
+        if (searchState.results.length === 0) return;
+        event.preventDefault();
+        const currentIndex = searchState.selectedPath ? searchState.results.findIndex((item) => item.full_path === searchState.selectedPath) : -1;
+        const delta = key === "arrowdown" ? 1 : -1;
+        const nextIndex = Math.max(0, Math.min(searchState.results.length - 1, currentIndex + delta));
+        const nextItem = searchState.results[nextIndex];
+        if (nextItem) {
+          searchState.setSelectedPath(nextItem.full_path);
+          const row = document.querySelector<HTMLTableRowElement>(`tr[data-path="${CSS.escape(nextItem.full_path)}"]`);
+          row?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        }
+        return;
+      }
+      if (key === "enter" && selectedResult) {
+        const activeTag = (event.target as HTMLElement | null)?.tagName.toLowerCase();
+        if (activeTag === "input" || activeTag === "textarea" || activeTag === "select") return;
+        event.preventDefault();
+        void handleOpenPath(selectedResult.full_path);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [indexRoots, index.isRebuildingIndex, searchState.results, searchState.selectedPath, selectedResult, filterState.searchBackend, handleSearch, handleOpenPath, layoutState, uiState]);
+
+  useEffect(() => {
+    if (window.innerWidth < RESPONSIVE_BREAKPOINT) {
+      layoutState.setLeftVisible(false);
+      layoutState.setRightVisible(false);
+    }
+  }, [layoutState]);
+
+  useEffect(() => {
+    if (!settingsState.regexEnabled && filterState.matchMode === "Regex") {
+      filterState.setMatchMode("Plain");
+    }
+  }, [filterState.matchMode, settingsState.regexEnabled, filterState]);
+
+  const statusText = useMemo(() => {
+    const effectiveElapsedMs =
+      searchState.elapsedMs !== null ? searchState.elapsedMs : searchState.isSearching && searchState.searchStartedAt !== null ? nowMs - searchState.searchStartedAt : null;
+    const elapsed =
+      effectiveElapsedMs === null
+        ? "-"
+        : tr("app.status.elapsedSeconds", "{{value}} сек", { value: (effectiveElapsedMs / 1000).toFixed(2) });
+    const throughput =
+      effectiveElapsedMs && effectiveElapsedMs > 0
+        ? `${(searchState.checkedPaths / Math.max(effectiveElapsedMs / 1000, 0.001)).toFixed(1)}/s`
+        : "-";
+    const ttfr =
+      searchState.ttfrMs === null
+        ? "-"
+        : tr("app.status.elapsedSeconds", "{{value}} сек", { value: (searchState.ttfrMs / 1000).toFixed(2) });
+    const warning = searchState.limitReached
+      ? tr("app.status.limitWarning", "Показано только {{count}} результатов", { count: searchState.results.length })
+      : "";
+    return { elapsed, warning, ttfr, throughput, errors: String(searchState.searchErrorCount) };
+  }, [searchState.checkedPaths, searchState.elapsedMs, searchState.isSearching, searchState.limitReached, nowMs, searchState.results.length, searchState.searchErrorCount, searchState.searchStartedAt, tr, searchState.ttfrMs]);
 
   return {
     tr,
+    language,
     searchState,
     searchRefs,
     themeState,
@@ -283,40 +1022,43 @@ export function useApp() {
     settingsState,
     layoutState,
     roots,
+    upsertRoot,
     index,
-    actions,
-    query,
-    setQuery,
-    historyOpen,
-    setHistoryOpen,
-    newProfileName,
-    setNewProfileName,
-    listHeight,
-    setListHeight,
-    scrollTop,
-    setScrollTop,
-    contextMenu,
-    setContextMenu,
+    indexRoots,
+    handleCancelRebuild,
     toasts,
     pushToast,
     closeToast,
-    newThemeName,
-    setNewThemeName,
-    newThemeBg,
-    setNewThemeBg,
-    newThemeText,
-    setNewThemeText,
-    newThemeAccent,
-    setNewThemeAccent,
+    uiState,
+    query,
+    setQuery,
+    handleSearch,
+    handleCancel,
+    handleOpenPath,
+    handleOpenParent,
+    handleRevealPath,
+    handleCopyPath,
+    handleCopyName,
+    handleAddFavorite,
+    handleRemoveFavorite,
+    handleSaveProfile,
+    handleDeleteProfile,
+    handleClearHistory,
+    handlePickRootPath,
+    handleRemoveRoot,
+    applyProfile,
+    requestClearHistory,
+    selectedResult,
+    chips,
+    visibleRows,
+    limit,
+    buildCurrentRequest,
+    statusText,
+    commandActions,
+    confirmClearHistory,
+    setConfirmClearHistory,
     searchInputRef,
     resultPaneRef,
     incrementalSearchRef,
-    indexRoots,
-    limit,
-    buildCurrentRequest,
-    validateCurrentDateFilters,
-    selectedResult,
-    chips,
-    visibleRows
   };
 }
