@@ -1,7 +1,9 @@
 use std::path::{Component, Path, PathBuf};
 
 pub fn is_safe_path(path: &str) -> bool {
-    let dangerous_chars = ['&', '|', ';', '$', '`', '\n', '\r', '\0'];
+    let dangerous_chars = [
+        '&', '|', ';', '$', '`', '\n', '\r', '\0', '(', ')', '<', '>', '!', '~', '#', '%', '^',
+    ];
     !path.chars().any(|c| dangerous_chars.contains(&c))
 }
 
@@ -83,6 +85,14 @@ mod tests {
         assert!(!is_safe_path("C:/path;rm"));
         assert!(!is_safe_path("C:/path$(id)"));
         assert!(!is_safe_path("C:/path`id`"));
+        assert!(!is_safe_path("C:/path(subshell)"));
+        assert!(!is_safe_path("C:/path<redirect"));
+        assert!(!is_safe_path("C:/path>redirect"));
+        assert!(!is_safe_path("C:/path!history"));
+        assert!(!is_safe_path("C:/path~home"));
+        assert!(!is_safe_path("C:/path#comment"));
+        assert!(!is_safe_path("C:/path%VAR%"));
+        assert!(!is_safe_path("C:/path^escape"));
     }
 
     #[test]
