@@ -254,27 +254,31 @@ export function ResultsWorkspace({
                 <th
                   className="border-b border-[var(--border)] px-2 py-1.5 font-medium whitespace-nowrap cursor-pointer hover:text-[var(--text)] select-none"
                   onClick={() => setSortMode(sortMode === "Name" ? "Name" : "Name")}
+                  title={sortMode === "Name" ? t("app.sort.ascending", "По возрастанию") : ""}
                 >
-                  {t("app.labels.colName", "Имя")} {sortMode === "Name" ? "▲" : ""}
+                  {t("app.labels.colName", "Имя")} {sortMode === "Name" ? "▼" : ""}
                 </th>
                 <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium whitespace-nowrap">{t("app.labels.colPath", "Полный путь")}</th>
                 <th
                   className="border-b border-[var(--border)] px-2 py-1.5 font-medium whitespace-nowrap cursor-pointer hover:text-[var(--text)] select-none"
                   onClick={() => setSortMode(sortMode === "Size" ? "Size" : "Size")}
+                  title={sortMode === "Size" ? t("app.sort.descending", "По убыванию") : ""}
                 >
                   {t("app.labels.colSize", "Размер")} {sortMode === "Size" ? "▼" : ""}
                 </th>
                 <th
                   className="border-b border-[var(--border)] px-2 py-1.5 font-medium whitespace-nowrap cursor-pointer hover:text-[var(--text)] select-none"
                   onClick={() => setSortMode(sortMode === "Modified" ? "Modified" : "Modified")}
+                  title={sortMode === "Modified" ? t("app.sort.descending", "По убыванию") : ""}
                 >
                   {t("app.labels.colModified", "Дата изменения")} {sortMode === "Modified" ? "▼" : ""}
                 </th>
                 <th
                   className="border-b border-[var(--border)] px-2 py-1.5 font-medium whitespace-nowrap cursor-pointer hover:text-[var(--text)] select-none"
                   onClick={() => setSortMode(sortMode === "Type" ? "Type" : "Type")}
+                  title={sortMode === "Type" ? t("app.sort.ascending", "По возрастанию") : ""}
                 >
-                  {t("app.labels.colType", "Тип")} {sortMode === "Type" ? "▲" : ""}
+                  {t("app.labels.colType", "Тип")} {sortMode === "Type" ? "▼" : ""}
                 </th>
               </tr>
             </thead>
