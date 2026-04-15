@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
+use std::time::{Duration, Instant};
 use tauri::State;
 
 /// Response returned after index rebuild completes.
@@ -95,14 +96,53 @@ pub fn index_rebuild(
     })
 }
 
+/// Response returned by index_rebuild_cancel with completion status.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IndexRebuildCancelResponse {
+    pub cancelled: bool,
+    pub timed_out: bool,
+}
+
 /// Cancels an in-progress index rebuild operation.
+///
+/// Waits up to 2 seconds for the rebuild to complete after signalling cancellation.
+/// Returns `cancelled: true` if rebuild was running, `timed_out: true` if it didn't
+/// complete within the timeout.
 #[tauri::command]
-pub fn index_rebuild_cancel(state: State<'_, AppState>) -> Result<(), String> {
-    let cancel_slot = crate::lock_mutex!(state.index_rebuild_cancel, "index_rebuild_cancel");
-    if let Some(cancel) = cancel_slot.as_ref() {
-        cancel.store(true, Ordering::Release);
+pub fn index_rebuild_cancel(
+    state: State<'_, AppState>,
+) -> Result<IndexRebuildCancelResponse, String> {
+    let was_running = state.index_rebuild_in_progress.load(Ordering::Acquire);
+
+    {
+        let cancel_slot = crate::lock_mutex!(state.index_rebuild_cancel, "index_rebuild_cancel");
+        if let Some(cancel) = cancel_slot.as_ref() {
+            cancel.store(true, Ordering::Release);
+        }
     }
-    Ok(())
+
+    if !was_running {
+        return Ok(IndexRebuildCancelResponse {
+            cancelled: false,
+            timed_out: false,
+        });
+    }
+
+    let deadline = Instant::now() + Duration::from_secs(2);
+    while Instant::now() < deadline {
+        if !state.index_rebuild_in_progress.load(Ordering::Acquire) {
+            return Ok(IndexRebuildCancelResponse {
+                cancelled: true,
+                timed_out: false,
+            });
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+
+    Ok(IndexRebuildCancelResponse {
+        cancelled: true,
+        timed_out: true,
+    })
 }
 
 /// Returns the current index status including entry count and rebuild state.

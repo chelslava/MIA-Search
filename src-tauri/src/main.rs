@@ -9,6 +9,7 @@ use commands::{actions, favorites, history, index, profiles, search, settings};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicUsize};
 use std::sync::Arc;
+use std::thread::JoinHandle;
 
 use storage::{
   favorites_store::FavoritesStore,
@@ -40,6 +41,7 @@ pub struct AppState {
   pub index_rebuild_cancel: Arc<Mutex<Option<Arc<AtomicBool>>>>,
   pub index_rebuild_entries: Arc<AtomicUsize>,
   pub shutting_down: Arc<AtomicBool>,
+  pub search_thread_handle: Arc<Mutex<Option<JoinHandle<()>>>>,
 }
 
 impl AppState {
@@ -55,6 +57,7 @@ impl AppState {
       index_rebuild_cancel: Arc::new(Mutex::new(None)),
       index_rebuild_entries: Arc::new(AtomicUsize::new(0)),
       shutting_down: Arc::new(AtomicBool::new(false)),
+      search_thread_handle: Arc::new(Mutex::new(None)),
     }
   }
 
@@ -68,6 +71,7 @@ fn main() {
   let shutdown_flag = app_state.shutting_down.clone();
   let search_session = app_state.search_session.clone();
   let rebuild_cancel = app_state.index_rebuild_cancel.clone();
+  let search_thread_handle = app_state.search_thread_handle.clone();
   tauri::Builder::default()
     .manage(app_state)
     .on_window_event(move |_window, event| {
@@ -80,6 +84,12 @@ fn main() {
         if let Ok(mut rebuild_cancel) = rebuild_cancel.lock() {
           if let Some(flag) = rebuild_cancel.take() {
             flag.store(true, std::sync::atomic::Ordering::Release);
+          }
+        }
+        if let Ok(mut handle_guard) = search_thread_handle.lock() {
+          if let Some(handle) = handle_guard.take() {
+            let _ = handle.join();
+            log::info!("Search thread joined");
           }
         }
         std::thread::sleep(std::time::Duration::from_millis(100));

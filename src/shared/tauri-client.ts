@@ -3,6 +3,7 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   FsTreeNode,
   HistorySnapshot,
+  IndexRebuildCancelResponse,
   IndexRebuildResponse,
   IndexStatusResponse,
   SearchMetadataPatch,
@@ -118,8 +119,8 @@ export async function indexRebuild(roots: string[]): Promise<IndexRebuildRespons
   return invoke<IndexRebuildResponse>("index_rebuild", { roots });
 }
 
-export async function indexRebuildCancel(): Promise<void> {
-  await invoke("index_rebuild_cancel");
+export async function indexRebuildCancel(): Promise<IndexRebuildCancelResponse> {
+  return invoke<IndexRebuildCancelResponse>("index_rebuild_cancel");
 }
 
 export async function searchEnrichMetadata(paths: string[]): Promise<SearchMetadataPatch[]> {

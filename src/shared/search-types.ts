@@ -139,3 +139,8 @@ export interface IndexRebuildResponse {
   memory_mb: number;
   truncated: boolean;
 }
+
+export interface IndexRebuildCancelResponse {
+  cancelled: boolean;
+  timed_out: boolean;
+}

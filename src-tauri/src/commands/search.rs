@@ -130,44 +130,74 @@ pub fn search_start(
   drop(session);
 
   let app_handle = app.clone();
-  std::thread::spawn(move || {
-    let state = app_handle.state::<AppState>();
-    if state.shutting_down.load(std::sync::atomic::Ordering::Acquire) {
-      return;
-    }
+  let handle = std::thread::spawn(move || {
+    let panic_result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+      let state = app_handle.state::<AppState>();
+      if state.shutting_down.load(std::sync::atomic::Ordering::Acquire) {
+        return;
+      }
 
-    let outcome = run_search_stream(&app_handle, &request, cancel_flag, search_id);
+      let outcome = run_search_stream(&app_handle, &request, cancel_flag, search_id);
 
-    let state = app_handle.state::<AppState>();
-    if state.shutting_down.load(std::sync::atomic::Ordering::Acquire) {
-      return;
-    }
+      let state = app_handle.state::<AppState>();
+      if state.shutting_down.load(std::sync::atomic::Ordering::Acquire) {
+        return;
+      }
 
-    match terminal_event_from_stream(search_id, outcome) {
-      SearchTerminalEvent::Cancelled(payload) => {
-        if is_active_search(&app_handle, search_id) {
-          let _ = app_handle.emit("search:cancelled", payload);
+      match terminal_event_from_stream(search_id, outcome) {
+        SearchTerminalEvent::Cancelled(payload) => {
+          if is_active_search(&app_handle, search_id) {
+            let _ = app_handle.emit("search:cancelled", payload);
+          }
+        }
+        SearchTerminalEvent::Done(payload) => {
+          if is_active_search(&app_handle, search_id) {
+            let _ = app_handle.emit("search:done", payload);
+          }
+        }
+        SearchTerminalEvent::Error(payload) => {
+          if is_active_search(&app_handle, search_id) {
+            let _ = app_handle.emit("search:error", payload);
+          }
         }
       }
-      SearchTerminalEvent::Done(payload) => {
-        if is_active_search(&app_handle, search_id) {
-          let _ = app_handle.emit("search:done", payload);
-        }
-      }
-      SearchTerminalEvent::Error(payload) => {
-        if is_active_search(&app_handle, search_id) {
-          let _ = app_handle.emit("search:error", payload);
-        }
-      }
-    }
 
-    {
-      let managed_state = app_handle.state::<AppState>();
-      if let Ok(mut session) = managed_state.search_session.lock() {
-        session.complete_if_active(search_id);
+      {
+        let managed_state = app_handle.state::<AppState>();
+        if let Ok(mut session) = managed_state.search_session.lock() {
+          session.complete_if_active(search_id);
+        };
+      }
+    }));
+
+    if let Err(panic_info) = panic_result {
+      let message = if let Some(s) = panic_info.downcast_ref::<&str>() {
+        s.to_string()
+      } else if let Some(s) = panic_info.downcast_ref::<String>() {
+        s.clone()
+      } else {
+        "Unknown panic in search thread".to_string()
       };
+      log::error!("Search thread panicked: {}", message);
+      let _ = app_handle.emit(
+        "search:error",
+        SearchErrorEvent {
+          search_id,
+          code: "SEARCH_THREAD_PANIC".to_string(),
+          message: format!("Search thread panicked: {}", message),
+        },
+      );
+      let state = app_handle.state::<AppState>();
+      if let Ok(mut session) = state.search_session.lock() {
+        session.complete_if_active(search_id);
+      }
     }
   });
+
+  {
+    let mut thread_handle = crate::lock_mutex!(state.search_thread_handle, "search_thread_handle");
+    *thread_handle = Some(handle);
+  }
 
   Ok(SearchCommandResponse {
     search_id,
