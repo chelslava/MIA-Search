@@ -236,6 +236,11 @@ fn terminal_event_from_stream(
   outcome: Result<crate::core::search_service::SearchStreamSummary, String>,
 ) -> SearchTerminalEvent {
   match outcome {
+    Ok(summary) if summary.worker_panicked => SearchTerminalEvent::Error(SearchErrorEvent {
+      search_id,
+      code: "SEARCH_WORKER_PANIC".to_string(),
+      message: "Worker thread panicked during search".to_string(),
+    }),
     Ok(summary) if summary.cancelled => SearchTerminalEvent::Cancelled(SearchCancelledEvent { search_id }),
     Ok(summary) => SearchTerminalEvent::Done(SearchDoneEvent {
       search_id,
@@ -408,6 +413,24 @@ mod tests {
         assert_eq!(payload.message, "boom");
       }
       _ => panic!("expected error event"),
+    }
+
+    let panicked = terminal_event_from_stream(
+      4,
+      Ok(SearchStreamSummary {
+        total_results: 5,
+        limit_reached: false,
+        cancelled: false,
+        worker_panicked: true,
+      }),
+    );
+    match panicked {
+      SearchTerminalEvent::Error(payload) => {
+        assert_eq!(payload.search_id, 4);
+        assert_eq!(payload.code, "SEARCH_WORKER_PANIC");
+        assert_eq!(payload.message, "Worker thread panicked during search");
+      }
+      _ => panic!("expected error event for worker panic"),
     }
   }
 

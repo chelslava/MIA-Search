@@ -332,6 +332,7 @@ impl SearchService {
             if let Err(panic) = handle.join() {
                 eprintln!("Worker thread panicked: {:?}", panic);
                 worker_panicked = true;
+                panic_flag.store(true, Ordering::Release);
             }
         }
 
