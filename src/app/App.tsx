@@ -803,6 +803,10 @@ export function App() {
       return;
     }
 
+    if (isSearching) {
+      return;
+    }
+
     if (!preparedRequest) {
       const dateErrors = validateCurrentDateFilters();
       if (dateErrors.length > 0) {
