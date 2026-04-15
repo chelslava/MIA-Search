@@ -6,3 +6,5 @@ export { useIndex } from "./useIndex";
 export { useRoots } from "./useRoots";
 export { useActions } from "./useActions";
 export { useApp } from "./useApp";
+export { useSearchEvents } from "./useSearchEvents";
+export { useKeyboardShortcuts } from "./useKeyboardShortcuts";
