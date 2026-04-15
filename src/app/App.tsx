@@ -46,6 +46,7 @@ import type {
 import { CommandPalette, type CommandPaletteAction } from "../widgets/CommandPalette";
 import { ToastHost, type ToastItem } from "../widgets/ToastHost";
 import { AppContextMenu } from "./components/chrome/AppContextMenu";
+import { ConfirmDialog } from "./components/ConfirmDialog";
 import { FiltersPanel } from "./components/chrome/FiltersPanel";
 import { SettingsPanel } from "./components/chrome/SettingsPanel";
 import { StatusBar } from "./components/chrome/StatusBar";
@@ -252,6 +253,7 @@ export function App() {
   const [ttfrMs, setTtfrMs] = useState<number | null>(null);
   const [searchErrorCount, setSearchErrorCount] = useState(0);
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [confirmClearHistory, setConfirmClearHistory] = useState(false);
   const [history, setHistory] = useState<HistorySnapshot>({ query_entries: [], opened_paths: [] });
   const [historyOpen, setHistoryOpen] = useState(false);
   const [profiles, setProfiles] = useState<SearchProfile[]>([]);
@@ -492,7 +494,7 @@ export function App() {
       {
         id: "cmd-clear-history",
         label: tr("app.commands.clearHistory", "> Очистить историю"),
-        run: () => void handleClearHistory()
+        run: requestClearHistory
       },
       {
         id: "cmd-theme",
@@ -1002,7 +1004,12 @@ export function App() {
     }
   }
 
+  function requestClearHistory(): void {
+    setConfirmClearHistory(true);
+  }
+
   async function handleClearHistory(): Promise<void> {
+    setConfirmClearHistory(false);
     if (!tauriRuntimeAvailable) return;
     try {
       const snapshot = await historyClear();
@@ -1703,7 +1710,7 @@ export function App() {
               onSaveProfile={() => void handleSaveProfile()}
               onApplyProfile={applyProfile}
               onDeleteProfile={(profileId) => void handleDeleteProfile(profileId)}
-              onClearHistory={() => void handleClearHistory()}
+              onClearHistory={requestClearHistory}
               onSelectHistoryQuery={setQuery}
               onDropRootPath={upsertRoot}
             />
@@ -1770,10 +1777,19 @@ export function App() {
           onDeleteRoot={(path) => setRoots((previous) => previous.filter((item) => item.path !== path))}
           tr={tr}
         />
-      </main>
+       </main>
 
-      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} actions={commandActions} />
-      <ToastHost items={toasts} onClose={closeToast} />
-    </>
-  );
+       <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} actions={commandActions} />
+       <ToastHost items={toasts} onClose={closeToast} />
+       <ConfirmDialog
+         open={confirmClearHistory}
+         title={tr("app.dialog.clearHistory.title", "Clear History")}
+         message={tr("app.dialog.clearHistory.message", "Are you sure you want to clear all search history? This action cannot be undone.")}
+         confirmLabel={tr("app.dialog.clearHistory.confirm", "Clear")}
+         cancelLabel={tr("app.dialog.clearHistory.cancel", "Cancel")}
+         onConfirm={() => void handleClearHistory()}
+         onCancel={() => setConfirmClearHistory(false)}
+       />
+     </>
+   );
 }
