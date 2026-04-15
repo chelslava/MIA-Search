@@ -1,6 +1,6 @@
 use std::path::{Component, Path, PathBuf};
 
-fn is_safe_path(path: &str) -> bool {
+pub fn is_safe_path(path: &str) -> bool {
     let dangerous_chars = ['&', '|', ';', '$', '`', '\n', '\r', '\0'];
     !path.chars().any(|c| dangerous_chars.contains(&c))
 }
@@ -13,7 +13,7 @@ pub fn is_local_path(path: &str) -> bool {
         || lower.starts_with("file://"))
 }
 
-fn has_path_traversal(path: &str) -> bool {
+pub fn has_path_traversal(path: &str) -> bool {
     Path::new(path)
         .components()
         .any(|c| matches!(c, Component::ParentDir))
