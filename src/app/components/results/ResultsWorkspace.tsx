@@ -239,7 +239,7 @@ export function ResultsWorkspace({
           className="min-h-0 flex-1 overflow-auto rounded-md border border-[var(--border)] bg-[var(--surface-alt)]"
           onScroll={(event) => setScrollTop((event.currentTarget as HTMLDivElement).scrollTop)}
         >
-          <table className="w-full table-fixed border-separate border-spacing-0 text-xs">
+          <table className="w-full table-fixed border-separate border-spacing-0 text-xs" role="grid" aria-label={t("app.results.ariaLabel", "Результаты поиска")}>
             <colgroup>
               <col style={{ width: "68px" }} />
               <col style={{ width: "56%" }} />
@@ -289,11 +289,13 @@ export function ResultsWorkspace({
                 <tr
                   data-path={item.full_path}
                   key={item.full_path}
+                  tabIndex={0}
+                  role="row"
                   aria-selected={selectedPath === item.full_path}
                   className={
                     selectedPath === item.full_path
-                      ? "cursor-pointer bg-[color-mix(in_srgb,var(--surface)_84%,var(--accent))] transition-colors hover:bg-[color-mix(in_srgb,var(--surface)_80%,var(--accent))]"
-                      : "cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--surface)_88%,var(--accent))]"
+                      ? "cursor-pointer bg-[color-mix(in_srgb,var(--surface)_84%,var(--accent))] transition-colors hover:bg-[color-mix(in_srgb,var(--surface)_80%,var(--accent))] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-inset"
+                      : "cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--surface)_88%,var(--accent))] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-inset"
                   }
                   onClick={() => onSelectPath(item.full_path)}
                   onContextMenu={(event: MouseEvent<HTMLTableRowElement>) => onResultContextMenu(event, item)}
