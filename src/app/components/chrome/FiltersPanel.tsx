@@ -49,6 +49,7 @@ export function FiltersPanel({
   indexUpdatedAtLabel,
   isRebuildingIndex,
   onRebuildIndex,
+  onCancelRebuild,
   indexHint,
   limitMode,
   onLimitModeChange,
@@ -382,6 +383,15 @@ export function FiltersPanel({
                 ? tr("app.filters.backend.rebuilding", "Rebuilding...")
                 : tr("app.filters.backend.rebuild", "Rebuild index")}
             </Button>
+            {isRebuildingIndex && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onCancelRebuild}
+              >
+                {tr("app.filters.backend.cancel", "Cancel")}
+              </Button>
+            )}
           </div>
           <div className="rounded-sm border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[11px] text-[var(--muted)]">
             <div>

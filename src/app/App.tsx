@@ -16,6 +16,7 @@ import {
   historyClear,
   historyList,
   indexRebuild,
+  indexRebuildCancel,
   indexStatus,
   onSearchBatch,
   onSearchCancelled,
@@ -608,6 +609,17 @@ export function App() {
       setIndexHint(tr("app.index.rebuildFailed", "Не удалось перестроить индекс"));
     } finally {
       setIsRebuildingIndex(false);
+    }
+  }
+
+  async function handleCancelRebuild(): Promise<void> {
+    if (!tauriRuntimeAvailable) return;
+    try {
+      await indexRebuildCancel();
+      setIndexHint(tr("app.index.rebuildCancelled", "Перестроение отменено"));
+      setIsRebuildingIndex(false);
+    } catch {
+      setIndexHint(tr("app.index.cancelFailed", "Не удалось отменить"));
     }
   }
 
@@ -1610,6 +1622,7 @@ export function App() {
             indexUpdatedAtLabel={indexUpdatedAtLabel}
             isRebuildingIndex={isRebuildingIndex}
             onRebuildIndex={() => void handleRebuildIndex(indexRoots)}
+            onCancelRebuild={() => void handleCancelRebuild()}
             indexHint={indexHint}
             limitMode={limitMode}
             onLimitModeChange={setLimitMode}

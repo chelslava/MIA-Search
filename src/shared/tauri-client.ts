@@ -118,6 +118,10 @@ export async function indexRebuild(roots: string[]): Promise<IndexRebuildRespons
   return invoke<IndexRebuildResponse>("index_rebuild", { roots });
 }
 
+export async function indexRebuildCancel(): Promise<void> {
+  await invoke("index_rebuild_cancel");
+}
+
 export async function searchEnrichMetadata(paths: string[]): Promise<SearchMetadataPatch[]> {
   if (paths.length === 0) return [];
   return invoke<SearchMetadataPatch[]>("search_enrich_metadata", { paths });
