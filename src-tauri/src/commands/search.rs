@@ -190,7 +190,7 @@ pub fn search_start(
       let state = app_handle.state::<AppState>();
       if let Ok(mut session) = state.search_session.lock() {
         session.complete_if_active(search_id);
-      }
+      };
     }
   });
 
