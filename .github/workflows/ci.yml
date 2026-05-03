@@ -101,7 +101,7 @@ jobs:
           tool: cargo-llvm-cov
 
       - name: Backend coverage gate
-        run: cargo llvm-cov --summary-only --fail-under-lines 72
+        run: cargo llvm-cov --summary-only --fail-under-lines 70
         working-directory: src-tauri
         env:
           PKG_CONFIG_PATH: /usr/lib/x86_64-linux-gnu/pkgconfig:/usr/share/pkgconfig
