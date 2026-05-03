@@ -14,7 +14,7 @@ import { LeftSidebar } from "./components/sidebars/LeftSidebar";
 import { formatBytes, formatDate } from "./formatters";
 import { applyThemeColors, darkenHex, tintHex } from "./theme";
 import type { AppLanguage } from "./components/chrome/props";
-import { useApp } from "./hooks";
+import { useApp, useKeyboardShortcuts } from "./hooks";
 import { RESPONSIVE_BREAKPOINT } from "./utils/search-utils";
 import "./styles.css";
 
@@ -85,6 +85,27 @@ export function App() {
       layoutState.setRightVisible(false);
     }
   }, [layoutState]);
+
+  useKeyboardShortcuts({
+    isSearching: searchState.isSearching,
+    results: searchState.results,
+    selectedPath: searchState.selectedPath,
+    selectedResult,
+    searchBackend: filterState.searchBackend,
+    indexRoots,
+    isRebuildingIndex: index.isRebuildingIndex,
+    onSearch: () => void handleSearch(),
+    onRebuildIndex: () => void index.handleRebuildIndex(indexRoots),
+    onOpenPath: (path) => void handleOpenPath(path),
+    onOpenParent: (path) => void handleOpenParent(path),
+    onSelectPath: searchState.setSelectedPath,
+    onOpenCommandPalette: () => layoutState.setPaletteOpen(true),
+    onFocusSearch: () => searchInputRef.current?.focus(),
+    onCloseModals: () => {
+      layoutState.setFiltersOpen(false);
+      layoutState.setSettingsOpen(false);
+    },
+  });
 
   return (
     <>

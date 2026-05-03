@@ -1,6 +1,7 @@
 use regex::Regex;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::path::Path;
 
 use crate::core::models::MatchMode;
 
@@ -25,6 +26,7 @@ pub enum QueryMatcher {
 }
 
 impl QueryMatcher {
+    /// Matches against arbitrary text (used by index_service).
     pub fn matches(&self, text: &str) -> bool {
         match self {
             Self::MatchAll => true,
@@ -41,6 +43,33 @@ impl QueryMatcher {
                 }
             }
             Self::Regex { regex } => regex.is_match(text),
+        }
+    }
+
+    /// Matches against a file path, checking both the file name and full path (used by search_service).
+    /// For plain mode, matches if the query is found in either the file name or the full path.
+    /// For regex mode, matches against the full path.
+    pub fn matches_path(&self, path: &str) -> bool {
+        match self {
+            Self::MatchAll => true,
+            Self::Plain {
+                query,
+                query_lower,
+                ignore_case,
+            } => {
+                let name = Path::new(path)
+                    .file_name()
+                    .and_then(|value| value.to_str())
+                    .unwrap_or(path);
+                if *ignore_case {
+                    let query_lower = query_lower.as_deref().unwrap_or(query);
+                    name.to_ascii_lowercase().contains(query_lower)
+                        || path.to_ascii_lowercase().contains(query_lower)
+                } else {
+                    name.contains(query) || path.contains(query)
+                }
+            }
+            Self::Regex { regex } => regex.is_match(path),
         }
     }
 }

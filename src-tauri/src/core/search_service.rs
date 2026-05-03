@@ -3,13 +3,12 @@ use crate::core::models::{
     CommandStatus, DateComparison, EntryKind, MatchMode, SearchRequest, SearchResultItem,
     SearchSessionSnapshot, SizeComparison, SortMode,
 };
+use crate::core::query_matcher::{build_query_matcher, QueryMatcher};
 use crate::core::ranking::sort_results;
 use chrono::{DateTime, Utc};
 use lru::LruCache;
-use regex::Regex;
 use rust_search::{FileSize, FilterExt, SearchBuilder};
-use std::cell::RefCell;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashSet, VecDeque};
 use std::num::NonZeroUsize;
 use std::panic;
 use std::path::{Path, PathBuf};
@@ -22,13 +21,6 @@ use std::time::SystemTime;
 const BATCH_SIZE: usize = 100;
 const FIRST_BATCH_SIZE: usize = 20;
 const MAX_SCAN_WORKERS: usize = 12;
-const REGEX_CACHE_SIZE: usize = 64;
-const MAX_REGEX_PATTERN_LENGTH: usize = 256;
-const MAX_WILDCARD_COUNT: usize = 32;
-
-thread_local! {
-  static REGEX_CACHE: RefCell<HashMap<String, Regex>> = RefCell::new(HashMap::new());
-}
 
 /// Result of a synchronous search execution.
 #[derive(Debug, Clone, Default)]
@@ -120,45 +112,6 @@ impl SearchSession {
 /// Main search service providing both synchronous and streaming search operations.
 #[derive(Debug, Clone, Default)]
 pub struct SearchService;
-
-#[derive(Debug)]
-enum QueryMatcher {
-    MatchAll,
-    Plain {
-        query: String,
-        query_lower: Option<String>,
-        ignore_case: bool,
-    },
-    Regex {
-        regex: Regex,
-    },
-}
-
-impl QueryMatcher {
-    fn matches(&self, path: &str) -> bool {
-        match self {
-            Self::MatchAll => true,
-            Self::Plain {
-                query,
-                query_lower,
-                ignore_case,
-            } => {
-                let name = Path::new(path)
-                    .file_name()
-                    .and_then(|value| value.to_str())
-                    .unwrap_or(path);
-                if *ignore_case {
-                    let query_lower = query_lower.as_deref().unwrap_or(query);
-                    name.to_ascii_lowercase().contains(query_lower)
-                        || path.to_ascii_lowercase().contains(query_lower)
-                } else {
-                    name.contains(query) || path.contains(query)
-                }
-            }
-            Self::Regex { regex } => regex.is_match(path),
-        }
-    }
-}
 
 impl SearchService {
     /// Executes a search synchronously, collecting all results into memory.
@@ -286,7 +239,7 @@ impl SearchService {
                 break;
             }
 
-            if !matcher.matches(&path) {
+            if !matcher.matches_path(&path) {
                 continue;
             }
             if path_matches_exclude_tokens(&path, &exclude_tokens) {
@@ -373,91 +326,6 @@ impl SearchService {
             worker_panicked: panic_flag.load(Ordering::Acquire),
         })
     }
-}
-
-fn build_query_matcher(
-    mode: &MatchMode,
-    query: &str,
-    ignore_case: bool,
-) -> Result<QueryMatcher, String> {
-    if query.is_empty() {
-        return Ok(QueryMatcher::MatchAll);
-    }
-
-    match mode {
-        MatchMode::Plain => Ok(QueryMatcher::Plain {
-            query: query.to_string(),
-            query_lower: ignore_case.then(|| query.to_lowercase()),
-            ignore_case,
-        }),
-        MatchMode::Regex => {
-            if query.len() > MAX_REGEX_PATTERN_LENGTH {
-                return Err(format!(
-                    "Regex pattern too long: {} chars (max {})",
-                    query.len(),
-                    MAX_REGEX_PATTERN_LENGTH
-                ));
-            }
-            let pattern = if ignore_case {
-                format!("(?i){query}")
-            } else {
-                query.to_string()
-            };
-            let regex = get_or_compile_regex(&pattern)?;
-            Ok(QueryMatcher::Regex { regex })
-        }
-        MatchMode::Wildcard => {
-            let wildcard_count = query.chars().filter(|&c| c == '*' || c == '?').count();
-            if wildcard_count > MAX_WILDCARD_COUNT {
-                return Err(format!(
-                    "Too many wildcard characters: {} (max {})",
-                    wildcard_count, MAX_WILDCARD_COUNT
-                ));
-            }
-            let escaped_len: usize = query
-                .chars()
-                .map(|c| {
-                    if c == '*' || c == '?' {
-                        0
-                    } else {
-                        regex::escape(&c.to_string()).len()
-                    }
-                })
-                .sum();
-            let mut pattern = String::with_capacity(1 + wildcard_count + escaped_len + 1);
-            pattern.push('^');
-            for ch in query.chars() {
-                match ch {
-                    '*' => pattern.push_str(".*"),
-                    '?' => pattern.push('.'),
-                    _ => pattern.push_str(&regex::escape(&ch.to_string())),
-                }
-            }
-            pattern.push('$');
-            let pattern = if ignore_case {
-                format!("(?i){pattern}")
-            } else {
-                pattern
-            };
-            let regex = get_or_compile_regex(&pattern)?;
-            Ok(QueryMatcher::Regex { regex })
-        }
-    }
-}
-
-fn get_or_compile_regex(pattern: &str) -> Result<Regex, String> {
-    REGEX_CACHE.with(|cache| {
-        let mut cache = cache.borrow_mut();
-        if let Some(regex) = cache.get(pattern).cloned() {
-            return Ok(regex);
-        }
-        let regex = Regex::new(pattern).map_err(|error| format!("regex parse error: {error}"))?;
-        if cache.len() >= REGEX_CACHE_SIZE {
-            cache.clear();
-        }
-        cache.insert(pattern.to_string(), regex.clone());
-        Ok(regex)
-    })
 }
 
 fn sort_stream_batch(items: &mut [SearchResultItem], mode: &SortMode, query: &str) {

@@ -12,6 +12,7 @@ type KeyboardShortcutsOptions = {
   onSearch: () => void;
   onRebuildIndex: () => void;
   onOpenPath: (path: string) => void;
+  onOpenParent: (path: string) => void;
   onSelectPath: (path: string | null) => void;
   onOpenCommandPalette: () => void;
   onFocusSearch: () => void;
@@ -29,6 +30,7 @@ export function useKeyboardShortcuts({
   onSearch,
   onRebuildIndex,
   onOpenPath,
+  onOpenParent,
   onSelectPath,
   onOpenCommandPalette,
   onFocusSearch,
@@ -91,9 +93,13 @@ export function useKeyboardShortcuts({
       const activeTag = (event.target as HTMLElement | null)?.tagName.toLowerCase();
       if (activeTag === "input" || activeTag === "textarea" || activeTag === "select") return;
       event.preventDefault();
-      onOpenPath(selectedResult.full_path);
+      if (event.shiftKey && onOpenParent) {
+        onOpenParent(selectedResult.full_path);
+      } else {
+        onOpenPath(selectedResult.full_path);
+      }
     }
-  }, [isSearching, results, selectedPath, selectedResult, searchBackend, indexRoots, isRebuildingIndex, onSearch, onRebuildIndex, onOpenPath, onOpenCommandPalette, onFocusSearch, onCloseModals, onSelectPath]);
+  }, [isSearching, results, selectedPath, selectedResult, searchBackend, indexRoots, isRebuildingIndex, onSearch, onRebuildIndex, onOpenPath, onOpenParent, onOpenCommandPalette, onFocusSearch, onCloseModals, onSelectPath]);
 
   useEffect(() => {
     window.addEventListener("keydown", handleKeyDown);
