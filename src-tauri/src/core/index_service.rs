@@ -142,7 +142,7 @@ impl IndexService {
             });
         }
 
-        let matcher = build_matcher(
+        let matcher = build_query_matcher(
             &request.options.match_mode,
             request.query.trim(),
             request.options.ignore_case,
@@ -298,15 +298,15 @@ mod tests {
     }
 
     #[test]
-    fn build_matcher_plain_mode_creates_plain_matcher() {
-        let matcher = build_matcher(&MatchMode::Plain, "test", true).unwrap();
+    fn build_query_matcher_plain_mode_creates_plain_matcher() {
+        let matcher = build_query_matcher(&MatchMode::Plain, "test", true).unwrap();
         assert!(matcher.matches("this is a test string"));
         assert!(matcher.matches("TEST"));
     }
 
     #[test]
-    fn build_matcher_empty_query_matches_all() {
-        let matcher = build_matcher(&MatchMode::Plain, "", true).unwrap();
+    fn build_query_matcher_empty_query_matches_all() {
+        let matcher = build_query_matcher(&MatchMode::Plain, "", true).unwrap();
         assert!(matcher.matches("anything"));
         assert!(matcher.matches(""));
     }
