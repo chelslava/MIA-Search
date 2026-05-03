@@ -35,9 +35,7 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
-
-      - name: Install pnpm
-        run: npm install -g pnpm@9
+          cache: npm
           
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -46,16 +44,18 @@ jobs:
         run: cargo install tauri-cli --version "^2.0.0" --locked
 
       - name: Install frontend dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm install
 
       - name: TypeScript check
-        run: pnpm run check
+        run: npm run check
 
       - name: Frontend tests
-        run: pnpm run test
+        run: npm run test
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
 
       - name: Build frontend
-        run: pnpm run build
+        run: npm run build
 
       - name: Backend tests
         run: cargo test
