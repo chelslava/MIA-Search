@@ -42,27 +42,27 @@ jobs:
           pkg-config --modversion glib-2.0
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
-          cache: npm
+          node-version: 24
+          cache: pnpm
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm ci
 
       - name: TypeScript check
-        run: npm run check
+        run: pnpm run check
 
       - name: Frontend tests
-        run: npm run test
+        run: pnpm run test
         env:
           NODE_OPTIONS: --max-old-space-size=4096
 
       - name: Frontend build
-        run: npm run build
+        run: pnpm run build
 
       - name: Backend tests
         run: cargo test
