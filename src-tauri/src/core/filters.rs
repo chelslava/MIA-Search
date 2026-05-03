@@ -170,4 +170,61 @@ mod tests {
         assert!(matches_date(&later, &after));
         assert!(!matches_date(&equal, &after));
     }
+
+    #[test]
+    fn matches_size_smaller_true_when_size_less() {
+        let item = SearchResultItem {
+            size: Some(50),
+            ..SearchResultItem::default()
+        };
+        let filter = Some(SizeFilter {
+            comparison: SizeComparison::Smaller,
+            bytes: 100,
+        });
+        assert!(matches_size(&item, &filter));
+    }
+
+    #[test]
+    fn matches_size_greater_false_when_size_less() {
+        let item = SearchResultItem {
+            size: Some(50),
+            ..SearchResultItem::default()
+        };
+        let filter = Some(SizeFilter {
+            comparison: SizeComparison::Greater,
+            bytes: 100,
+        });
+        assert!(!matches_size(&item, &filter));
+    }
+
+    #[test]
+    fn matches_size_equal_true_when_size_matches() {
+        let item = SearchResultItem {
+            size: Some(100),
+            ..SearchResultItem::default()
+        };
+        let filter = Some(SizeFilter {
+            comparison: SizeComparison::Equal,
+            bytes: 100,
+        });
+        assert!(matches_size(&item, &filter));
+    }
+
+    #[test]
+    fn matches_size_no_size_handles_null() {
+        let item = SearchResultItem {
+            size: None,
+            ..SearchResultItem::default()
+        };
+        let filter_smaller = Some(SizeFilter {
+            comparison: SizeComparison::Smaller,
+            bytes: 100,
+        });
+        let filter_greater = Some(SizeFilter {
+            comparison: SizeComparison::Greater,
+            bytes: 100,
+        });
+        assert!(matches_size(&item, &filter_smaller));
+        assert!(matches_size(&item, &filter_greater));
+    }
 }

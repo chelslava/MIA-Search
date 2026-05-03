@@ -248,4 +248,79 @@ mod tests {
         let result = build_query_matcher(&MatchMode::Regex, "test.*pattern", true);
         assert!(result.is_ok());
     }
+
+    #[test]
+    fn build_query_matcher_accepts_valid_wildcard() {
+        let result = build_query_matcher(&MatchMode::Wildcard, "*.txt", true);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn matches_path_match_all() {
+        let matcher = QueryMatcher::MatchAll;
+        assert!(matcher.matches_path("/any/path"));
+    }
+
+    #[test]
+    fn matches_path_plain_finds_in_filename() {
+        let matcher = QueryMatcher::Plain {
+            query: "test".to_string(),
+            query_lower: Some("test".to_string()),
+            ignore_case: true,
+        };
+        assert!(matcher.matches_path("/home/user/test.txt"));
+        assert!(matcher.matches_path("/home/user/TEST.txt"));
+    }
+
+    #[test]
+    fn matches_path_plain_finds_in_full_path() {
+        let matcher = QueryMatcher::Plain {
+            query: "user".to_string(),
+            query_lower: Some("user".to_string()),
+            ignore_case: true,
+        };
+        assert!(matcher.matches_path("/home/user/test.txt"));
+    }
+
+    #[test]
+    fn matches_path_plain_case_sensitive() {
+        let matcher = QueryMatcher::Plain {
+            query: "Test".to_string(),
+            query_lower: None,
+            ignore_case: false,
+        };
+        assert!(matcher.matches_path("/home/Test/file.txt"));
+        assert!(!matcher.matches_path("/home/test/file.txt"));
+    }
+
+    #[test]
+    fn matches_path_regex() {
+        let matcher = QueryMatcher::Regex {
+            regex: Regex::new(r"test\d+").unwrap(),
+        };
+        assert!(matcher.matches_path("/test123/file.txt"));
+        assert!(!matcher.matches_path("/testabc/file.txt"));
+    }
+
+    #[test]
+    fn build_query_matcher_regex_case_sensitive() {
+        let matcher = build_query_matcher(&MatchMode::Regex, "test", false).unwrap();
+        assert!(matcher.matches("test"));
+        assert!(!matcher.matches("TEST"));
+    }
+
+    #[test]
+    fn build_query_matcher_wildcard_single_char() {
+        let matcher = build_query_matcher(&MatchMode::Wildcard, "?.txt", true).unwrap();
+        assert!(matcher.matches("a.txt"));
+        assert!(matcher.matches("x.txt"));
+        assert!(!matcher.matches("ab.txt"));
+    }
+
+    #[test]
+    fn build_query_matcher_wildcard_case_insensitive() {
+        let matcher = build_query_matcher(&MatchMode::Wildcard, "*.TXT", true).unwrap();
+        assert!(matcher.matches("file.txt"));
+        assert!(matcher.matches("file.TXT"));
+    }
 }

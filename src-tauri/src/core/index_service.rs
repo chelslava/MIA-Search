@@ -373,4 +373,54 @@ mod tests {
         assert_eq!(score_relevance("other.txt", "file"), Some(0.2));
         assert_eq!(score_relevance("anything", ""), None);
     }
+
+    #[test]
+    fn parse_extensions_handles_empty() {
+        let exts = parse_extensions(&[]);
+        assert!(exts.is_empty());
+    }
+
+    #[test]
+    fn parse_extensions_handles_whitespace_only() {
+        let exts = parse_extensions(&["   ".to_string()]);
+        assert!(exts.is_empty());
+    }
+
+    #[test]
+    fn matches_roots_empty_roots_matches_all() {
+        let item = SearchResultItem {
+            full_path: "/any/path.txt".to_string(),
+            name: "path.txt".to_string(),
+            parent_path: "/any".to_string(),
+            is_file: true,
+            is_dir: false,
+            extension: None,
+            size: None,
+            created_at: None,
+            modified_at: None,
+            hidden: false,
+            score: None,
+            source_root: "/".to_string(),
+        };
+        assert!(matches_roots(&item, &[]));
+    }
+
+    #[test]
+    fn matches_roots_no_match() {
+        let item = SearchResultItem {
+            full_path: "/home/user/file.txt".to_string(),
+            name: "file.txt".to_string(),
+            parent_path: "/home/user".to_string(),
+            is_file: true,
+            is_dir: false,
+            extension: None,
+            size: None,
+            created_at: None,
+            modified_at: None,
+            hidden: false,
+            score: None,
+            source_root: "/".to_string(),
+        };
+        assert!(!matches_roots(&item, &["/var".to_string()]));
+    }
 }
