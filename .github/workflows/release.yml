@@ -32,10 +32,10 @@ jobs:
           }
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
-          cache: npm
+          node-version: 24
+          package-manager: pnpm@9
 
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
@@ -44,16 +44,16 @@ jobs:
         run: cargo install tauri-cli --version "^2.0.0" --locked
 
       - name: Install frontend dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: TypeScript check
-        run: npm run check
+        run: pnpm run check
 
       - name: Frontend tests
-        run: npm run test
+        run: pnpm run test
 
       - name: Build frontend
-        run: npm run build
+        run: pnpm run build
 
       - name: Backend tests
         run: cargo test
