@@ -1,13 +1,15 @@
+use lru::LruCache;
 use regex::Regex;
 use std::cell::RefCell;
-use std::collections::HashMap;
 use std::path::Path;
 
 use crate::core::constants::{MAX_REGEX_PATTERN_LENGTH, MAX_WILDCARD_COUNT, REGEX_CACHE_SIZE};
 use crate::core::models::MatchMode;
 
 thread_local! {
-  static REGEX_CACHE: RefCell<HashMap<String, Regex>> = RefCell::new(HashMap::new());
+  static REGEX_CACHE: RefCell<LruCache<String, Regex>> = RefCell::new(LruCache::new(
+    std::num::NonZeroUsize::new(REGEX_CACHE_SIZE).unwrap()
+  ));
 }
 
 #[derive(Debug)]
@@ -149,10 +151,7 @@ fn get_or_compile_regex(pattern: &str) -> Result<Regex, String> {
             return Ok(regex);
         }
         let regex = Regex::new(pattern).map_err(|error| format!("regex parse error: {error}"))?;
-        if cache.len() >= REGEX_CACHE_SIZE {
-            cache.clear();
-        }
-        cache.insert(pattern.to_string(), regex.clone());
+        cache.put(pattern.to_string(), regex.clone());
         Ok(regex)
     })
 }
