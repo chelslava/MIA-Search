@@ -35,7 +35,6 @@ pub struct SearchStart {
 
 /// Summary of a streamed search operation.
 #[derive(Debug, Clone, Default)]
-#[allow(dead_code)]
 pub struct SearchStreamSummary {
     pub total_results: usize,
     pub limit_reached: bool,
