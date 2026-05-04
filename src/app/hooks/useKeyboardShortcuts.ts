@@ -1,5 +1,5 @@
-import { useEffect, useCallback } from "react";
-import type { SearchResultItem } from "../../shared/search-types";
+import { useEffect, useCallback, useRef } from "react";
+import type { SearchResultItem, HistorySnapshot } from "../../shared/search-types";
 
 type KeyboardShortcutsOptions = {
   isSearching: boolean;
@@ -17,6 +17,8 @@ type KeyboardShortcutsOptions = {
   onOpenCommandPalette: () => void;
   onFocusSearch: () => void;
   onCloseModals: () => void;
+  history?: HistorySnapshot;
+  onSelectHistoryQuery?: (query: string) => void;
 };
 
 export function useKeyboardShortcuts({
@@ -34,11 +36,16 @@ export function useKeyboardShortcuts({
   onSelectPath,
   onOpenCommandPalette,
   onFocusSearch,
-  onCloseModals
+  onCloseModals,
+  history,
+  onSelectHistoryQuery
 }: KeyboardShortcutsOptions): void {
+  const historyIndexRef = useRef<number>(-1);
+  
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     const key = event.key.toLowerCase();
     const accel = event.ctrlKey || event.metaKey;
+    const alt = event.altKey;
 
     if (accel && key === "k") {
       event.preventDefault();
@@ -64,6 +71,28 @@ export function useKeyboardShortcuts({
     }
     if (key === "escape") {
       onCloseModals();
+      historyIndexRef.current = -1;
+      return;
+    }
+    if (alt && (key === "arrowup" || key === "arrowdown")) {
+      if (!history || !onSelectHistoryQuery || history.query_entries.length === 0) return;
+      const entries = history.query_entries.filter(e => e.query.trim());
+      if (entries.length === 0) return;
+      
+      event.preventDefault();
+      if (key === "arrowup") {
+        historyIndexRef.current = historyIndexRef.current <= 0 
+          ? entries.length - 1 
+          : historyIndexRef.current - 1;
+      } else {
+        historyIndexRef.current = historyIndexRef.current >= entries.length - 1 
+          ? 0 
+          : historyIndexRef.current + 1;
+      }
+      const entry = entries[historyIndexRef.current];
+      if (entry) {
+        onSelectHistoryQuery(entry.query);
+      }
       return;
     }
     if (key === "arrowdown" || key === "arrowup") {

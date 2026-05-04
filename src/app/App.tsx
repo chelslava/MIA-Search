@@ -105,6 +105,8 @@ export function App() {
       layoutState.setFiltersOpen(false);
       layoutState.setSettingsOpen(false);
     },
+    history: persistence.history,
+    onSelectHistoryQuery: (q) => setQuery(q),
   });
 
   return (
