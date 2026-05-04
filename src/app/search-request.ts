@@ -1,12 +1,21 @@
 import type { EntryKind, MatchMode, SearchBackend, SearchRequest, SizeComparison, SortMode } from "../shared/search-types";
 import { toIsoOrNull } from "./formatters";
 
+/**
+ * Represents a date validation error for a specific filter field.
+ * @property field - The name of the field that failed validation
+ * @property rawValue - The original value that failed to parse as a valid date
+ */
 export type DateValidationError = {
   field: "modifiedAfter" | "modifiedBefore" | "createdAfter" | "createdBefore";
   rawValue: string;
 };
 
-type BuildSearchRequestInput = {
+/**
+ * Input parameters for building a search request.
+ * Maps UI state to backend search request format.
+ */
+export type BuildSearchRequestInput = {
   query: string;
   enabledRoots: string[];
   primaryRoot: string;
@@ -42,6 +51,21 @@ const sizeUnitMultipliers: Record<string, number> = {
   TB: 1024 ** 4
 };
 
+/**
+ * Validates date filter inputs and returns errors for invalid values.
+ * Checks that date strings can be parsed as ISO 8601 format.
+ *
+ * @param input - The search input containing date filter values
+ * @returns Array of validation errors for fields with invalid dates
+ *
+ * @example
+ * const errors = getDateValidationErrors({
+ *   modifiedAfter: "2024-01-01",
+ *   modifiedBefore: "invalid-date",
+ *   // ...other fields
+ * });
+ * // errors will contain entry for "modifiedBefore"
+ */
 export function getDateValidationErrors(input: BuildSearchRequestInput): DateValidationError[] {
   const errors: DateValidationError[] = [];
 
@@ -61,6 +85,21 @@ export function getDateValidationErrors(input: BuildSearchRequestInput): DateVal
   return errors;
 }
 
+/**
+ * Builds a SearchRequest object from UI input parameters.
+ * Normalizes and validates input values, applying defaults where necessary.
+ *
+ * @param input - The UI input parameters for the search
+ * @returns A normalized SearchRequest object for the backend
+ *
+ * @example
+ * const request = buildSearchRequest({
+ *   query: "*.ts",
+ *   enabledRoots: ["C:\\src"],
+ *   matchMode: "Wildcard",
+ *   // ...other parameters
+ * });
+ */
 export function buildSearchRequest(input: BuildSearchRequestInput): SearchRequest {
   const fallbackRoot =
     typeof navigator !== "undefined" && /windows/i.test(navigator.userAgent) ? "C:\\" : "/";

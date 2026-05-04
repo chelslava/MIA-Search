@@ -1,6 +1,13 @@
 import { useMemo } from "react";
 import type { SortMode, SearchResultItem } from "../../shared/search-types";
 
+/**
+ * Compares two search result items for sorting.
+ * @param left - First item to compare
+ * @param right - Second item to compare
+ * @param mode - The sort mode determining comparison criteria
+ * @returns Negative if left < right, positive if left > right, zero if equal
+ */
 export function compareSearchItems(left: SearchResultItem, right: SearchResultItem, mode: SortMode): number {
   switch (mode) {
     case "Name":
@@ -20,10 +27,18 @@ export function compareSearchItems(left: SearchResultItem, right: SearchResultIt
   }
 }
 
+/**
+ * Sorts search results according to the specified mode.
+ * Creates a new sorted array without mutating the original.
+ */
 export function sortResultsForMode(items: SearchResultItem[], mode: SortMode): SearchResultItem[] {
   return [...items].sort((left, right) => compareSearchItems(left, right, mode));
 }
 
+/**
+ * Filters search results by query string using plain text matching.
+ * Searches both item name and full path.
+ */
 export function filterPlainResults(items: SearchResultItem[], query: string, ignoreCase: boolean): SearchResultItem[] {
   const normalizedQuery = ignoreCase ? query.toLocaleLowerCase() : query;
   return items.filter((item) => {
@@ -33,6 +48,10 @@ export function filterPlainResults(items: SearchResultItem[], query: string, ign
   });
 }
 
+/**
+ * Merges metadata patches into search results.
+ * Updates existing items with fresh metadata from the backend.
+ */
 export function mergeMetadataIntoResults(items: SearchResultItem[], patches: { full_path: string; extension?: string | null; size?: number | null; created_at?: string | null; modified_at?: string | null; hidden?: boolean }[]): SearchResultItem[] {
   if (patches.length === 0) return items;
   const patchByPath = new Map(patches.map((patch) => [patch.full_path, patch]));
@@ -51,15 +70,25 @@ export function mergeMetadataIntoResults(items: SearchResultItem[], patches: { f
   });
 }
 
+/**
+ * Clamps a value between a minimum and maximum.
+ */
 export function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
+/**
+ * Checks if two string arrays are equal.
+ */
 export function arraysEqual(left: string[], right: string[]): boolean {
   if (left.length !== right.length) return false;
   return left.every((item, index) => item === right[index]);
 }
 
+/**
+ * Determines if two search requests have the same context (excluding query).
+ * Used to prevent redundant searches when only the query changes.
+ */
 export function sameSearchContextWithoutQuery(left: { roots: string[]; extensions: string[]; exclude_paths?: string[]; options: object }, right: { roots: string[]; extensions: string[]; exclude_paths?: string[]; options: object }): boolean {
   return (
     arraysEqual(left.roots, right.roots) &&
@@ -69,6 +98,10 @@ export function sameSearchContextWithoutQuery(left: { roots: string[]; extension
   );
 }
 
+/**
+ * Computes adaptive debounce delay based on search complexity.
+ * Uses shorter delays for simple queries, longer for complex searches.
+ */
 export function computeAdaptiveDebounce(request: { options: { match_mode: string; max_depth: number | null; size_filter: unknown; created_filter: unknown; modified_filter: unknown }; query: string; roots: string[]; extensions: string[] }, configuredDebounceMs: number): number {
   const mode = request.options.match_mode;
   const heavyMode = mode === "Regex" || mode === "Wildcard";
@@ -91,6 +124,12 @@ export function computeAdaptiveDebounce(request: { options: { match_mode: string
   return clamp(configuredDebounceMs, 120, 220);
 }
 
+/**
+ * Checks if an index is stale based on its last update time and TTL.
+ * @param updatedAt - ISO timestamp of last index update
+ * @param ttlMs - Time-to-live in milliseconds
+ * @param now - Current timestamp (defaults to Date.now())
+ */
 export function isIndexStale(updatedAt: string, ttlMs: number, now = Date.now()): boolean {
   const stamp = new Date(updatedAt).getTime();
   if (!Number.isFinite(stamp) || stamp <= 0) return true;
