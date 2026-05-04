@@ -18,6 +18,25 @@ export function formatDate(dateValue: string | null): string {
   return parsed.toLocaleString("ru-RU");
 }
 
+export function formatRelativeTime(dateValue: string | null | undefined): string {
+  if (!dateValue) return "";
+  const parsed = new Date(dateValue);
+  if (Number.isNaN(parsed.getTime())) return "";
+  
+  const now = Date.now();
+  const diffMs = now - parsed.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+
+  if (diffSec < 60) return "только что";
+  if (diffMin < 60) return `${diffMin} мин. назад`;
+  if (diffHour < 24) return `${diffHour} ч. назад`;
+  if (diffDay < 7) return `${diffDay} дн. назад`;
+  return parsed.toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
+}
+
 export function toIsoOrNull(value: string): string | null {
   if (!value) return null;
   const parsed = new Date(value);

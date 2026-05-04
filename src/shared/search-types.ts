@@ -107,6 +107,7 @@ export interface SearchProfile {
 
 export interface HistoryQueryEntry {
   query: string;
+  timestamp?: string;
 }
 
 export interface HistorySnapshot {

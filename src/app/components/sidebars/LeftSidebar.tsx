@@ -6,6 +6,7 @@ import { Input } from "../../../components/ui/input";
 import { Switch } from "../../../components/ui/switch";
 import { ConfirmDialog } from "../../../widgets/ConfirmDialog";
 import { EmptyHistory } from "../../../components/ui/empty-state";
+import { formatRelativeTime } from "../../formatters";
 
 export type TranslateFn = (key: string, defaultValue: string, values?: Record<string, unknown>) => string;
 
@@ -297,7 +298,12 @@ export function LeftSidebar({
                       className="h-5 min-w-0 w-full justify-start px-1 text-left text-[11px] font-normal"
                       onClick={() => onSelectHistoryQuery(item.query)}
                     >
-                      <span className="truncate">{item.query || tr("app.history.emptyQuery", "(пустой запрос)")}</span>
+                      <span className="truncate flex-1">{item.query || tr("app.history.emptyQuery", "(пустой запрос)")}</span>
+                      {item.timestamp && (
+                        <span className="ml-2 shrink-0 text-[10px] text-[var(--muted)]">
+                          {formatRelativeTime(item.timestamp)}
+                        </span>
+                      )}
                     </Button>
                   </li>
                 ))}
