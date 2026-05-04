@@ -4,6 +4,7 @@ import type { SearchResultItem, SortMode } from "../../../shared/search-types";
 import type { DisplayMode, FilterChip } from "../../types";
 import { Button } from "../../../components/ui/button";
 import { Select } from "../../../components/ui/select";
+import { SkeletonRow, SkeletonCard } from "../../../components/ui/skeleton";
 import { getFileIcon } from "../../utils/fileIcons";
 
 const CARD_HEIGHT = 80;
@@ -92,9 +93,10 @@ export function ResultsWorkspace({
   const renderEmptyState = () => {
     if (isLoading) {
       return (
-        <div className="flex h-full flex-col items-center justify-center gap-3 text-[var(--muted)]">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-[var(--accent)] border-t-transparent" />
-          <span>{t("app.status.loading", "Загрузка...")}</span>
+        <div className="flex h-full flex-col items-center justify-center gap-2 overflow-auto p-2">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <SkeletonRow key={i} />
+          ))}
         </div>
       );
     }
@@ -186,8 +188,16 @@ export function ResultsWorkspace({
 
       {displayMode === "cards" ? (
         results.length === 0 || isLoading || error ? (
-          <div className="min-h-0 flex-1 flex items-center justify-center rounded-md border border-[var(--border)] bg-[var(--surface-alt)]">
-            {renderEmptyState()}
+          <div className="min-h-0 flex-1 overflow-auto rounded-md border border-[var(--border)] bg-[var(--surface-alt)] p-1.5">
+            {isLoading ? (
+              <div className="grid gap-1.5 sm:grid-cols-2 xl:grid-cols-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <SkeletonCard key={i} />
+                ))}
+              </div>
+            ) : (
+              renderEmptyState()
+            )}
           </div>
         ) : (
         <div
@@ -213,7 +223,7 @@ export function ResultsWorkspace({
             >
               <div className="mb-1.5 flex items-start gap-1.5 text-xs font-semibold text-[var(--text)]">
                 <span aria-hidden="true" className="text-sm leading-none">
-                  {item.is_dir ? "📁" : "📄"}
+                  {getFileIcon(item.extension, item.is_dir).icon}
                 </span>
                 <span className="min-w-0 break-words">
                   {item.name || t("app.labels.noName", "Без имени")}
