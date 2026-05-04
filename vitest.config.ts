@@ -5,7 +5,7 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: ["./src/test/setup.ts"],
     globals: true,
-    css: true,
+    css: false,
     pool: "forks",
     poolOptions: {
       forks: {
