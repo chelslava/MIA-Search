@@ -1,3 +1,4 @@
+use crate::core::constants::{BATCH_SIZE, FIRST_BATCH_SIZE, MAX_SCAN_WORKERS};
 use crate::core::metadata_service::MetadataService;
 use crate::core::models::{
     CommandStatus, DateComparison, EntryKind, MatchMode, SearchRequest, SearchResultItem,
@@ -17,10 +18,6 @@ use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::SystemTime;
-
-const BATCH_SIZE: usize = 100;
-const FIRST_BATCH_SIZE: usize = 20;
-const MAX_SCAN_WORKERS: usize = 12;
 
 /// Result of a synchronous search execution.
 #[derive(Debug, Clone, Default)]

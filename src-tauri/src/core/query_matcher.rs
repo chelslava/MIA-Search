@@ -3,11 +3,8 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::path::Path;
 
+use crate::core::constants::{MAX_REGEX_PATTERN_LENGTH, MAX_WILDCARD_COUNT, REGEX_CACHE_SIZE};
 use crate::core::models::MatchMode;
-
-const MAX_REGEX_PATTERN_LENGTH: usize = 512;
-const MAX_WILDCARD_COUNT: usize = 32;
-const REGEX_CACHE_SIZE: usize = 64;
 
 thread_local! {
   static REGEX_CACHE: RefCell<HashMap<String, Regex>> = RefCell::new(HashMap::new());

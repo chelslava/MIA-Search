@@ -1,14 +1,12 @@
+use crate::core::constants::{ENTRY_OVERHEAD_BYTES, MAX_INDEX_ENTRIES, MAX_INDEX_SIZE_MB};
 use crate::core::models::SearchResultItem;
 use crate::storage::persistence;
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-const INDEX_FILE: &str = "search_index.json";
-const INDEX_VERSION: u32 = 1;
-const MAX_INDEX_ENTRIES: usize = 1_000_000;
-const MAX_INDEX_SIZE_MB: usize = 500;
-const ENTRY_OVERHEAD_BYTES: usize = 512;
+pub const INDEX_FILE: &str = "search_index.json";
+pub const INDEX_VERSION: u32 = 1;
 
 fn estimate_entry_size(entry: &SearchResultItem) -> usize {
   entry.full_path.len()

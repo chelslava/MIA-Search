@@ -1,3 +1,4 @@
+use crate::core::constants::{ENTRY_OVERHEAD_BYTES, MAX_INDEX_ENTRIES, MAX_INDEX_SIZE_MB};
 use crate::core::filters::{matches_date, matches_entry_kind, matches_size};
 use crate::core::metadata_service::MetadataService;
 use crate::core::models::{MatchMode, SearchRequest, SearchResultItem, SortMode};
@@ -10,9 +11,6 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 
 const INDEX_BATCH_SIZE: usize = 100;
-const MAX_INDEX_ENTRIES: usize = 1_000_000;
-const MAX_INDEX_SIZE_MB: usize = 500;
-const ENTRY_OVERHEAD_BYTES: usize = 512;
 
 fn estimate_entry_size(entry: &SearchResultItem) -> usize {
     entry.full_path.len()

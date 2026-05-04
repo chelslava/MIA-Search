@@ -1,5 +1,6 @@
 use crate::{
   core::{
+    constants::{MAX_EXCLUDE_PATH_LENGTH, MAX_EXCLUDE_PATHS, MAX_EXTENSIONS, MAX_QUERY_LENGTH, MAX_ROOTS},
     index_service::IndexService,
     metadata_service::MetadataService,
     models::{SearchBackend, SearchRequest, SearchResultItem},
@@ -61,12 +62,6 @@ enum SearchTerminalEvent {
   Done(SearchDoneEvent),
   Error(SearchErrorEvent),
 }
-
-const MAX_QUERY_LENGTH: usize = 1024;
-const MAX_ROOTS: usize = 50;
-const MAX_EXTENSIONS: usize = 20;
-const MAX_EXCLUDE_PATHS: usize = 50;
-const MAX_EXCLUDE_PATH_LENGTH: usize = 256;
 
 fn validate_request(request: &SearchRequest) -> Result<(), String> {
   if request.query.len() > MAX_QUERY_LENGTH {
