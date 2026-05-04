@@ -1,6 +1,7 @@
 import type { SearchResultItem } from "../../../shared/search-types";
 import { formatBytes, formatDate } from "../../formatters";
 import { Button } from "../../../components/ui/button";
+import { EmptySelection } from "../../../components/ui/empty-state";
 
 export type TranslateFn = (key: string, defaultValue: string, values?: Record<string, unknown>) => string;
 
@@ -124,9 +125,7 @@ export function DetailsSidebar({
           </div>
         </div>
       ) : (
-        <p className="rounded-md border border-dashed border-[var(--border)] bg-[var(--surface-alt)] px-2 py-1.5 text-xs text-[var(--muted)]">
-          {tr("app.details.empty", "Выберите элемент в списке результатов.")}
-        </p>
+        <EmptySelection />
       )}
     </aside>
   );

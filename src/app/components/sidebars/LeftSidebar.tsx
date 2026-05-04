@@ -5,6 +5,7 @@ import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Switch } from "../../../components/ui/switch";
 import { ConfirmDialog } from "../../../widgets/ConfirmDialog";
+import { EmptyHistory } from "../../../components/ui/empty-state";
 
 export type TranslateFn = (key: string, defaultValue: string, values?: Record<string, unknown>) => string;
 
@@ -281,21 +282,27 @@ export function LeftSidebar({
             <Button type="button" variant="ghost" size="sm" className="h-6 w-full justify-start px-1 text-[11px] font-normal" onClick={() => setConfirmClearHistory(true)}>
               {tr("app.history.clear", "Очистить историю")}
             </Button>
-            <ul className="space-y-1">
-              {history.query_entries.slice(0, 10).map((item, index) => (
-                <li key={`${item.query}-${index}`} className="rounded-sm border border-[var(--border)] bg-[var(--surface)] px-1 py-0.5">
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-5 min-w-0 w-full justify-start px-1 text-left text-[11px] font-normal"
-                    onClick={() => onSelectHistoryQuery(item.query)}
-                  >
-                    <span className="truncate">{item.query || tr("app.history.emptyQuery", "(пустой запрос)")}</span>
-                  </Button>
-                </li>
-              ))}
-            </ul>
+            {history.query_entries.length === 0 ? (
+              <div className="py-2">
+                <EmptyHistory />
+              </div>
+            ) : (
+              <ul className="space-y-1">
+                {history.query_entries.slice(0, 10).map((item, index) => (
+                  <li key={`${item.query}-${index}`} className="rounded-sm border border-[var(--border)] bg-[var(--surface)] px-1 py-0.5">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-5 min-w-0 w-full justify-start px-1 text-left text-[11px] font-normal"
+                      onClick={() => onSelectHistoryQuery(item.query)}
+                    >
+                      <span className="truncate">{item.query || tr("app.history.emptyQuery", "(пустой запрос)")}</span>
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         ) : null}
       </section>

@@ -4,6 +4,7 @@ import type { SearchResultItem, SortMode } from "../../../shared/search-types";
 import type { DisplayMode, FilterChip } from "../../types";
 import { Button } from "../../../components/ui/button";
 import { Select } from "../../../components/ui/select";
+import { EmptySearchResults } from "../../../components/ui/empty-state";
 import { SkeletonRow, SkeletonCard } from "../../../components/ui/skeleton";
 import { getFileIcon } from "../../utils/fileIcons";
 
@@ -112,12 +113,7 @@ export function ResultsWorkspace({
       );
     }
     if (results.length === 0) {
-      return (
-        <div className="flex h-full flex-col items-center justify-center gap-3 text-[var(--muted)]">
-          <span className="text-2xl" aria-hidden="true">🔍</span>
-          <span>{t("app.status.noResults", "Нет результатов")}</span>
-        </div>
-      );
+      return <EmptySearchResults />;
     }
     return null;
   };
