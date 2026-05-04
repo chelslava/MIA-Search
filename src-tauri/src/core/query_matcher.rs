@@ -13,6 +13,7 @@ thread_local! {
   static REGEX_CACHE: RefCell<HashMap<String, Regex>> = RefCell::new(HashMap::new());
 }
 
+#[derive(Debug)]
 pub enum QueryMatcher {
     MatchAll,
     Plain {

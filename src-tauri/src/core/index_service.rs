@@ -1,7 +1,7 @@
 use crate::core::filters::{matches_date, matches_entry_kind, matches_size};
 use crate::core::metadata_service::MetadataService;
 use crate::core::models::{MatchMode, SearchRequest, SearchResultItem, SortMode};
-use crate::core::query_matcher::{build_query_matcher, QueryMatcher};
+use crate::core::query_matcher::build_query_matcher;
 use crate::core::ranking::sort_results;
 use crate::storage::index_store::IndexSnapshot;
 use rust_search::SearchBuilder;

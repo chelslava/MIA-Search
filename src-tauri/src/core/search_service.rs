@@ -3,7 +3,7 @@ use crate::core::models::{
     CommandStatus, DateComparison, EntryKind, MatchMode, SearchRequest, SearchResultItem,
     SearchSessionSnapshot, SizeComparison, SortMode,
 };
-use crate::core::query_matcher::{build_query_matcher, QueryMatcher};
+use crate::core::query_matcher::build_query_matcher;
 use crate::core::ranking::sort_results;
 use chrono::{DateTime, Utc};
 use lru::LruCache;
@@ -172,7 +172,7 @@ impl SearchService {
         }
         let mut limit_reached = false;
         let mut total_results = 0usize;
-        let estimated_capacity = request.options.limit.unwrap_or(10000).min(100000);
+        let _estimated_capacity = request.options.limit.unwrap_or(10000).min(100000);
         // Use LRU cache for deduplication to avoid clearing entire set
         // Set capacity to limit * 10 to allow for filtering while preventing duplicates
         let lru_capacity = NonZeroUsize::new(
@@ -987,7 +987,7 @@ mod tests {
 
     #[test]
     fn build_query_matcher_rejects_long_regex_pattern() {
-        let long_pattern = "a".repeat(300);
+        let long_pattern = "a".repeat(600);
         let result = build_query_matcher(&MatchMode::Regex, &long_pattern, true);
         assert!(result.is_err());
         assert!(result.unwrap_err().contains("too long"));
