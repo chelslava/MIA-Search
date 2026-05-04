@@ -15,7 +15,7 @@ use storage::{
   favorites_store::FavoritesStore,
   history_store::HistoryStore,
   index_store::IndexStore,
-  presets_store::ProfilesStore,
+  profiles_store::ProfilesStore,
   settings_store::SettingsStore,
 };
 

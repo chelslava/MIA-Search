@@ -1,4 +1,4 @@
-use crate::{core::models::SearchProfile, storage::presets_store::ProfilesStore, AppState};
+use crate::{core::models::SearchProfile, storage::profiles_store::ProfilesStore, AppState};
 use std::sync::Mutex;
 use tauri::State;
 
