@@ -51,10 +51,20 @@ export function filterPlainResults(items: SearchResultItem[], query: string, ign
 /**
  * Merges metadata patches into search results.
  * Updates existing items with fresh metadata from the backend.
+ * Only creates new array if patches match any items.
  */
 export function mergeMetadataIntoResults(items: SearchResultItem[], patches: { full_path: string; extension?: string | null; size?: number | null; created_at?: string | null; modified_at?: string | null; hidden?: boolean }[]): SearchResultItem[] {
   if (patches.length === 0) return items;
   const patchByPath = new Map(patches.map((patch) => [patch.full_path, patch]));
+
+  let hasMatches = false;
+  for (const item of items) {
+    if (patchByPath.has(item.full_path)) {
+      hasMatches = true;
+      break;
+    }
+  }
+  if (!hasMatches) return items;
 
   return items.map((item) => {
     const patch = patchByPath.get(item.full_path);
