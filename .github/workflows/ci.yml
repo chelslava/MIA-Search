@@ -53,7 +53,7 @@ jobs:
       - name: Frontend tests
         run: pnpm run test
         env:
-          NODE_OPTIONS: --max-old-space-size=4096
+          NODE_OPTIONS: --max-old-space-size=16384
 
   build-frontend:
     runs-on: ${{ matrix.os }}
