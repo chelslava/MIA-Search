@@ -369,6 +369,7 @@ const en = {
       status: "Status: {{status}}",
       time: "Time: {{elapsed}}",
       checked: "Checked: {{count}}",
+      progress: "{{count}} checked",
       ttfr: "TTFR: {{value}}",
       throughput: "Throughput: {{value}}",
       errors: "Errors: {{count}}",

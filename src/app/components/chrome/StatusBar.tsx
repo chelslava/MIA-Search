@@ -24,7 +24,7 @@ export function StatusBar({ resultsCount, status, statusText, checkedPaths, acti
         </span>
       ) : null}
       <span className="rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] px-1.5 py-0.5 whitespace-nowrap text-[var(--text)]">
-        {tr("app.statusbar.checked", "Проверено: {{count}}", { count: checkedPaths })}
+        {tr("app.statusbar.checked", "Проверено: {{count}}", { count: checkedPaths })} {statusText.progress !== "-" ? `(${statusText.progress})` : ""}
       </span>
       <span className="rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] px-1.5 py-0.5 whitespace-nowrap text-[var(--text)]">
         {tr("app.statusbar.ttfr", "TTFR: {{value}}", { value: statusText.ttfr })}

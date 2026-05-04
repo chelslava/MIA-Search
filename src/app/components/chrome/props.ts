@@ -133,6 +133,7 @@ export type StatusText = {
   ttfr: string;
   throughput: string;
   errors: string;
+  progress: string;
 };
 
 export type StatusBarProps = {

@@ -369,6 +369,7 @@ const ru = {
       status: "Статус: {{status}}",
       time: "Время: {{elapsed}}",
       checked: "Проверено: {{count}}",
+      progress: "{{count}} проверено",
       ttfr: "TTFR: {{value}}",
       throughput: "Скорость: {{value}}",
       errors: "Ошибки: {{count}}",

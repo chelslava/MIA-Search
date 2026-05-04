@@ -1007,7 +1007,10 @@ export function useApp() {
     const warning = searchState.limitReached
       ? tr("app.status.limitWarning", "Показано только {{count}} результатов", { count: searchState.results.length })
       : "";
-    return { elapsed, warning, ttfr, throughput, errors: String(searchState.searchErrorCount) };
+    const progress = searchState.isSearching && throughput !== "-"
+      ? `${searchState.checkedPaths} ${tr("app.statusbar.checked", "проверено")}`
+      : "-";
+    return { elapsed, warning, ttfr, throughput, errors: String(searchState.searchErrorCount), progress };
   }, [searchState.checkedPaths, searchState.elapsedMs, searchState.isSearching, searchState.limitReached, nowMs, searchState.results.length, searchState.searchErrorCount, searchState.searchStartedAt, tr, searchState.ttfrMs]);
 
   return {
