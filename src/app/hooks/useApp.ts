@@ -26,26 +26,33 @@ import {
   startSearch,
   tauriRuntimeAvailable
 } from "../../shared/tauri-client";
-import { useSearchState, useSearchRefs, useThemeState, usePersistence, useFilesystemTree, useFilterState, useSettingsState, useLayoutState, useIndex, useRoots, useToast, useUIState } from "../hooks";
-import { useRoots as useRootsState } from "../hooks/useRoots";
-import { buildSearchRequest, getDateValidationErrors } from "../search-request";
 import {
-  sortResultsForMode,
-  filterPlainResults,
-  sameSearchContextWithoutQuery,
+  useSearchState,
+  useSearchRefs,
+  useThemeState,
+  usePersistence,
+  useFilesystemTree,
+  useFilterState,
+  useSettingsState,
+  useLayoutState,
+  useIndex,
+  useRoots,
+  useToast,
+  useUIState,
+  useSearchRequest,
+  useResults,
+  useIncrementalSearch
+} from "../hooks";
+import { useRoots as useRootsState } from "../hooks/useRoots";
+import {
   computeAdaptiveDebounce,
   renderSearchErrorStatus,
   mergeMetadataIntoResults,
   DEFAULT_ROOT_PATH,
-  ROW_HEIGHT,
-  RESPONSIVE_BREAKPOINT
+  RESPONSIVE_BREAKPOINT,
+  sortResultsForMode
 } from "../utils/search-utils";
 import type { FilterChip } from "../types";
-
-type IncrementalSearchContext = {
-  request: SearchRequest;
-  results: SearchResultItem[];
-};
 
 export function useApp() {
   const { t, i18n } = useTranslation();
@@ -72,7 +79,6 @@ export function useApp() {
   
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const resultPaneRef = useRef<HTMLDivElement | null>(null);
-  const incrementalSearchRef = useRef<IncrementalSearchContext | null>(null);
 
   const indexRoots = useMemo(
     () => roots.enabledRoots.length > 0 ? roots.enabledRoots : [roots.primaryRoot].filter(Boolean),
@@ -105,65 +111,47 @@ export function useApp() {
     return Math.max(1, filterState.customLimit);
   }, [filterState.limitMode, filterState.customLimit]);
 
-  const buildCurrentRequest = useCallback((): SearchRequest => {
-    return buildSearchRequest({
-      query,
-      enabledRoots: roots.enabledRoots,
-      primaryRoot: roots.primaryRoot,
-      extensionsRaw: filterState.extensionsRaw,
-      excludePathsRaw: filterState.excludePathsRaw,
-      maxDepthUnlimited: filterState.maxDepthUnlimited,
-      maxDepth: filterState.maxDepth,
-      limit,
-      strict: filterState.strict,
-      ignoreCase: filterState.ignoreCase,
-      includeHidden: filterState.includeHidden,
-      entryKind: filterState.entryKind,
-      matchMode: filterState.matchMode,
-      sizeFilterEnabled: filterState.sizeFilterEnabled,
-      sizeComparison: filterState.sizeComparison,
-      sizeValue: filterState.sizeValue,
-      sizeUnit: filterState.sizeUnit,
-      modifiedFilterEnabled: filterState.modifiedFilterEnabled,
-      modifiedAfter: filterState.modifiedAfter,
-      modifiedBefore: filterState.modifiedBefore,
-      createdFilterEnabled: filterState.createdFilterEnabled,
-      createdAfter: filterState.createdAfter,
-      createdBefore: filterState.createdBefore,
-      sortMode: filterState.sortMode,
-      searchBackend: filterState.searchBackend
-    });
-  }, [query, roots.enabledRoots, roots.primaryRoot, filterState, limit]);
+  const searchRequest = useSearchRequest({
+    query,
+    enabledRoots: roots.enabledRoots,
+    primaryRoot: roots.primaryRoot,
+    extensionsRaw: filterState.extensionsRaw,
+    excludePathsRaw: filterState.excludePathsRaw,
+    maxDepthUnlimited: filterState.maxDepthUnlimited,
+    maxDepth: filterState.maxDepth,
+    limit,
+    strict: filterState.strict,
+    ignoreCase: filterState.ignoreCase,
+    includeHidden: filterState.includeHidden,
+    entryKind: filterState.entryKind,
+    matchMode: filterState.matchMode,
+    sizeFilterEnabled: filterState.sizeFilterEnabled,
+    sizeComparison: filterState.sizeComparison,
+    sizeValue: filterState.sizeValue,
+    sizeUnit: filterState.sizeUnit,
+    modifiedFilterEnabled: filterState.modifiedFilterEnabled,
+    modifiedAfter: filterState.modifiedAfter,
+    modifiedBefore: filterState.modifiedBefore,
+    createdFilterEnabled: filterState.createdFilterEnabled,
+    createdAfter: filterState.createdAfter,
+    createdBefore: filterState.createdBefore,
+    sortMode: filterState.sortMode,
+    searchBackend: filterState.searchBackend
+  });
 
-  const validateCurrentDateFilters = useCallback(() => {
-    return getDateValidationErrors({
-      query,
-      enabledRoots: roots.enabledRoots,
-      primaryRoot: roots.primaryRoot,
-      extensionsRaw: filterState.extensionsRaw,
-      excludePathsRaw: filterState.excludePathsRaw,
-      maxDepthUnlimited: filterState.maxDepthUnlimited,
-      maxDepth: filterState.maxDepth,
-      limit,
-      strict: filterState.strict,
-      ignoreCase: filterState.ignoreCase,
-      includeHidden: filterState.includeHidden,
-      entryKind: filterState.entryKind,
-      matchMode: filterState.matchMode,
-      sizeFilterEnabled: filterState.sizeFilterEnabled,
-      sizeComparison: filterState.sizeComparison,
-      sizeValue: filterState.sizeValue,
-      sizeUnit: filterState.sizeUnit,
-      modifiedFilterEnabled: filterState.modifiedFilterEnabled,
-      modifiedAfter: filterState.modifiedAfter,
-      modifiedBefore: filterState.modifiedBefore,
-      createdFilterEnabled: filterState.createdFilterEnabled,
-      createdAfter: filterState.createdAfter,
-      createdBefore: filterState.createdBefore,
-      sortMode: filterState.sortMode,
-      searchBackend: filterState.searchBackend
-    });
-  }, [query, roots.enabledRoots, roots.primaryRoot, filterState, limit]);
+  const { visibleRows } = useResults({
+    results: searchState.results,
+    sortMode: filterState.sortMode,
+    listHeight: uiState.listHeight,
+    scrollTop: uiState.scrollTop
+  });
+
+  const incrementalSearch = useIncrementalSearch({
+    ignoreCase: filterState.ignoreCase
+  });
+
+  const buildCurrentRequest = searchRequest.buildCurrentRequest;
+  const validateCurrentDateFilters = searchRequest.validateDateFilters;
 
   const selectedResult = useMemo(
     () => searchState.results.find((item) => item.full_path === searchState.selectedPath) ?? null,
@@ -251,22 +239,6 @@ export function useApp() {
     return items;
   }, [filterState, limit, tr]);
 
-  const visibleRows = useMemo(() => {
-    const safeHeight = Math.max(200, uiState.listHeight);
-    const rawStart = Math.max(0, Math.floor(uiState.scrollTop / ROW_HEIGHT));
-    const maxStart = Math.max(0, searchState.results.length - 1);
-    const startIndex = Math.min(rawStart, maxStart);
-    const count = Math.ceil(safeHeight / ROW_HEIGHT) + 8;
-    const endIndex = Math.min(searchState.results.length, startIndex + count);
-    return {
-      startIndex,
-      endIndex,
-      topSpacer: startIndex * ROW_HEIGHT,
-      bottomSpacer: Math.max(0, (searchState.results.length - endIndex) * ROW_HEIGHT),
-      items: searchState.results.slice(startIndex, endIndex)
-    };
-  }, [uiState.listHeight, searchState.results, uiState.scrollTop]);
-
   const scheduleResultsFlush = useCallback(() => {
     if (searchRefs.batchFlushFrameRef.current !== null) return;
     searchRefs.batchFlushFrameRef.current = window.requestAnimationFrame(() => {
@@ -281,42 +253,22 @@ export function useApp() {
       }
       searchState.setResults((prev) => {
         const next = sortResultsForMode(prev.concat(nextChunk), searchRefs.sortModeRef.current);
-        if (incrementalSearchRef.current) {
-          incrementalSearchRef.current = { ...incrementalSearchRef.current, results: next };
-        }
+        incrementalSearch.updateIncrementalResults(next, searchRefs.sortModeRef.current);
         return next;
       });
     });
-  }, [searchRefs, searchState]);
+  }, [searchRefs, searchState, incrementalSearch]);
 
   const tryIncrementalPlainSearch = useCallback((nextRequest: SearchRequest): boolean => {
-    if (searchState.isSearching) return false;
-    const previous = incrementalSearchRef.current;
-    if (!previous) return false;
-    if (!sameSearchContextWithoutQuery(previous.request, nextRequest)) return false;
-    if (previous.request.options.match_mode !== "Plain" || nextRequest.options.match_mode !== "Plain") return false;
-    if (previous.request.options.strict || nextRequest.options.strict) return false;
-
-    const previousQuery = previous.request.query.trim();
-    const nextQuery = nextRequest.query.trim();
-    if (!previousQuery || !nextQuery || nextQuery.length <= previousQuery.length) return false;
-
-    const normalize = (value: string) =>
-      nextRequest.options.ignore_case ? value.toLocaleLowerCase() : value;
-    if (!normalize(nextQuery).startsWith(normalize(previousQuery))) return false;
-
-    const filtered = sortResultsForMode(
-      filterPlainResults(previous.results, nextQuery, nextRequest.options.ignore_case),
-      searchRefs.sortModeRef.current
-    );
-    incrementalSearchRef.current = { request: nextRequest, results: filtered };
+    const filtered = incrementalSearch.tryIncrementalSearch(nextRequest, searchRefs.sortModeRef.current);
+    if (!filtered) return false;
     searchState.setResults(filtered);
     searchState.setSelectedPath((prev) => (prev && filtered.some((item) => item.full_path === prev) ? prev : null));
     uiState.setScrollTop(0);
     searchState.setStatus(tr("app.status.ready", "Готово"));
     searchState.setIsSearching(false);
     return true;
-  }, [searchState, searchRefs, uiState, tr]);
+  }, [searchState, searchRefs, uiState, tr, incrementalSearch]);
 
   const handleSearch = useCallback(async (preparedRequest?: SearchRequest): Promise<void> => {
     if (!tauriRuntimeAvailable) {
@@ -358,7 +310,7 @@ export function useApp() {
     searchState.setElapsedMs(null);
     searchState.setTtfrMs(null);
     searchState.setSearchErrorCount(0);
-    incrementalSearchRef.current = { request, results: [] };
+    incrementalSearch.incrementalSearchRef.current = { request, results: [] };
     searchRefs.bufferedBatchRef.current = [];
     searchRefs.pendingCheckedDeltaRef.current = 0;
     if (searchRefs.batchFlushFrameRef.current !== null) {
@@ -619,8 +571,8 @@ export function useApp() {
     searchRefs.sortModeRef.current = filterState.sortMode;
     searchState.setResults((prev) => {
       const next = sortResultsForMode(prev, filterState.sortMode);
-      if (incrementalSearchRef.current) {
-        incrementalSearchRef.current = { ...incrementalSearchRef.current, results: next };
+      if (incrementalSearch.incrementalSearchRef.current) {
+        incrementalSearch.incrementalSearchRef.current = { ...incrementalSearch.incrementalSearchRef.current, results: next };
       }
       return next;
     });
@@ -688,8 +640,8 @@ export function useApp() {
         searchRefs.bufferedBatchRef.current = [];
         searchState.setResults((prev) => {
           const next = sortResultsForMode(prev.concat(remaining), searchRefs.sortModeRef.current);
-          if (incrementalSearchRef.current) {
-            incrementalSearchRef.current = { ...incrementalSearchRef.current, results: next };
+          if (incrementalSearch.incrementalSearchRef.current) {
+            incrementalSearch.incrementalSearchRef.current = { ...incrementalSearch.incrementalSearchRef.current, results: next };
           }
           return next;
         });
@@ -835,8 +787,8 @@ export function useApp() {
           if (patches.length === 0) return;
           searchState.setResults((prev) => {
             const next = mergeMetadataIntoResults(prev, patches);
-            if (incrementalSearchRef.current) {
-              incrementalSearchRef.current = { ...incrementalSearchRef.current, results: next };
+            if (incrementalSearch.incrementalSearchRef.current) {
+              incrementalSearch.incrementalSearchRef.current = { ...incrementalSearch.incrementalSearchRef.current, results: next };
             }
             return next;
           });
@@ -1062,6 +1014,6 @@ export function useApp() {
     setConfirmClearHistory,
     searchInputRef,
     resultPaneRef,
-    incrementalSearchRef,
+    incrementalSearch: incrementalSearch.incrementalSearchRef,
   };
 }

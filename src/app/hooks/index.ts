@@ -10,3 +10,6 @@ export { useSearchEvents } from "./useSearchEvents";
 export { useKeyboardShortcuts } from "./useKeyboardShortcuts";
 export { useToast } from "./useToast";
 export { useUIState } from "./useUIState";
+export { useSearchRequest, type DateValidationError } from "./useSearchRequest";
+export { useResults, useResultsState } from "./useResults";
+export { useIncrementalSearch, type UseIncrementalSearchReturn } from "./useIncrementalSearch";
