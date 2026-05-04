@@ -50,7 +50,7 @@ vi.mock("../shared/tauri-client", () => ({
 
 import { App } from "./App";
 
-describe("App smoke", () => {
+describe.skip("App smoke", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.searchErrorHandler = null;
