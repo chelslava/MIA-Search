@@ -158,4 +158,86 @@ mod tests {
     assert_eq!(items[0].name, "valid_item");
     assert_eq!(items[1].name, "nan_item");
   }
+
+  #[test]
+  fn sort_results_by_size_handles_none_values() {
+    let mut items = vec![
+      SearchResultItem {
+        name: "none_size".to_string(),
+        size: None,
+        ..SearchResultItem::default()
+      },
+      SearchResultItem {
+        name: "some_size_10".to_string(),
+        size: Some(10),
+        ..SearchResultItem::default()
+      },
+      SearchResultItem {
+        name: "some_size_100".to_string(),
+        size: Some(100),
+        ..SearchResultItem::default()
+      },
+    ];
+
+    sort_results(&mut items, &SortMode::Size);
+    assert_eq!(items[0].name, "some_size_100");
+    assert_eq!(items[1].name, "some_size_10");
+    assert_eq!(items[2].name, "none_size");
+  }
+
+  #[test]
+  fn sort_results_by_modified_handles_none_values() {
+    let mut items = vec![
+      SearchResultItem {
+        name: "none_modified".to_string(),
+        modified_at: None,
+        ..SearchResultItem::default()
+      },
+      SearchResultItem {
+        name: "old_modified".to_string(),
+        modified_at: Some("2020-01-01T00:00:00Z".to_string()),
+        ..SearchResultItem::default()
+      },
+      SearchResultItem {
+        name: "new_modified".to_string(),
+        modified_at: Some("2024-01-01T00:00:00Z".to_string()),
+        ..SearchResultItem::default()
+      },
+    ];
+
+    sort_results(&mut items, &SortMode::Modified);
+    assert_eq!(items[0].name, "new_modified");
+    assert_eq!(items[1].name, "old_modified");
+    assert_eq!(items[2].name, "none_modified");
+  }
+
+  #[test]
+  fn sort_results_by_type_handles_none_extensions() {
+    let mut items = vec![
+      SearchResultItem {
+        name: "no_ext".to_string(),
+        extension: None,
+        ..SearchResultItem::default()
+      },
+      SearchResultItem {
+        name: "a_md".to_string(),
+        extension: Some("md".to_string()),
+        ..SearchResultItem::default()
+      },
+      SearchResultItem {
+        name: "b_txt".to_string(),
+        extension: Some("txt".to_string()),
+        ..SearchResultItem::default()
+      },
+    ];
+
+    sort_results(&mut items, &SortMode::Type);
+    let names: Vec<_> = items.iter().map(|i| i.name.as_str()).collect();
+    assert!(names.contains(&"no_ext"));
+    assert!(names.contains(&"a_md"));
+    assert!(names.contains(&"b_txt"));
+    let md_idx = names.iter().position(|&n| n == "a_md").unwrap();
+    let txt_idx = names.iter().position(|&n| n == "b_txt").unwrap();
+    assert!(md_idx < txt_idx, "md should come before txt alphabetically");
+  }
 }
