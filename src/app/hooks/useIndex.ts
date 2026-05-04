@@ -7,6 +7,7 @@ type UseIndexResult = {
   indexStatusSnapshot: IndexStatusResponse | null;
   isRebuildingIndex: boolean;
   indexHint: string;
+  rebuildProgress: number;
   refreshIndexStatus: () => Promise<IndexStatusResponse | null>;
   handleRebuildIndex: (roots: string[]) => Promise<void>;
 };
@@ -22,6 +23,7 @@ export function useIndex(
   const [indexStatusSnapshot, setIndexStatusSnapshot] = useState<IndexStatusResponse | null>(null);
   const [isRebuildingIndex, setIsRebuildingIndex] = useState(false);
   const [indexHint, setIndexHint] = useState("");
+  const [rebuildProgress, setRebuildProgress] = useState(0);
 
   const refreshIndexStatus = useCallback(async (): Promise<IndexStatusResponse | null> => {
     if (!tauriRuntimeAvailable) return null;
@@ -41,9 +43,35 @@ export function useIndex(
   const handleRebuildIndex = useCallback(async (roots: string[]) => {
     if (!tauriRuntimeAvailable || roots.length === 0) return;
     setIsRebuildingIndex(true);
+    setRebuildProgress(0);
     setIndexHint(tr("app.index.rebuilding", "Идёт перестроение индекса..."));
+
+    let pollIntervalId: ReturnType<typeof setInterval> | null = null;
+
+    const startPolling = () => {
+      pollIntervalId = setInterval(async () => {
+        try {
+          const snapshot = await indexStatus();
+          setRebuildProgress(snapshot.rebuild_entries_count);
+        } catch {
+          // Ignore polling errors
+        }
+      }, 500);
+    };
+
+    const stopPolling = () => {
+      if (pollIntervalId) {
+        clearInterval(pollIntervalId);
+        pollIntervalId = null;
+      }
+    };
+
+    startPolling();
+
     try {
       const rebuilt = await indexRebuild(roots);
+      stopPolling();
+      setRebuildProgress(rebuilt.entries);
       setIndexStatusSnapshot({
         status: rebuilt.entries > 0 ? "ready" : "empty",
         entries: rebuilt.entries,
@@ -51,10 +79,12 @@ export function useIndex(
         root_paths: roots,
         updated_at: rebuilt.updated_at,
         version_mismatch: false,
-        rebuild_entries_count: 0
+        rebuild_entries_count: rebuilt.entries
       });
-      setIndexHint(tr("app.index.rebuildDone", "Индекс обновлён"));
+      setIndexHint(tr("app.index.rebuildDone", `Индекс обновлён (${rebuilt.entries} entries)`));
     } catch {
+      stopPolling();
+      setRebuildProgress(0);
       setIndexHint(tr("app.index.rebuildFailed", "Не удалось перестроить индекс"));
     } finally {
       setIsRebuildingIndex(false);
@@ -117,6 +147,7 @@ export function useIndex(
     indexStatusSnapshot,
     isRebuildingIndex,
     indexHint,
+    rebuildProgress,
     refreshIndexStatus,
     handleRebuildIndex
   };

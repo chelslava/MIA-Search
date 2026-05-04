@@ -163,6 +163,15 @@ const ru = {
         legend: "Глубина",
         unlimited: "Без ограничений"
       },
+      backend: {
+        rebuild: "Перестроить индекс",
+        rebuilding: "Перестроение...",
+        cancel: "Отмена",
+        status: "Статус",
+        entries: "Записей",
+        updatedAt: "Обновлено",
+        rebuildProgress: "Проиндексировано: {{count}}"
+      },
       size: {
         legend: "Размер",
         enabled: "Учитывать",

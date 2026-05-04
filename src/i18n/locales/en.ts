@@ -163,6 +163,15 @@ const en = {
         legend: "Depth",
         unlimited: "Unlimited"
       },
+      backend: {
+        rebuild: "Rebuild index",
+        rebuilding: "Rebuilding...",
+        cancel: "Cancel",
+        status: "Status",
+        entries: "Entries",
+        updatedAt: "Updated",
+        rebuildProgress: "Indexed: {{count}}"
+      },
       size: {
         legend: "Size",
         enabled: "Enable",

@@ -192,6 +192,7 @@ export function App() {
             onRebuildIndex={() => void index.handleRebuildIndex(indexRoots)}
             onCancelRebuild={() => void handleCancelRebuild()}
             indexHint={index.indexHint}
+            rebuildProgress={index.rebuildProgress}
             limitMode={filterState.limitMode}
             onLimitModeChange={filterState.setLimitMode}
             customLimit={filterState.customLimit}

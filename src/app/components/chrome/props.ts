@@ -93,6 +93,7 @@ export type FiltersPanelProps = {
   onRebuildIndex: () => void;
   onCancelRebuild: () => void;
   indexHint: string;
+  rebuildProgress: number;
   limitMode: LimitMode;
   onLimitModeChange: (value: LimitMode) => void;
   customLimit: number;

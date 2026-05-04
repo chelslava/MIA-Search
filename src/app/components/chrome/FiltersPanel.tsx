@@ -51,6 +51,7 @@ export function FiltersPanel({
   onRebuildIndex,
   onCancelRebuild,
   indexHint,
+  rebuildProgress,
   limitMode,
   onLimitModeChange,
   customLimit,
@@ -400,10 +401,23 @@ export function FiltersPanel({
             <div>
               {tr("app.filters.backend.entries", "Entries")}: {indexStatus?.entries ?? 0}
             </div>
+            {isRebuildingIndex && rebuildProgress > 0 && (
+              <div className="mt-1">
+                <div className="mb-0.5">
+                  {tr("app.filters.backend.rebuildProgress", "Indexed: {{count}}", { count: rebuildProgress.toLocaleString() })}
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--border)]">
+                  <div
+                    className="h-full rounded-full bg-[var(--accent)] transition-all duration-300"
+                    style={{ width: `${Math.min(100, (rebuildProgress / (indexStatus?.entries || rebuildProgress)) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}
             <div>
               {tr("app.filters.backend.updatedAt", "Updated")}: {indexUpdatedAtLabel}
             </div>
-            {indexHint ? <div>{indexHint}</div> : null}
+            {indexHint ? <div className={isRebuildingIndex ? "font-medium text-[var(--accent)]" : ""}>{indexHint}</div> : null}
           </div>
         </fieldset>
       </div>
