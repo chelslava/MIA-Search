@@ -1,3 +1,4 @@
+use std::fmt;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -13,16 +14,16 @@ pub enum CommandError {
     Cancelled,
 }
 
-impl CommandError {
-    pub fn to_string(&self) -> String {
+impl fmt::Display for CommandError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidRequest(msg) => format!("[COMMAND_INVALID_REQUEST] {msg}"),
-            Self::ValidationFailed(msg) => format!("[COMMAND_VALIDATION_FAILED] {msg}"),
-            Self::NotFound(msg) => format!("[COMMAND_NOT_FOUND] {msg}"),
-            Self::PermissionDenied => "[COMMAND_PERMISSION_DENIED] Permission denied".to_string(),
-            Self::InternalError(msg) => format!("[COMMAND_INTERNAL_ERROR] {msg}"),
-            Self::StateError(msg) => format!("[COMMAND_STATE_ERROR] {msg}"),
-            Self::Cancelled => "[COMMAND_CANCELLED] Operation cancelled".to_string(),
+            Self::InvalidRequest(msg) => write!(f, "[COMMAND_INVALID_REQUEST] {msg}"),
+            Self::ValidationFailed(msg) => write!(f, "[COMMAND_VALIDATION_FAILED] {msg}"),
+            Self::NotFound(msg) => write!(f, "[COMMAND_NOT_FOUND] {msg}"),
+            Self::PermissionDenied => write!(f, "[COMMAND_PERMISSION_DENIED] Permission denied"),
+            Self::InternalError(msg) => write!(f, "[COMMAND_INTERNAL_ERROR] {msg}"),
+            Self::StateError(msg) => write!(f, "[COMMAND_STATE_ERROR] {msg}"),
+            Self::Cancelled => write!(f, "[COMMAND_CANCELLED] Operation cancelled"),
         }
     }
 }
