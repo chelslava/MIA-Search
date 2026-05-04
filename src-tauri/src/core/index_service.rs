@@ -1,4 +1,5 @@
-use crate::core::constants::{ENTRY_OVERHEAD_BYTES, MAX_INDEX_ENTRIES, MAX_INDEX_SIZE_MB};
+use crate::core::constants::{MAX_INDEX_ENTRIES, MAX_INDEX_SIZE_MB};
+use crate::core::entry_utils::estimate_entry_size;
 use crate::core::filters::{matches_date, matches_entry_kind, matches_size};
 use crate::core::metadata_service::MetadataService;
 use crate::core::models::{MatchMode, SearchRequest, SearchResultItem, SortMode};
@@ -11,15 +12,6 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
 
 const INDEX_BATCH_SIZE: usize = 100;
-
-fn estimate_entry_size(entry: &SearchResultItem) -> usize {
-    entry.full_path.len()
-        + entry.name.len()
-        + entry.extension.as_ref().map_or(0, |e| e.len())
-        + entry.created_at.as_ref().map_or(0, |c| c.len())
-        + entry.modified_at.as_ref().map_or(0, |m| m.len())
-        + ENTRY_OVERHEAD_BYTES
-}
 
 #[derive(Debug, Clone, Default)]
 pub struct IndexBuildSummary {
@@ -271,6 +263,7 @@ fn score_relevance(name: &str, query: &str) -> Option<f64> {
 
 #[cfg(test)]
 mod tests {
+    use crate::core::entry_utils::estimate_entry_size;
     use super::*;
 
     #[test]

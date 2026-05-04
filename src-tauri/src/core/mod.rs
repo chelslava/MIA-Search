@@ -1,4 +1,5 @@
 pub mod constants;
+pub mod entry_utils;
 pub mod filters;
 pub mod index_service;
 pub mod metadata_service;

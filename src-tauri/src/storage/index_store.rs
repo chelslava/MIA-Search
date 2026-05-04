@@ -1,4 +1,5 @@
-use crate::core::constants::{ENTRY_OVERHEAD_BYTES, MAX_INDEX_ENTRIES, MAX_INDEX_SIZE_MB};
+use crate::core::constants::{MAX_INDEX_ENTRIES, MAX_INDEX_SIZE_MB};
+use crate::core::entry_utils::estimate_entry_size;
 use crate::core::models::SearchResultItem;
 use crate::storage::persistence;
 use chrono::Utc;
@@ -7,15 +8,6 @@ use std::sync::Arc;
 
 pub const INDEX_FILE: &str = "search_index.json";
 pub const INDEX_VERSION: u32 = 1;
-
-fn estimate_entry_size(entry: &SearchResultItem) -> usize {
-  entry.full_path.len()
-    + entry.name.len()
-    + entry.extension.as_ref().map_or(0, |e| e.len())
-    + entry.created_at.as_ref().map_or(0, |c| c.len())
-    + entry.modified_at.as_ref().map_or(0, |m| m.len())
-    + ENTRY_OVERHEAD_BYTES
-}
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 #[serde(default)]
@@ -139,6 +131,8 @@ impl IndexStore {
 
 #[cfg(test)]
 mod tests {
+  use crate::core::constants::ENTRY_OVERHEAD_BYTES;
+  use crate::core::entry_utils::estimate_entry_size;
   use super::*;
 
   fn make_item(path: &str, name: &str) -> SearchResultItem {
