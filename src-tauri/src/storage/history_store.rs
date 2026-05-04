@@ -1,17 +1,31 @@
 use crate::core::models::SearchRequest;
 use crate::storage::persistence;
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 
 const HISTORY_FILE: &str = "history.json";
 
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HistoryQueryEntry {
   pub query: String,
+  pub timestamp: String,
+}
+
+impl Default for HistoryQueryEntry {
+  fn default() -> Self {
+    Self {
+      query: String::new(),
+      timestamp: Utc::now().to_rfc3339(),
+    }
+  }
 }
 
 impl From<SearchRequest> for HistoryQueryEntry {
   fn from(request: SearchRequest) -> Self {
-    Self { query: request.query }
+    Self {
+      query: request.query,
+      timestamp: Utc::now().to_rfc3339(),
+    }
   }
 }
 
@@ -139,5 +153,23 @@ mod tests {
     };
     let entry: HistoryQueryEntry = request.into();
     assert_eq!(entry.query, "secret document");
+  }
+
+  #[test]
+  fn history_entry_has_timestamp() {
+    let request = SearchRequest {
+      query: "test query".to_string(),
+      ..SearchRequest::default()
+    };
+    let entry: HistoryQueryEntry = request.into();
+    assert!(!entry.timestamp.is_empty());
+    assert!(chrono::DateTime::parse_from_rfc3339(&entry.timestamp).is_ok());
+  }
+
+  #[test]
+  fn history_entry_default_has_timestamp() {
+    let entry = HistoryQueryEntry::default();
+    assert!(!entry.timestamp.is_empty());
+    assert!(chrono::DateTime::parse_from_rfc3339(&entry.timestamp).is_ok());
   }
 }
