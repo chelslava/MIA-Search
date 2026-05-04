@@ -71,28 +71,28 @@ const MAX_EXCLUDE_PATH_LENGTH: usize = 256;
 fn validate_request(request: &SearchRequest) -> Result<(), String> {
   if request.query.len() > MAX_QUERY_LENGTH {
     return Err(format!(
-      "Query too long: {} chars (max {})",
+      "[VALIDATION_QUERY_TOO_LONG] Query too long: {} chars (max {})",
       request.query.len(),
       MAX_QUERY_LENGTH
     ));
   }
   if request.roots.len() > MAX_ROOTS {
     return Err(format!(
-      "Too many roots: {} (max {})",
+      "[VALIDATION_TOO_MANY_ROOTS] Too many roots: {} (max {})",
       request.roots.len(),
       MAX_ROOTS
     ));
   }
   if request.extensions.len() > MAX_EXTENSIONS {
     return Err(format!(
-      "Too many extensions: {} (max {})",
+      "[VALIDATION_TOO_MANY_EXTENSIONS] Too many extensions: {} (max {})",
       request.extensions.len(),
       MAX_EXTENSIONS
     ));
   }
   if request.exclude_paths.len() > MAX_EXCLUDE_PATHS {
     return Err(format!(
-      "Too many exclude_paths: {} (max {})",
+      "[VALIDATION_TOO_MANY_EXCLUDE_PATHS] Too many exclude_paths: {} (max {})",
       request.exclude_paths.len(),
       MAX_EXCLUDE_PATHS
     ));
@@ -100,7 +100,7 @@ fn validate_request(request: &SearchRequest) -> Result<(), String> {
   for (i, path) in request.exclude_paths.iter().enumerate() {
     if path.len() > MAX_EXCLUDE_PATH_LENGTH {
       return Err(format!(
-        "exclude_paths[{}] too long: {} chars (max {})",
+        "[VALIDATION_EXCLUDE_PATH_TOO_LONG] exclude_paths[{}] too long: {} chars (max {})",
         i,
         path.len(),
         MAX_EXCLUDE_PATH_LENGTH
@@ -280,6 +280,13 @@ fn terminal_event_from_stream(
 }
 
 fn format_search_error(message: &str) -> (String, String) {
+  if message.starts_with('[') {
+    if let Some(end) = message.find(']') {
+      let code = message[1..end].to_string();
+      let rest = message[end + 1..].trim().to_string();
+      return (code, rest);
+    }
+  }
   let code = if message.contains("regex parse error") || message.contains("wildcard parse error") {
     "SEARCH_INVALID_QUERY"
   } else if message.contains("index store lock poisoned") || message.contains("search session lock poisoned") {
