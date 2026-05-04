@@ -4,6 +4,7 @@ import type { SearchResultItem, SortMode } from "../../../shared/search-types";
 import type { DisplayMode, FilterChip } from "../../types";
 import { Button } from "../../../components/ui/button";
 import { Select } from "../../../components/ui/select";
+import { getFileIcon } from "../../utils/fileIcons";
 
 const CARD_HEIGHT = 80;
 const CARDS_PER_ROW_SM = 2;
@@ -306,7 +307,9 @@ export function ResultsWorkspace({
                   title={`${t("app.tooltips.openFile", "Открыть")}: Enter, ${t("app.tooltips.openParentFolder", "Родительская папка")}: Shift+Enter`}
                 >
                   <td className={`border-b border-[var(--border)] px-2 py-1.5 whitespace-nowrap ${item.hidden ? "text-[var(--muted)] opacity-60" : ""}`}>
-                    <span aria-hidden="true">{item.is_dir ? "📁" : "📄"}</span>
+                    <span aria-hidden="true" className="text-base">
+                      {getFileIcon(item.extension, item.is_dir).icon}
+                    </span>
                   </td>
                   <td className={`border-b border-[var(--border)] px-2 py-1.5 ${item.is_dir ? "font-medium text-[var(--text)]" : "text-[var(--text)]"}`}>
                     <span className="block truncate" title={item.name || t("app.labels.noName", "Без имени")}>
