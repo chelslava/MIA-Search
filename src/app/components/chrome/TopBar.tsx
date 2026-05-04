@@ -108,7 +108,7 @@ export function TopBar({
           size="icon"
           type="button"
           onClick={onToggleLeftPanel}
-          title={tr("app.tooltips.leftPanel", "Левая панель")}
+          title={`${tr("app.tooltips.leftPanel", "Левая панель")} (${tr("app.tooltips.leftPanelHint", "Ctrl+B")})`}
           aria-label={tr("app.tooltips.leftPanel", "Левая панель")}
           className="icon-btn text-base"
         >
@@ -120,6 +120,7 @@ export function TopBar({
             value={query}
             onChange={(event) => onQueryChange(event.target.value)}
             placeholder={tr("app.search.placeholder", "Поиск файлов и папок...")}
+            title={tr("app.tooltips.searchInputHint", "Ctrl+F - фокус, Enter - искать, F5 - обновить")}
             className="search-input pr-11"
           />
           {query ? (
@@ -160,7 +161,7 @@ export function TopBar({
           size="icon"
           type="button"
           onClick={onToggleFilters}
-          title={tr("app.tooltips.filters", "Фильтры")}
+          title={`${tr("app.tooltips.filters", "Фильтры")} (${tr("app.tooltips.filtersHint", "Ctrl+Shift+F")})`}
           aria-label={tr("app.tooltips.filters", "Фильтры")}
           className="icon-btn text-base"
         >
@@ -183,7 +184,7 @@ export function TopBar({
           size="icon"
           type="button"
           onClick={onOpenCommandPalette}
-          title={tr("app.tooltips.commandPalette", "Командная палитра")}
+          title={`${tr("app.tooltips.commandPalette", "Командная палитра")} (${tr("app.tooltips.commandPaletteHint", "Ctrl+K")})`}
           aria-label={tr("app.tooltips.commandPalette", "Командная палитра")}
           className="icon-btn text-base"
         >
@@ -194,7 +195,7 @@ export function TopBar({
           size="icon"
           type="button"
           onClick={onToggleSettings}
-          title={tr("app.tooltips.settings", "Настройки")}
+          title={`${tr("app.tooltips.settings", "Настройки")} (${tr("app.tooltips.settingsHint", "Ctrl+,")})`}
           aria-label={tr("app.tooltips.settings", "Настройки")}
           className="icon-btn text-base"
         >
@@ -205,7 +206,7 @@ export function TopBar({
           size="icon"
           type="button"
           onClick={onToggleRightPanel}
-          title={tr("app.tooltips.rightPanel", "Правая панель")}
+          title={`${tr("app.tooltips.rightPanel", "Правая панель")} (${tr("app.tooltips.rightPanelHint", "Ctrl+Shift+B")})`}
           aria-label={tr("app.tooltips.rightPanel", "Правая панель")}
           className="icon-btn text-base"
         >

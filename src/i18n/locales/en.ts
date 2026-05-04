@@ -92,12 +92,26 @@ const en = {
     },
     tooltips: {
       leftPanel: "Left panel",
+      leftPanelHint: "Ctrl+B",
       clear: "Clear",
       liveSearch: "Live search",
       filters: "Filters",
+      filtersHint: "Ctrl+Shift+F",
       commandPalette: "Command palette",
+      commandPaletteHint: "Ctrl+K",
       settings: "Settings",
-      rightPanel: "Right panel"
+      settingsHint: "Ctrl+,",
+      rightPanel: "Right panel",
+      rightPanelHint: "Ctrl+Shift+B",
+      searchInput: "Search input",
+      searchInputHint: "Ctrl+F to focus, Enter to search, F5 to refresh",
+      openFile: "Open file",
+      openFileHint: "Enter",
+      openParentFolder: "Open parent folder",
+      openParentFolderHint: "Shift+Enter",
+      toggleSort: "Toggle sort direction",
+      rebuildIndex: "Rebuild index",
+      rebuildIndexHint: "Ctrl+Shift+R"
     },
     search: {
       placeholder: "Search files and folders...",

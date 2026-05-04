@@ -92,12 +92,26 @@ const ru = {
     },
     tooltips: {
       leftPanel: "Левая панель",
+      leftPanelHint: "Ctrl+B",
       clear: "Очистить",
       liveSearch: "Live search",
       filters: "Фильтры",
+      filtersHint: "Ctrl+Shift+F",
       commandPalette: "Командная палитра",
+      commandPaletteHint: "Ctrl+K",
       settings: "Настройки",
-      rightPanel: "Правая панель"
+      settingsHint: "Ctrl+,",
+      rightPanel: "Правая панель",
+      rightPanelHint: "Ctrl+Shift+B",
+      searchInput: "Поле поиска",
+      searchInputHint: "Ctrl+F - фокус, Enter - искать, F5 - обновить",
+      openFile: "Открыть файл",
+      openFileHint: "Enter",
+      openParentFolder: "Открыть родительскую папку",
+      openParentFolderHint: "Shift+Enter",
+      toggleSort: "Переключить направление сортировки",
+      rebuildIndex: "Перестроить индекс",
+      rebuildIndexHint: "Ctrl+Shift+R"
     },
     search: {
       placeholder: "Поиск файлов и папок...",
