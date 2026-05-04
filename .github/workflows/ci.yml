@@ -127,6 +127,7 @@ jobs:
         run: cargo clippy -- -D warnings
         working-directory: src-tauri
         continue-on-error: true
+        continue-on-error: true
 
       - name: Run clippy
         run: cargo clippy -- -D warnings
