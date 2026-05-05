@@ -544,7 +544,14 @@ fn absolutize_path(path: &Path, cwd: &Path) -> PathBuf {
 fn dedup_path_key(path: &str) -> String {
     #[cfg(windows)]
     {
-        path.replace('\\', "/").to_lowercase()
+        let mut result = String::with_capacity(path.len());
+        for c in path.chars() {
+            match c {
+                '\\' => result.push('/'),
+                _ => result.extend(c.to_lowercase()),
+            }
+        }
+        result
     }
     #[cfg(not(windows))]
     {
@@ -1007,5 +1014,20 @@ mod tests {
     fn build_query_matcher_accepts_valid_wildcard() {
         let result = build_query_matcher(&MatchMode::Wildcard, "*.txt", true);
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn dedup_path_key_normalizes_windows_paths() {
+        #[cfg(windows)]
+        {
+            let result = dedup_path_key("C:\\Users\\Test\\File.TXT");
+            assert!(result.contains('/'));
+            assert!(result.eq("c:/users/test/file.txt"));
+        }
+        #[cfg(not(windows))]
+        {
+            let result = dedup_path_key("/users/test/file.txt");
+            assert_eq!(result, "/users/test/file.txt");
+        }
     }
 }

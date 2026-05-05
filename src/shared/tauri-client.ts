@@ -111,6 +111,77 @@ export async function fsPickFolder(): Promise<string | null> {
   return selected ?? null;
 }
 
+export interface FilePreviewResponse {
+  path: string;
+  content: string | null;
+  truncated: boolean;
+  size: number;
+  error: string | null;
+}
+
+export async function previewFile(path: string): Promise<FilePreviewResponse> {
+  return invoke<FilePreviewResponse>("preview_file", { path });
+}
+
+export interface BatchOperationResult {
+  source: string;
+  destination: string | null;
+  success: boolean;
+  error: string | null;
+}
+
+export interface BatchOperationResponse {
+  operation: string;
+  total: number;
+  successful: number;
+  failed: number;
+  results: BatchOperationResult[];
+}
+
+export async function batchCopy(sourcePaths: string[], destinationDir: string): Promise<BatchOperationResponse> {
+  return invoke<BatchOperationResponse>("batch_copy", { sourcePaths, destinationDir });
+}
+
+export async function batchMove(sourcePaths: string[], destinationDir: string): Promise<BatchOperationResponse> {
+  return invoke<BatchOperationResponse>("batch_move", { sourcePaths, destinationDir });
+}
+
+export async function batchDelete(paths: string[]): Promise<BatchOperationResponse> {
+  return invoke<BatchOperationResponse>("batch_delete", { paths });
+}
+
+export interface ExportResponse {
+  path: string | null;
+  count: number;
+  error: string | null;
+}
+
+export async function exportSearchResults(
+  results: string[],
+  format: "csv" | "json",
+  includeMetadata: boolean
+): Promise<ExportResponse> {
+  return invoke("export_search_results", { results, format, includeMetadata });
+}
+
+export async function exportToClipboard(
+  results: string[],
+  format: "csv" | "json",
+  includeMetadata: boolean
+): Promise<ExportResponse> {
+  return invoke("export_to_clipboard", { results, format, includeMetadata });
+}
+
+export async function contentSearch(
+  paths: string[],
+  query: string,
+  caseSensitive: boolean,
+  wholeWord: boolean,
+  useRegex: boolean
+): Promise<import("./search-types").ContentSearchResponse> {
+  return invoke("content_search", { paths, query, caseSensitive, wholeWord, useRegex });
+}
+
 export async function indexStatus(): Promise<IndexStatusResponse> {
   return invoke<IndexStatusResponse>("index_status");
 }

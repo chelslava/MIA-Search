@@ -1,4 +1,6 @@
-import type { SearchResultItem } from "../../../shared/search-types";
+import { useState } from "react";
+import type { SearchResultItem, FilePreviewResponse } from "../../../shared/search-types";
+import { previewFile } from "../../../shared/tauri-client";
 import { formatBytes, formatDate } from "../../formatters";
 import { Button } from "../../../components/ui/button";
 import { EmptySelection } from "../../../components/ui/empty-state";
@@ -24,6 +26,32 @@ export function DetailsSidebar({
   onRevealPath,
   onAddFavorite
 }: DetailsSidebarProps) {
+  const [preview, setPreview] = useState<FilePreviewResponse | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const [previewExpanded, setPreviewExpanded] = useState(false);
+
+  const loadPreview = async (path: string) => {
+    setLoadingPreview(true);
+    try {
+      const result = await previewFile(path);
+      setPreview(result);
+    } catch {
+      setPreview(null);
+    } finally {
+      setLoadingPreview(false);
+    }
+  };
+
+  const togglePreview = () => {
+    if (!previewExpanded) {
+      setPreviewExpanded(true);
+      if (!preview && selectedResult?.is_file) {
+        loadPreview(selectedResult.full_path);
+      }
+    } else {
+      setPreviewExpanded(false);
+    }
+  };
   return (
     <aside className="flex h-full min-h-0 min-w-0 flex-col gap-1.5 overflow-y-auto overflow-x-hidden border-l border-[var(--border)] bg-[var(--surface)] p-1.5 text-[var(--text)]">
       <div className="flex items-center justify-between gap-2">
@@ -93,6 +121,33 @@ export function DetailsSidebar({
               <dd className="break-all">{selectedResult.source_root}</dd>
             </div>
           </dl>
+
+          {selectedResult.is_file && (
+            <div className="mt-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={togglePreview}
+                className="w-full text-[11px]"
+              >
+                {loadingPreview ? "..." : previewExpanded ? tr("app.details.hidePreview", "Скрыть preview") : tr("app.details.showPreview", "Показать")}
+              </Button>
+              {previewExpanded && (
+                <div className="mt-2 max-h-48 overflow-auto rounded-md border border-[var(--border)] bg-[var(--surface)] p-2">
+                  {loadingPreview ? (
+                    <p className="text-xs text-[var(--muted)]">...</p>
+                  ) : preview?.error ? (
+                    <p className="text-xs text-[var(--muted)]">{preview.error}</p>
+                  ) : preview?.truncated ? (
+                    <p className="text-xs text-[var(--muted)]">{tr("app.details.previewTruncated", "Файл слишком большой")}</p>
+                  ) : preview?.content ? (
+                    <pre className="whitespace-pre-wrap break-all text-[10px] font-mono">{preview.content}</pre>
+                  ) : null}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="grid gap-1">
             <Button type="button" onClick={() => void onOpenPath(selectedResult.full_path)} className="h-8 w-full px-2 text-[12px]">

@@ -35,6 +35,7 @@ export function App() {
     indexRoots,
     handleCancelRebuild,
     toasts,
+    pushToast,
     closeToast,
     uiState,
     query,
@@ -58,6 +59,10 @@ export function App() {
     selectedResult,
     chips,
     visibleRows,
+    selectedPaths,
+    toggleSelection,
+    selectAll,
+    clearSelection,
     statusText,
     commandActions,
     confirmClearHistory,
@@ -326,6 +331,105 @@ export function App() {
             formatBytes={formatBytes}
             formatDate={formatDate}
             t={tr}
+            selectedPaths={selectedPaths}
+            onToggleSelection={toggleSelection}
+            onSelectAll={() => selectAll(searchState.results)}
+            onClearSelection={clearSelection}
+            onBatchAction={async (action) => {
+              const paths = Array.from(selectedPaths);
+              if (paths.length === 0) return;
+              
+              if (action === "delete") {
+                if (confirm(`${paths.length} файлов будет удалено. Продолжить?`)) {
+                  pushToast(tr("app.batch.deleting", "Удаление..."), "info");
+                  const { batchDelete } = await import("../shared/tauri-client");
+                  const result = await batchDelete(paths);
+                  clearSelection();
+                  if (result.failed > 0) {
+                    pushToast(tr("app.batch.deletePartial", "Удалено: {{ok}}, ошибок: {{fail}}", { ok: result.successful, fail: result.failed }), "error");
+                  } else {
+                    pushToast(tr("app.batch.deleteSuccess", "Удалено: {{count}}", { count: result.successful }), "success");
+                  }
+                }
+              } else if (action === "copy") {
+                pushToast(tr("app.batch.copying", "Копирование..."), "info");
+                const { fsPickFolder, batchCopy } = await import("../shared/tauri-client");
+                const destDir = await fsPickFolder();
+                if (destDir) {
+                  const result = await batchCopy(paths, destDir);
+                  clearSelection();
+                  if (result.failed > 0) {
+                    pushToast(tr("app.batch.copyPartial", "Скопировано: {{ok}}, ошибок: {{fail}}", { ok: result.successful, fail: result.failed }), "error");
+                  } else {
+                    pushToast(tr("app.batch.copySuccess", "Скопировано: {{count}}", { count: result.successful }), "success");
+                  }
+                }
+              } else if (action === "move") {
+                pushToast(tr("app.batch.moving", "Перемещение..."), "info");
+                const { fsPickFolder, batchMove } = await import("../shared/tauri-client");
+                const destDir = await fsPickFolder();
+                if (destDir) {
+                  const result = await batchMove(paths, destDir);
+                  clearSelection();
+                  if (result.failed > 0) {
+                    pushToast(tr("app.batch.movePartial", "Перемещено: {{ok}}, ошибок: {{fail}}", { ok: result.successful, fail: result.failed }), "error");
+                  } else {
+                    pushToast(tr("app.batch.moveSuccess", "Перемещено: {{count}}", { count: result.successful }), "success");
+                  }
+                }
+              }
+            }}
+            onExportCsv={async () => {
+              const paths = searchState.results.map((r) => r.full_path);
+              const { exportSearchResults } = await import("../shared/tauri-client");
+              pushToast(tr("app.export.exporting", "Экспорт..."), "info");
+              const result = await exportSearchResults(paths, "csv", false);
+              if (result.error) {
+                pushToast(tr("app.export.failed", "Ошибка экспорта"), "error");
+              } else {
+                pushToast(tr("app.export.csvSuccess", "Экспорт в CSV: {{count}}", { count: result.count }), "success");
+              }
+            }}
+            onExportJson={async () => {
+              const paths = searchState.results.map((r) => r.full_path);
+              const { exportSearchResults } = await import("../shared/tauri-client");
+              pushToast(tr("app.export.exporting", "Экспорт..."), "info");
+              const result = await exportSearchResults(paths, "json", false);
+              if (result.error) {
+                pushToast(tr("app.export.failed", "Ошибка экспорта"), "error");
+              } else {
+                pushToast(tr("app.export.jsonSuccess", "Экспорт в JSON: {{count}}", { count: result.count }), "success");
+              }
+            }}
+            onExportClipboard={async () => {
+              const paths = searchState.results.map((r) => r.full_path);
+              const { exportToClipboard } = await import("../shared/tauri-client");
+              const result = await exportToClipboard(paths, "csv", false);
+              if (result.error) {
+                pushToast(tr("app.export.clipboardFailed", "Не удалось скопировать в буфер"), "error");
+              } else {
+                pushToast(tr("app.export.clipboardSuccess", "Скопировано: {{count}}", { count: result.count }), "success");
+              }
+            }}
+            onContentSearch={async (query: string) => {
+              const filePaths = searchState.results.filter((r) => r.is_file).map((r) => r.full_path);
+              if (filePaths.length === 0) {
+                pushToast(tr("app.contentSearch.noFiles", "Нет файлов для поиска"), "info");
+                return;
+              }
+              pushToast(tr("app.contentSearch.searching", "Поиск..."), "info");
+              try {
+                const { contentSearch } = await import("../shared/tauri-client");
+                const result = await contentSearch(filePaths, query, false, false, false);
+                if (result.total_matches > 0) {
+                  pushToast(tr("app.contentSearch.found", "Найдено: {{files}} файлов, {{matches}} совпадений", { files: result.total_files, matches: result.total_matches }), "success");
+                } else {
+                  pushToast(tr("app.contentSearch.notFound", "Совпадений не найдено"), "info");
+                }
+              } catch {
+                pushToast(tr("app.contentSearch.error", "Ошибка поиска"), "error");
+              }
+            }}
           />
 
           {layoutState.rightVisible ? <div className="splitter" onMouseDown={() => { document.body.dataset.dragPanel = "right"; }} /> : null}

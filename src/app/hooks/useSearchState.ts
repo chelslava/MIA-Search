@@ -13,6 +13,7 @@ export type SearchState = {
   elapsedMs: number | null;
   ttfrMs: number | null;
   searchErrorCount: number;
+  selectedPaths: Set<string>;
 };
 
 export type SearchStateActions = {
@@ -28,6 +29,9 @@ export type SearchStateActions = {
   setTtfrMs: React.Dispatch<React.SetStateAction<number | null>>;
   setSearchErrorCount: React.Dispatch<React.SetStateAction<number>>;
   resetSearch: (status: string) => void;
+  toggleSelection: (path: string, selected: boolean) => void;
+  selectAll: (results: SearchResultItem[]) => void;
+  clearSelection: () => void;
 };
 
 export function useSearchState(initialStatus: string): SearchState & SearchStateActions {
@@ -42,6 +46,27 @@ export function useSearchState(initialStatus: string): SearchState & SearchState
   const [elapsedMs, setElapsedMs] = useState<number | null>(null);
   const [ttfrMs, setTtfrMs] = useState<number | null>(null);
   const [searchErrorCount, setSearchErrorCount] = useState(0);
+  const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
+
+  const toggleSelection = useCallback((path: string, selected: boolean) => {
+    setSelectedPaths((prev) => {
+      const next = new Set(prev);
+      if (selected) {
+        next.add(path);
+      } else {
+        next.delete(path);
+      }
+      return next;
+    });
+  }, []);
+
+  const selectAll = useCallback((results: SearchResultItem[]) => {
+    setSelectedPaths(new Set(results.map((r) => r.full_path)));
+  }, []);
+
+  const clearSelection = useCallback(() => {
+    setSelectedPaths(new Set());
+  }, []);
 
   const resetSearch = useCallback((newStatus: string) => {
     setResults([]);
@@ -54,6 +79,7 @@ export function useSearchState(initialStatus: string): SearchState & SearchState
     setElapsedMs(null);
     setTtfrMs(null);
     setSearchErrorCount(0);
+    setSelectedPaths(new Set());
   }, []);
 
   return {
@@ -68,6 +94,7 @@ export function useSearchState(initialStatus: string): SearchState & SearchState
     elapsedMs,
     ttfrMs,
     searchErrorCount,
+    selectedPaths,
     setResults,
     setSelectedPath,
     setStatus,
@@ -79,7 +106,10 @@ export function useSearchState(initialStatus: string): SearchState & SearchState
     setElapsedMs,
     setTtfrMs,
     setSearchErrorCount,
-    resetSearch
+    resetSearch,
+    toggleSelection,
+    selectAll,
+    clearSelection,
   };
 }
 

@@ -122,6 +122,36 @@ export interface FsTreeNode {
   has_children: boolean;
 }
 
+export interface FilePreviewResponse {
+  path: string;
+  content: string | null;
+  truncated: boolean;
+  size: number;
+  error: string | null;
+}
+
+export interface ContentMatch {
+  path: string;
+  line_number: number;
+  line_content: string;
+  match_start: number;
+  match_end: number;
+}
+
+export interface ContentSearchResult {
+  path: string;
+  matches: ContentMatch[];
+  total_matches: number;
+}
+
+export interface ContentSearchResponse {
+  results: ContentSearchResult[];
+  total_files: number;
+  total_matches: number;
+  searched_paths: number;
+  errors: string[];
+}
+
 export interface IndexStatusResponse {
   status: "empty" | "ready" | "in_progress";
   entries: number;

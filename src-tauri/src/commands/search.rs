@@ -2,14 +2,14 @@ use crate::{
   core::{
     constants::{MAX_EXCLUDE_PATH_LENGTH, MAX_EXCLUDE_PATHS, MAX_EXTENSIONS, MAX_QUERY_LENGTH, MAX_ROOTS},
     index_service::IndexService,
-    metadata_service::MetadataService,
+    async_metadata_service::AsyncMetadataService,
     models::{SearchBackend, SearchRequest, SearchResultItem},
     search_service::SearchService,
+    content_search::{ContentSearchService, ContentSearchResponse},
   },
   commands::history::record_query_if_enabled,
   AppState,
 };
-use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 use tauri::{AppHandle, Emitter, Manager, State};
@@ -234,9 +234,7 @@ pub async fn search_enrich_metadata(
     .map(|request| request.roots)
     .unwrap_or_default();
 
-  tauri::async_runtime::spawn_blocking(move || enrich_paths_with_metadata(&paths, &candidate_roots))
-    .await
-    .map_err(|error| format!("metadata task join error: {error}"))?
+  enrich_paths_with_metadata(&paths, &candidate_roots).await
 }
 
 fn cancel_status_text(search_id: Option<u64>) -> String {
@@ -343,15 +341,23 @@ fn to_lightweight_item(mut item: SearchResultItem) -> SearchResultItem {
   item
 }
 
-fn enrich_paths_with_metadata(paths: &[String], candidate_roots: &[String]) -> Result<Vec<SearchResultItem>, String> {
-  let items: Vec<SearchResultItem> = paths
-    .par_iter()
-    .map(|path| {
+async fn enrich_paths_with_metadata(paths: &[String], candidate_roots: &[String]) -> Result<Vec<SearchResultItem>, String> {
+  use futures::stream::{self, StreamExt};
+  
+  let batch_size = 50;
+  let mut results = Vec::with_capacity(paths.len());
+  
+  for chunk in paths.chunks(batch_size) {
+    let futures: Vec<_> = chunk.iter().map(|path| {
       let source_root = resolve_source_root_for_path(path, candidate_roots);
-      MetadataService::enrich_path(path, source_root)
-    })
-    .collect();
-  Ok(items)
+      AsyncMetadataService::enrich_path(path, source_root)
+    }).collect();
+    
+    let batch_results = stream::iter(futures).buffer_unordered(batch_size).collect::<Vec<_>>().await;
+    results.extend(batch_results);
+  }
+  
+  Ok(results)
 }
 
 fn resolve_source_root_for_path(path: &str, roots: &[String]) -> String {
@@ -495,15 +501,16 @@ mod tests {
     assert_eq!(resolved, "C:/data/project");
   }
 
-  #[test]
-  fn enrich_paths_with_metadata_populates_entries() {
+  #[tokio::test]
+  async fn enrich_paths_with_metadata_populates_entries() {
+    use tokio::test as async_test;
     let dir = tempdir().expect("tempdir");
     let file = dir.path().join("doc.txt");
     fs::write(&file, "hello").expect("write file");
     let paths = vec![file.to_string_lossy().to_string()];
     let roots = vec![dir.path().to_string_lossy().to_string()];
 
-    let items = enrich_paths_with_metadata(&paths, &roots).expect("metadata");
+    let items = enrich_paths_with_metadata(&paths, &roots).await.expect("metadata");
     assert_eq!(items.len(), 1);
     assert_eq!(items[0].name, "doc.txt");
     assert!(items[0].is_file);
@@ -573,4 +580,31 @@ mod tests {
     let err = validate_request(&request).unwrap_err();
     assert!(err.contains("exclude_paths[0] too long"));
   }
+}
+
+#[tauri::command]
+pub async fn content_search(
+  paths: Vec<String>,
+  query: String,
+  case_sensitive: bool,
+  whole_word: bool,
+  use_regex: bool,
+) -> Result<ContentSearchResponse, String> {
+  if query.is_empty() {
+    return Ok(ContentSearchResponse {
+      results: vec![],
+      total_files: 0,
+      total_matches: 0,
+      searched_paths: paths.len(),
+      errors: vec![],
+    });
+  }
+
+  let result = tokio::task::spawn_blocking(move || {
+    ContentSearchService::search_in_content(&paths, &query, case_sensitive, whole_word, use_regex)
+  })
+  .await
+  .map_err(|e| format!("Task join error: {}", e))?;
+
+  Ok(result)
 }

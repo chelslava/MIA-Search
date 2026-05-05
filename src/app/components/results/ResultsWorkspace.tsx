@@ -1,5 +1,5 @@
 import type { MouseEvent, RefObject } from "react";
-import { useMemo } from "react";
+import { useMemo, useCallback } from "react";
 import type { SearchResultItem, SortMode } from "../../../shared/search-types";
 import type { DisplayMode, FilterChip } from "../../types";
 import { Button } from "../../../components/ui/button";
@@ -8,9 +8,7 @@ import { EmptySearchResults } from "../../../components/ui/empty-state";
 import { SkeletonRow, SkeletonCard } from "../../../components/ui/skeleton";
 import { getFileIcon } from "../../utils/fileIcons";
 
-const CARD_HEIGHT = 80;
-const CARDS_PER_ROW_SM = 2;
-const CARDS_PER_ROW_XL = 3;
+export type BatchAction = "copy" | "move" | "delete";
 
 type ResultsWorkspaceProps = {
   containerRef?: RefObject<HTMLElement | null>;
@@ -37,7 +35,20 @@ type ResultsWorkspaceProps = {
   t: (key: string, defaultValue: string, values?: Record<string, unknown>) => string;
   isLoading?: boolean;
   error?: string | null;
+  selectedPaths: Set<string>;
+  onToggleSelection: (path: string, selected: boolean) => void;
+  onSelectAll: () => void;
+  onClearSelection: () => void;
+  onBatchAction: (action: BatchAction) => void;
+  onExportCsv: () => void;
+  onExportJson: () => void;
+  onExportClipboard: () => void;
+  onContentSearch: (query: string) => void;
 };
+
+const CARD_HEIGHT = 80;
+const CARDS_PER_ROW_SM = 2;
+const CARDS_PER_ROW_XL = 3;
 
 function useVisibleCards(
   results: SearchResultItem[],
@@ -87,9 +98,55 @@ export function ResultsWorkspace({
   formatDate,
   t,
   isLoading,
-  error
+  error,
+  selectedPaths,
+  onToggleSelection,
+    onSelectAll,
+    onClearSelection,
+    onBatchAction,
+    onExportCsv,
+    onExportJson,
+    onExportClipboard,
+    onContentSearch,
 }: ResultsWorkspaceProps) {
   const visibleCards = useVisibleCards(results, scrollTop, listHeight);
+
+  const handleRowClick = useCallback((item: SearchResultItem, event: React.MouseEvent) => {
+    if (event.ctrlKey || event.metaKey) {
+      const newSelected = !selectedPaths.has(item.full_path);
+      onToggleSelection(item.full_path, newSelected);
+    } else {
+      onSelectPath(item.full_path);
+    }
+  }, [selectedPaths, onToggleSelection, onSelectPath]);
+
+  const isSelected = useCallback((path: string) => selectedPaths.has(path), [selectedPaths]);
+
+  const renderSelectionBar = () => {
+    if (selectedPaths.size === 0) return null;
+    return (
+      <div className="flex items-center gap-2 rounded-md border border-[var(--accent)] bg-[color-mix(in_srgb,var(--surface)_90%,var(--accent))] p-2 text-sm">
+        <span className="font-medium">{selectedPaths.size} выбрано</span>
+        <Button type="button" variant="outline" size="sm" onClick={onSelectAll}>
+          {t("app.batch.selectAll", "Выбрать все")}
+        </Button>
+        <Button type="button" variant="outline" size="sm" onClick={onClearSelection}>
+          {t("app.batch.clearSelection", "Снять выбор")}
+        </Button>
+        <div className="ml-auto flex gap-1">
+          <Button type="button" size="sm" onClick={() => onBatchAction("copy")}>
+            {t("app.batch.copy", "Копировать")}
+          </Button>
+          <Button type="button" size="sm" variant="secondary" onClick={() => onBatchAction("move")}>
+            {t("app.batch.move", "Переместить")}
+          </Button>
+          <Button type="button" size="sm" variant="outline" onClick={() => onBatchAction("delete")}>
+            {t("app.batch.delete", "Удалить")}
+          </Button>
+        </div>
+      </div>
+    );
+  };
 
   const renderEmptyState = () => {
     if (isLoading) {
@@ -148,17 +205,38 @@ export function ResultsWorkspace({
           </Button>
         </div>
         <div className="flex flex-wrap items-center gap-1">
-          <Select
-            value={sortMode}
-            onChange={(event) => setSortMode(event.target.value as SortMode)}
-            className="min-w-[14rem]"
-          >
-            <option value="Relevance">{t("app.labels.sortRelevance", "По релевантности")}</option>
-            <option value="Name">{t("app.labels.sortName", "По имени")}</option>
-            <option value="Size">{t("app.labels.sortSize", "По размеру")}</option>
-            <option value="Modified">{t("app.labels.sortModified", "По дате изменения")}</option>
-            <option value="Type">{t("app.labels.sortType", "По типу")}</option>
-          </Select>
+            <Select
+              value={sortMode}
+              onChange={(event) => setSortMode(event.target.value as SortMode)}
+              className="min-w-[14rem]"
+            >
+              <option value="Relevance">{t("app.labels.sortRelevance", "По релевантности")}</option>
+              <option value="Name">{t("app.labels.sortName", "По имени")}</option>
+              <option value="Size">{t("app.labels.sortSize", "По размеру")}</option>
+              <option value="Modified">{t("app.labels.sortModified", "По дате изменения")}</option>
+              <option value="Type">{t("app.labels.sortType", "По типу")}</option>
+            </Select>
+          </div>
+          <div className="flex gap-1">
+            {results.length > 0 && (
+              <>
+                <Button type="button" size="sm" variant="outline" onClick={onExportCsv}>
+                  {t("app.export.csv", "CSV")}
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={onExportJson}>
+                  {t("app.export.json", "JSON")}
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={onExportClipboard}>
+                  {t("app.export.clipboard", "Буфер")}
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => {
+                  const query = prompt(t("app.contentSearch.prompt", "Введите текст для поиска в файлах:"));
+                  if (query) onContentSearch(query);
+                }}>
+                  {t("app.contentSearch.button", "Поиск в файлах")}
+                </Button>
+              </>
+            )}
         </div>
       </div>
 
@@ -181,6 +259,8 @@ export function ResultsWorkspace({
           </Button>
         ) : null}
       </div>
+
+      {renderSelectionBar()}
 
       {displayMode === "cards" ? (
         results.length === 0 || isLoading || error ? (
@@ -211,13 +291,25 @@ export function ResultsWorkspace({
               role="listitem"
               aria-selected={selectedPath === item.full_path}
               className={
-                selectedPath === item.full_path
+                isSelected(item.full_path)
+                  ? "cursor-pointer rounded-md border-2 border-[var(--accent)] bg-[color-mix(in_srgb,var(--surface)_88%,var(--accent))] p-2 transition-colors"
+                  : selectedPath === item.full_path
                   ? "cursor-pointer rounded-md border border-[var(--accent)] bg-[color-mix(in_srgb,var(--surface)_88%,var(--accent))] p-2 transition-colors"
                   : "cursor-pointer rounded-md border border-[var(--border)] bg-[var(--surface)] p-2 transition-colors hover:border-[var(--accent)] hover:bg-[color-mix(in_srgb,var(--surface)_88%,var(--accent))]"
               }
-              onClick={() => onSelectPath(item.full_path)}
+              onClick={(e) => handleRowClick(item, e)}
             >
               <div className="mb-1.5 flex items-start gap-1.5 text-xs font-semibold text-[var(--text)]">
+                <input
+                  type="checkbox"
+                  checked={isSelected(item.full_path)}
+                  onChange={(e) => {
+                    e.stopPropagation();
+                    onToggleSelection(item.full_path, e.target.checked);
+                  }}
+                  onClick={(e) => e.stopPropagation()}
+                  className="mt-0.5 h-3.5 w-3.5 shrink-0 cursor-pointer accent-[var(--accent)]"
+                />
                 <span aria-hidden="true" className="text-sm leading-none">
                   {getFileIcon(item.extension, item.is_dir).icon}
                 </span>
@@ -248,8 +340,9 @@ export function ResultsWorkspace({
         >
           <table className="w-full table-fixed border-separate border-spacing-0 text-xs" role="grid" aria-label={t("app.results.ariaLabel", "Результаты поиска")}>
             <colgroup>
-              <col style={{ width: "68px" }} />
-              <col style={{ width: "56%" }} />
+              <col style={{ width: "32px" }} />
+              <col style={{ width: "36px" }} />
+              <col style={{ width: "48%" }} />
               <col style={{ width: "22%" }} />
               <col style={{ width: "92px" }} />
               <col style={{ width: "124px" }} />
@@ -257,6 +350,20 @@ export function ResultsWorkspace({
             </colgroup>
             <thead className="sticky top-0 z-10 bg-[var(--surface-alt)]">
               <tr className="text-left text-xs uppercase tracking-wide text-[var(--muted)]">
+                <th className="border-b border-[var(--border)] px-1 py-1.5 font-medium whitespace-nowrap">
+                  <input
+                    type="checkbox"
+                    checked={selectedPaths.size > 0 && selectedPaths.size === results.length}
+                    ref={(el) => {
+                      if (el) el.indeterminate = selectedPaths.size > 0 && selectedPaths.size < results.length;
+                    }}
+                    onChange={(e) => {
+                      if (e.target.checked) onSelectAll();
+                      else onClearSelection();
+                    }}
+                    className="h-3.5 w-3.5 cursor-pointer accent-[var(--accent)]"
+                  />
+                </th>
                 <th className="border-b border-[var(--border)] px-2 py-1.5 font-medium whitespace-nowrap">{t("app.labels.colIcon", "Иконка")}</th>
                 <th
                   className="border-b border-[var(--border)] px-2 py-1.5 font-medium whitespace-nowrap cursor-pointer hover:text-[var(--text)] select-none"
@@ -292,7 +399,7 @@ export function ResultsWorkspace({
             <tbody>
               {visibleRows.topSpacer > 0 ? (
                 <tr>
-                  <td colSpan={6} style={{ height: `${visibleRows.topSpacer}px`, padding: 0, borderBottom: "none" }} />
+                  <td colSpan={7} style={{ height: `${visibleRows.topSpacer}px`, padding: 0, borderBottom: "none" }} />
                 </tr>
               ) : null}
 
@@ -304,14 +411,28 @@ export function ResultsWorkspace({
                   role="row"
                   aria-selected={selectedPath === item.full_path}
                   className={
-                    selectedPath === item.full_path
+                    isSelected(item.full_path)
+                      ? "cursor-pointer bg-[color-mix(in_srgb,var(--surface)_80%,var(--accent))] transition-colors hover:bg-[color-mix(in_srgb,var(--surface)_76%,var(--accent))] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-inset"
+                      : selectedPath === item.full_path
                       ? "cursor-pointer bg-[color-mix(in_srgb,var(--surface)_84%,var(--accent))] transition-colors hover:bg-[color-mix(in_srgb,var(--surface)_80%,var(--accent))] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-inset"
                       : "cursor-pointer transition-colors hover:bg-[color-mix(in_srgb,var(--surface)_88%,var(--accent))] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-inset"
                   }
-                  onClick={() => onSelectPath(item.full_path)}
+                  onClick={(e) => handleRowClick(item, e)}
                   onContextMenu={(event: MouseEvent<HTMLTableRowElement>) => onResultContextMenu(event, item)}
                   title={`${t("app.tooltips.openFile", "Открыть")}: Enter, ${t("app.tooltips.openParentFolder", "Родительская папка")}: Shift+Enter`}
                 >
+                  <td className="border-b border-[var(--border)] px-1 py-1.5 whitespace-nowrap">
+                    <input
+                      type="checkbox"
+                      checked={isSelected(item.full_path)}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        onToggleSelection(item.full_path, e.target.checked);
+                      }}
+                      onClick={(e) => e.stopPropagation()}
+                      className="h-3.5 w-3.5 cursor-pointer accent-[var(--accent)]"
+                    />
+                  </td>
                   <td className={`border-b border-[var(--border)] px-2 py-1.5 whitespace-nowrap ${item.hidden ? "text-[var(--muted)] opacity-60" : ""}`}>
                     <span aria-hidden="true" className="text-base">
                       {getFileIcon(item.extension, item.is_dir).icon}
@@ -340,7 +461,7 @@ export function ResultsWorkspace({
               {visibleRows.bottomSpacer > 0 ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={7}
                     style={{ height: `${visibleRows.bottomSpacer}px`, padding: 0, borderBottom: "none" }}
                   />
                 </tr>
