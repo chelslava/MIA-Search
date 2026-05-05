@@ -35,6 +35,41 @@ export function sortResultsForMode(items: SearchResultItem[], mode: SortMode): S
   return [...items].sort((left, right) => compareSearchItems(left, right, mode));
 }
 
+export function insertIntoSortedArray(
+  sorted: SearchResultItem[],
+  newItems: SearchResultItem[],
+  mode: SortMode
+): SearchResultItem[] {
+  if (sorted.length === 0) {
+    return sortResultsForMode(newItems, mode);
+  }
+  if (newItems.length === 0) {
+    return sorted;
+  }
+
+  const result: SearchResultItem[] = [];
+  let sortedIdx = 0;
+  let newIdx = 0;
+
+  while (sortedIdx < sorted.length && newIdx < newItems.length) {
+    if (compareSearchItems(sorted[sortedIdx], newItems[newIdx], mode) <= 0) {
+      result.push(sorted[sortedIdx++]);
+    } else {
+      result.push(newItems[newIdx++]);
+    }
+  }
+
+  while (sortedIdx < sorted.length) {
+    result.push(sorted[sortedIdx++]);
+  }
+
+  while (newIdx < newItems.length) {
+    result.push(newItems[newIdx++]);
+  }
+
+  return result;
+}
+
 /**
  * Filters search results by query string using plain text matching.
  * Searches both item name and full path.

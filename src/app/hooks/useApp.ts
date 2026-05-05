@@ -50,7 +50,8 @@ import {
   mergeMetadataIntoResults,
   DEFAULT_ROOT_PATH,
   RESPONSIVE_BREAKPOINT,
-  sortResultsForMode
+  sortResultsForMode,
+  insertIntoSortedArray
 } from "../utils/search-utils";
 import type { FilterChip } from "../types";
 
@@ -252,7 +253,7 @@ export function useApp() {
         searchState.setCheckedPaths((prev) => prev + checkedDelta);
       }
       searchState.setResults((prev) => {
-        const next = sortResultsForMode(prev.concat(nextChunk), searchRefs.sortModeRef.current);
+        const next = insertIntoSortedArray(prev, nextChunk, searchRefs.sortModeRef.current);
         incrementalSearch.updateIncrementalResults(next, searchRefs.sortModeRef.current);
         return next;
       });
@@ -639,7 +640,7 @@ export function useApp() {
         const remaining = searchRefs.bufferedBatchRef.current;
         searchRefs.bufferedBatchRef.current = [];
         searchState.setResults((prev) => {
-          const next = sortResultsForMode(prev.concat(remaining), searchRefs.sortModeRef.current);
+          const next = insertIntoSortedArray(prev, remaining, searchRefs.sortModeRef.current);
           if (incrementalSearch.incrementalSearchRef.current) {
             incrementalSearch.incrementalSearchRef.current = { ...incrementalSearch.incrementalSearchRef.current, results: next };
           }
@@ -771,7 +772,7 @@ export function useApp() {
           !searchRefs.metadataLoadedPathsRef.current.has(path) &&
           !searchRefs.metadataInFlightPathsRef.current.has(path)
       )
-      .slice(0, 64);
+      .slice(0, 32);
     if (targetPaths.length === 0) return;
 
     const timer = window.setTimeout(() => {
@@ -799,7 +800,7 @@ export function useApp() {
             searchRefs.metadataInFlightPathsRef.current.delete(path);
           }
         });
-    }, 100);
+    }, 150);
 
     return () => {
       window.clearTimeout(timer);

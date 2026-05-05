@@ -9,6 +9,7 @@ import {
   isIndexStale,
   parseSearchErrorMessage,
   renderSearchErrorStatus,
+  insertIntoSortedArray,
 } from "./utils/search-utils";
 import type { SearchResultItem } from "../shared/search-types";
 
@@ -199,5 +200,40 @@ describe("renderSearchErrorStatus", () => {
   it("renders generic error for unformatted message", () => {
     const result = renderSearchErrorStatus("unknown error", tr);
     expect(result).toContain("unknown error");
+  });
+});
+
+describe("insertIntoSortedArray", () => {
+  it("merges new items into empty sorted array", () => {
+    const newItems = [makeItem("b"), makeItem("a")];
+    const result = insertIntoSortedArray([], newItems, "Name");
+    expect(result.map((i) => i.name)).toEqual(["a", "b"]);
+  });
+
+  it("merges new items into existing sorted array", () => {
+    const existing = [makeItem("a"), makeItem("c"), makeItem("e")];
+    const newItems = [makeItem("b"), makeItem("d")];
+    const result = insertIntoSortedArray(existing, newItems, "Name");
+    expect(result.map((i) => i.name)).toEqual(["a", "b", "c", "d", "e"]);
+  });
+
+  it("handles empty new items array", () => {
+    const existing = [makeItem("a"), makeItem("b")];
+    const result = insertIntoSortedArray(existing, [], "Name");
+    expect(result.map((i) => i.name)).toEqual(["a", "b"]);
+  });
+
+  it("handles appending items larger than all existing", () => {
+    const existing = [makeItem("a"), makeItem("b")];
+    const newItems = [makeItem("c"), makeItem("d")];
+    const result = insertIntoSortedArray(existing, newItems, "Name");
+    expect(result.map((i) => i.name)).toEqual(["a", "b", "c", "d"]);
+  });
+
+  it("handles prepending items smaller than all existing", () => {
+    const existing = [makeItem("c"), makeItem("d")];
+    const newItems = [makeItem("a"), makeItem("b")];
+    const result = insertIntoSortedArray(existing, newItems, "Name");
+    expect(result.map((i) => i.name)).toEqual(["a", "b", "c", "d"]);
   });
 });
