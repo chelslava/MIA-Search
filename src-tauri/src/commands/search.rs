@@ -8,6 +8,7 @@ use crate::{
     content_search::{ContentSearchService, ContentSearchResponse},
   },
   commands::history::record_query_if_enabled,
+  platform::path_security::has_path_traversal,
   AppState,
 };
 use serde::{Deserialize, Serialize};
@@ -101,6 +102,12 @@ fn validate_request(request: &SearchRequest) -> Result<(), String> {
         MAX_EXCLUDE_PATH_LENGTH
       ));
     }
+    if has_path_traversal(path) {
+      return Err(format!(
+        "[VALIDATION_EXCLUDE_PATH_TRAVERSAL] exclude_paths[{}] contains path traversal: {}",
+        i, path
+      ));
+    }
   }
   Ok(())
 }
@@ -190,8 +197,9 @@ pub fn search_start(
   });
 
   {
-    let mut thread_handle = crate::lock_mutex!(state.search_thread_handle, "search_thread_handle");
-    *thread_handle = Some(handle);
+    let mut thread_handles = crate::lock_mutex!(state.search_thread_handles, "search_thread_handles");
+    thread_handles.retain(|h| !h.is_finished());
+    thread_handles.push(handle);
   }
 
   Ok(SearchCommandResponse {
@@ -214,6 +222,13 @@ fn is_active_search(app_handle: &AppHandle, search_id: u64) -> bool {
 pub fn search_cancel(state: State<'_, AppState>) -> Result<SearchCancelResponse, String> {
   let mut session = crate::lock_mutex!(state.search_session, "search_session");
   let search_id = session.cancel();
+
+  // Join the thread to ensure it stops before we return
+  let mut thread_handles = crate::lock_mutex!(state.search_thread_handles, "search_thread_handles");
+  for handle in thread_handles.drain(..) {
+    let _ = handle.join();
+  }
+
   Ok(SearchCancelResponse {
     search_id,
     status: cancel_status_text(search_id),
@@ -308,8 +323,23 @@ fn run_search_stream(
     }
   };
 
+  // Extract the dedup cache from the session so we don't hold the session lock
+  // during the entire stream execution.
+  let mut seen_paths = {
+    let managed_state = app_handle.state::<AppState>();
+    let mut session = managed_state
+      .search_session
+      .lock()
+      .map_err(|_| "search session lock poisoned".to_string())?;
+    session
+      .take_seen_paths()
+      .ok_or_else(|| "search session missing seen_paths".to_string())?
+  };
+
   match request.options.search_backend {
-    SearchBackend::Scan => SearchService::stream(request, cancel_flag, emit_batch, |_| {}),
+    SearchBackend::Scan => {
+      SearchService::stream(request, &mut seen_paths, cancel_flag, emit_batch, |_| {})
+    }
     SearchBackend::Index => {
       let index_snapshot = app_handle
         .state::<AppState>()
@@ -319,7 +349,7 @@ fn run_search_stream(
         .snapshot();
 
       if index_snapshot.entries.is_empty() {
-        SearchService::stream(request, cancel_flag, emit_batch, |_| {})
+        SearchService::stream(request, &mut seen_paths, cancel_flag, emit_batch, |_| {})
       } else {
         let summary = IndexService::stream(&index_snapshot, request, cancel_flag, emit_batch, |_| {})
           .map(|value| crate::core::search_service::SearchStreamSummary {
@@ -579,6 +609,16 @@ mod tests {
     };
     let err = validate_request(&request).unwrap_err();
     assert!(err.contains("exclude_paths[0] too long"));
+  }
+
+  #[test]
+  fn validate_request_rejects_exclude_path_traversal() {
+    let request = SearchRequest {
+      exclude_paths: vec!["../../../etc/passwd".to_string()],
+      ..SearchRequest::default()
+    };
+    let err = validate_request(&request).unwrap_err();
+    assert!(err.contains("path traversal"));
   }
 }
 

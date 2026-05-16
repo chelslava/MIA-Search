@@ -10,7 +10,6 @@ use chrono::{DateTime, Utc};
 use lru::LruCache;
 use rust_search::{FileSize, FilterExt, SearchBuilder};
 use std::collections::{HashSet, VecDeque};
-use std::num::NonZeroUsize;
 use std::panic;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -49,6 +48,8 @@ pub struct SearchSession {
     active_search_id: Option<u64>,
     active_cancel_flag: Option<Arc<AtomicBool>>,
     last_request: Option<SearchRequest>,
+    /// LRU cache for deduplication across consecutive searches within the same session.
+    seen_paths: Option<LruCache<String, ()>>,
 }
 
 impl SearchSession {
@@ -56,13 +57,23 @@ impl SearchSession {
     pub fn start(&mut self, request: SearchRequest) -> SearchStart {
         self.next_search_id = self.next_search_id.saturating_add(1);
         self.active_search_id = Some(self.next_search_id);
-        self.last_request = Some(request);
+        self.last_request = Some(request.clone());
 
         if let Some(flag) = &self.active_cancel_flag {
             flag.store(true, Ordering::Release);
         }
         let cancel_flag = Arc::new(AtomicBool::new(false));
         self.active_cancel_flag = Some(cancel_flag.clone());
+
+        let lru_capacity = request
+            .options
+            .limit
+            .unwrap_or(10000)
+            .saturating_mul(10)
+            .max(1000);
+        self.seen_paths = Some(LruCache::new(
+            std::num::NonZeroUsize::new(lru_capacity).unwrap(),
+        ));
 
         SearchStart {
             search_id: self.next_search_id,
@@ -76,6 +87,7 @@ impl SearchSession {
             flag.store(true, Ordering::Release);
         }
         self.active_cancel_flag = None;
+        self.seen_paths = None;
         self.active_search_id.take()
     }
 
@@ -84,6 +96,7 @@ impl SearchSession {
         if self.active_search_id == Some(search_id) {
             self.active_search_id = None;
             self.active_cancel_flag = None;
+            self.seen_paths = None;
         }
     }
 
@@ -103,6 +116,12 @@ impl SearchSession {
     pub fn is_active_search(&self, search_id: u64) -> bool {
         self.active_search_id == Some(search_id)
     }
+
+    /// Takes the dedup cache out of the session, replacing it with None.
+    /// Used by the command layer to pass the cache to stream() without holding the session lock.
+    pub(crate) fn take_seen_paths(&mut self) -> Option<LruCache<String, ()>> {
+        self.seen_paths.take()
+    }
 }
 
 /// Main search service providing both synchronous and streaming search operations.
@@ -114,8 +133,19 @@ impl SearchService {
     pub fn execute(request: &SearchRequest) -> SearchExecution {
         let mut all_items = Vec::new();
         let mut limit_reached = false;
+        let lru_capacity = std::num::NonZeroUsize::new(
+            request
+                .options
+                .limit
+                .unwrap_or(10000)
+                .saturating_mul(10)
+                .max(1000),
+        )
+        .unwrap();
+        let mut seen_paths = LruCache::new(lru_capacity);
         let _ = Self::stream(
             request,
+            &mut seen_paths,
             Arc::new(AtomicBool::new(false)),
             |batch| {
                 all_items.extend(batch);
@@ -137,6 +167,7 @@ impl SearchService {
     /// The `on_limit` callback is called when the result limit is reached.
     pub fn stream<F, G>(
         request: &SearchRequest,
+        seen_paths: &mut LruCache<String, ()>,
         cancel_flag: Arc<AtomicBool>,
         mut on_batch: F,
         mut on_limit: G,
@@ -168,19 +199,6 @@ impl SearchService {
         }
         let mut limit_reached = false;
         let mut total_results = 0usize;
-        let _estimated_capacity = request.options.limit.unwrap_or(10000).min(100000);
-        // Use LRU cache for deduplication to avoid clearing entire set
-        // Set capacity to limit * 10 to allow for filtering while preventing duplicates
-        let lru_capacity = NonZeroUsize::new(
-            request
-                .options
-                .limit
-                .unwrap_or(10000)
-                .saturating_mul(10)
-                .max(1000),
-        )
-        .unwrap();
-        let mut seen_paths = LruCache::new(lru_capacity);
         let mut batch = Vec::with_capacity(BATCH_SIZE);
         let mut current_batch_limit = FIRST_BATCH_SIZE;
         let tasks = build_scan_tasks(request, &roots);
@@ -231,7 +249,7 @@ impl SearchService {
         drop(tx);
 
         for path in rx {
-            if cancel_flag.load(Ordering::Acquire) && !limit_reached {
+            if cancel_flag.load(Ordering::Acquire) {
                 break;
             }
 
@@ -267,7 +285,7 @@ impl SearchService {
             }
 
             if batch.len() >= current_batch_limit {
-                if cancel_flag.load(Ordering::Acquire) && !limit_reached {
+                if cancel_flag.load(Ordering::Acquire) {
                     break;
                 }
                 sort_stream_batch(&mut batch, &request.options.sort_mode, &query);
@@ -577,6 +595,7 @@ mod tests {
     use super::*;
     use std::collections::HashSet;
     use std::fs;
+    use std::num::NonZeroUsize;
     use std::path::Path;
     use std::sync::atomic::AtomicBool;
     use std::sync::Arc;
@@ -644,6 +663,45 @@ mod tests {
         assert_eq!(execution.items.len(), 1);
         assert_eq!(paths.len(), 1);
         assert_eq!(execution.items[0].name, "duplicate.rs");
+    }
+
+    #[test]
+    fn cross_search_deduplication_reuses_cache() {
+        let root = tempdir().expect("root");
+        write_file(&root.path().join("alpha.txt"), "alpha");
+        write_file(&root.path().join("beta.txt"), "beta");
+        write_file(&root.path().join("gamma.txt"), "gamma");
+
+        let mut request = request_for_roots(vec![root.path().to_string_lossy().to_string()]);
+        request.options.sort_mode = SortMode::Name;
+
+        let lru_capacity = NonZeroUsize::new(1000).unwrap();
+        let mut seen_paths = LruCache::new(lru_capacity);
+
+        // First search: files should be found
+        let first = SearchService::stream(
+            &request,
+            &mut seen_paths,
+            Arc::new(AtomicBool::new(false)),
+            |_batch| {},
+            |_limit| {},
+        )
+        .expect("first stream should succeed");
+        assert!(first.total_results > 0, "first search should find files");
+
+        // Second search with the same LRU cache: all files already seen, so 0 new results
+        let second = SearchService::stream(
+            &request,
+            &mut seen_paths,
+            Arc::new(AtomicBool::new(false)),
+            |_batch| {},
+            |_limit| {},
+        )
+        .expect("second stream should succeed");
+        assert_eq!(
+            second.total_results, 0,
+            "all paths were already in the LRU cache from the first search"
+        );
     }
 
     #[test]
@@ -720,8 +778,10 @@ mod tests {
         request.roots = vec![".".to_string()];
         request.options.match_mode = MatchMode::Regex;
 
+        let mut seen_paths = LruCache::new(NonZeroUsize::new(1000).unwrap());
         let result = SearchService::stream(
             &request,
+            &mut seen_paths,
             Arc::new(AtomicBool::new(false)),
             |_batch| {},
             |_limit| {},
@@ -874,8 +934,10 @@ mod tests {
         let mut request = request_for_roots(vec!["Z:/this/path/should/not/exist".to_string()]);
         request.options.max_depth = None;
 
+        let mut seen_paths = LruCache::new(NonZeroUsize::new(1000).unwrap());
         let summary = SearchService::stream(
             &request,
+            &mut seen_paths,
             Arc::new(AtomicBool::new(false)),
             |_batch| {},
             |_limit| {},
@@ -905,8 +967,10 @@ mod tests {
         let mut request = request_for_roots(vec![locked.to_string_lossy().to_string()]);
         request.options.max_depth = None;
 
+        let mut seen_paths = LruCache::new(NonZeroUsize::new(1000).unwrap());
         let result = SearchService::stream(
             &request,
+            &mut seen_paths,
             Arc::new(AtomicBool::new(false)),
             |_batch| {},
             |_limit| {},

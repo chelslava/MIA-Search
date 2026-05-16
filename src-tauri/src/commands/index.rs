@@ -6,7 +6,7 @@ use std::sync::atomic::AtomicBool;
 use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
-use tauri::State;
+use tauri::{AppHandle, Emitter, State};
 
 /// Response returned after index rebuild completes.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -31,31 +31,46 @@ pub struct IndexStatusResponse {
     pub rebuild_entries_count: usize,
 }
 
-struct RebuildFlagGuard<'a> {
-    flag: &'a AtomicBool,
+/// Event emitted during index rebuild to report progress.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IndexProgressEvent {
+    pub entries: usize,
+    pub roots: usize,
 }
 
-impl Drop for RebuildFlagGuard<'_> {
-    fn drop(&mut self) {
-        self.flag.store(false, Ordering::Release);
-    }
+/// Event emitted when index rebuild completes successfully.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IndexDoneEvent {
+    pub status: String,
+    pub entries: usize,
+    pub roots: usize,
+    pub updated_at: String,
+    pub memory_mb: usize,
+    pub truncated: bool,
 }
 
-fn acquire_rebuild_guard<'a>(flag: &'a AtomicBool) -> Result<RebuildFlagGuard<'a>, String> {
-    flag.compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
-        .map_err(|_| "index rebuild already in progress".to_string())?;
-    Ok(RebuildFlagGuard { flag })
+/// Event emitted when index rebuild fails.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct IndexErrorEvent {
+    pub message: String,
 }
 
 /// Rebuilds the search index from the specified root directories.
 ///
-/// Only one rebuild can run at a time. Results are persisted to disk.
+/// Only one rebuild can run at a time. The work is dispatched to a background
+/// thread so the frontend remains responsive. Progress and completion are
+/// communicated via Tauri events: `index:progress`, `index:done`, `index:error`.
 #[tauri::command]
 pub fn index_rebuild(
+    app: AppHandle,
     state: State<'_, AppState>,
     roots: Vec<String>,
 ) -> Result<IndexRebuildResponse, String> {
-    let _guard = acquire_rebuild_guard(&state.index_rebuild_in_progress)?;
+    // Manual CAS — no guard because the background thread manages the flag.
+    state
+        .index_rebuild_in_progress
+        .compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire)
+        .map_err(|_| "index rebuild already in progress".to_string())?;
 
     state.index_rebuild_entries.store(0, Ordering::Release);
 
@@ -66,33 +81,74 @@ pub fn index_rebuild(
         *cancel_slot = Some(cancel.clone());
     }
 
-    let progress_counter = state.index_rebuild_entries.clone();
-    let result = IndexService::rebuild(&roots, cancel.clone(), Some(progress_counter));
+    // Clone Arcs for the background thread.
+    let rebuild_in_progress = state.index_rebuild_in_progress.clone();
+    let index_rebuild_cancel = state.index_rebuild_cancel.clone();
+    let index_rebuild_entries = state.index_rebuild_entries.clone();
+    let index_store = state.index.clone();
+    let roots_clone = roots.clone();
+    let cancel_clone = cancel.clone();
 
-    state.index_rebuild_entries.store(0, Ordering::Release);
+    std::thread::spawn(move || {
+        // Emit initial progress.
+        let _ = app.emit(
+            "index:progress",
+            IndexProgressEvent {
+                entries: 0,
+                roots: roots_clone.len(),
+            },
+        );
 
-    {
-        let mut cancel_slot =
-            crate::lock_mutex!(state.index_rebuild_cancel, "index_rebuild_cancel");
-        *cancel_slot = None;
-    }
+        let result = IndexService::rebuild(
+            &roots_clone,
+            cancel_clone,
+            Some(index_rebuild_entries),
+        );
 
-    let (snapshot, summary) = result?;
+        // Clear the rebuild flag before emitting completion events.
+        rebuild_in_progress.store(false, Ordering::Release);
 
-    let updated_at = snapshot.updated_at.clone();
-    {
-        let mut index = crate::lock_mutex!(state.index, "index");
-        index.replace(snapshot);
-        index.persist()?;
-    }
+        // Clear the cancel slot.
+        {
+            let mut cancel_slot = match index_rebuild_cancel.lock() {
+                Ok(guard) => guard,
+                Err(_) => return,
+            };
+            *cancel_slot = None;
+        }
+
+        match result {
+            Ok((snapshot, summary)) => {
+                let updated_at = snapshot.updated_at.clone();
+                if let Ok(mut index) = index_store.lock() {
+                    index.replace(snapshot);
+                    let _ = index.persist();
+                }
+                let _ = app.emit(
+                    "index:done",
+                    IndexDoneEvent {
+                        status: "ok".to_string(),
+                        entries: summary.entries,
+                        roots: summary.roots,
+                        updated_at,
+                        memory_mb: summary.memory_bytes / (1024 * 1024),
+                        truncated: summary.truncated,
+                    },
+                );
+            }
+            Err(e) => {
+                let _ = app.emit("index:error", IndexErrorEvent { message: e });
+            }
+        }
+    });
 
     Ok(IndexRebuildResponse {
-        status: "ok".to_string(),
-        roots: summary.roots,
-        entries: summary.entries,
-        updated_at,
-        memory_mb: summary.memory_bytes / (1024 * 1024),
-        truncated: summary.truncated,
+        status: "accepted".to_string(),
+        roots: roots.len(),
+        entries: 0,
+        updated_at: String::new(),
+        memory_mb: 0,
+        truncated: false,
     })
 }
 
@@ -223,25 +279,4 @@ mod tests {
         assert!(status.version_mismatch);
     }
 
-    #[test]
-    fn acquire_rebuild_guard_rejects_parallel_attempts() {
-        let flag = AtomicBool::new(false);
-        let _first = acquire_rebuild_guard(&flag).expect("first acquire");
-        match acquire_rebuild_guard(&flag) {
-            Ok(_) => panic!("second acquire should fail"),
-            Err(message) => assert_eq!(message, "index rebuild already in progress"),
-        };
-    }
-
-    #[test]
-    fn acquire_rebuild_guard_releases_flag_on_drop() {
-        let flag = AtomicBool::new(false);
-        {
-            let _guard = acquire_rebuild_guard(&flag).expect("acquire");
-            assert!(flag.load(Ordering::Acquire));
-        }
-        assert!(!flag.load(Ordering::Acquire));
-        let again = acquire_rebuild_guard(&flag);
-        assert!(again.is_ok());
-    }
 }
