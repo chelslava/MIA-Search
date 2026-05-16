@@ -3,6 +3,9 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   FsTreeNode,
   HistorySnapshot,
+  IndexProgressEvent,
+  IndexDoneEvent,
+  IndexErrorEvent,
   IndexRebuildCancelResponse,
   IndexRebuildResponse,
   IndexStatusResponse,
@@ -48,6 +51,24 @@ export async function onSearchCancelled(
 
 export async function onSearchError(handler: (payload: SearchErrorEvent) => void): Promise<UnlistenFn> {
   return listen<SearchErrorEvent>("search:error", (event) => handler(event.payload));
+}
+
+export async function onIndexProgress(
+  handler: (payload: IndexProgressEvent) => void
+): Promise<UnlistenFn> {
+  return listen("index:progress", (event) => handler(event.payload as IndexProgressEvent));
+}
+
+export async function onIndexDone(
+  handler: (payload: IndexRebuildResponse) => void
+): Promise<UnlistenFn> {
+  return listen("index:done", (event) => handler(event.payload as IndexRebuildResponse));
+}
+
+export async function onIndexError(
+  handler: (payload: IndexErrorEvent) => void
+): Promise<UnlistenFn> {
+  return listen("index:error", (event) => handler(event.payload as IndexErrorEvent));
 }
 
 export async function favoritesList(): Promise<string[]> {

@@ -1,6 +1,14 @@
-import { useState, useCallback, useEffect, useMemo } from "react";
-import type { IndexStatusResponse } from "../../shared/search-types";
-import { indexRebuild, indexStatus, tauriRuntimeAvailable } from "../../shared/tauri-client";
+import { useState, useCallback, useEffect } from "preact/hooks";
+import type { UnlistenFn } from "@tauri-apps/api/event";
+import type { IndexRebuildResponse, IndexStatusResponse } from "../../shared/search-types";
+import {
+  indexRebuild,
+  indexStatus,
+  onIndexDone,
+  onIndexError,
+  onIndexProgress,
+  tauriRuntimeAvailable,
+} from "../../shared/tauri-client";
 import { arraysEqual, isIndexStale } from "../utils/search-utils";
 
 type UseIndexResult = {
@@ -46,47 +54,57 @@ export function useIndex(
     setRebuildProgress(0);
     setIndexHint(tr("app.index.rebuilding", "Идёт перестроение индекса..."));
 
-    let pollIntervalId: ReturnType<typeof setInterval> | null = null;
-
-    const startPolling = () => {
-      pollIntervalId = setInterval(async () => {
-        try {
-          const snapshot = await indexStatus();
-          setRebuildProgress(snapshot.rebuild_entries_count);
-        } catch {
-          // Ignore polling errors
-        }
-      }, 500);
-    };
-
-    const stopPolling = () => {
-      if (pollIntervalId) {
-        clearInterval(pollIntervalId);
-        pollIntervalId = null;
-      }
-    };
-
-    startPolling();
+    const unlisteners: UnlistenFn[] = [];
 
     try {
-      const rebuilt = await indexRebuild(roots);
-      stopPolling();
-      setRebuildProgress(rebuilt.entries);
-      setIndexStatusSnapshot({
-        status: rebuilt.entries > 0 ? "ready" : "empty",
-        entries: rebuilt.entries,
-        roots: rebuilt.roots,
-        root_paths: roots,
-        updated_at: rebuilt.updated_at,
-        version_mismatch: false,
-        rebuild_entries_count: rebuilt.entries
+      // Build the result promise BEFORE calling indexRebuild so we never
+      // miss the completion events.
+      const resultPromise = new Promise<IndexRebuildResponse>((resolve, reject) => {
+        let settled = false;
+
+        onIndexDone((payload) => {
+          if (settled) return;
+          settled = true;
+          resolve(payload);
+        }).then((fn) => unlisteners.push(fn));
+
+        onIndexError((payload) => {
+          if (settled) return;
+          settled = true;
+          reject(new Error(payload.message));
+        }).then((fn) => unlisteners.push(fn));
       });
-      setIndexHint(tr("app.index.rebuildDone", `Индекс обновлён (${rebuilt.entries} entries)`));
+
+      // Wire up progress events.
+      const unlistenProgress = await onIndexProgress((payload) => {
+        setRebuildProgress(payload.entries);
+      });
+      unlisteners.push(unlistenProgress);
+
+      // Start the rebuild — returns immediately with status "accepted".
+      await indexRebuild(roots);
+
+      // Wait for the completion event.
+      const result = await resultPromise;
+
+      setRebuildProgress(result.entries);
+      setIndexStatusSnapshot({
+        status: result.entries > 0 ? "ready" : "empty",
+        entries: result.entries,
+        roots: result.roots,
+        root_paths: roots,
+        updated_at: result.updated_at,
+        version_mismatch: false,
+        rebuild_entries_count: result.entries,
+      });
+      setIndexHint(tr("app.index.rebuildDone", `Индекс обновлён (${result.entries} entries)`));
     } catch {
-      stopPolling();
       setRebuildProgress(0);
       setIndexHint(tr("app.index.rebuildFailed", "Не удалось перестроить индекс"));
     } finally {
+      for (const fn of unlisteners) {
+        fn();
+      }
       setIsRebuildingIndex(false);
     }
   }, [tr]);

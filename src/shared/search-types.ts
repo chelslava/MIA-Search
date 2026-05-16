@@ -152,6 +152,24 @@ export interface ContentSearchResponse {
   errors: string[];
 }
 
+export interface IndexProgressEvent {
+  entries: number;
+  roots: number;
+}
+
+export interface IndexDoneEvent {
+  status: string;
+  entries: number;
+  roots: number;
+  updated_at: string;
+  memory_mb: number;
+  truncated: boolean;
+}
+
+export interface IndexErrorEvent {
+  message: string;
+}
+
 export interface IndexStatusResponse {
   status: "empty" | "ready" | "in_progress";
   entries: number;
@@ -163,7 +181,7 @@ export interface IndexStatusResponse {
 }
 
 export interface IndexRebuildResponse {
-  status: "ok";
+  status: string;
   roots: number;
   entries: number;
   updated_at: string;
