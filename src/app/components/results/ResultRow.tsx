@@ -1,4 +1,4 @@
-import { useCallback } from "preact/hooks";
+import { useCallback, useMemo } from "preact/hooks";
 import { memo } from "preact/compat";
 import type { SearchResultItem } from "../../../shared/search-types";
 import { getFileIcon } from "../../utils/fileIcons";
@@ -49,6 +49,8 @@ export const ResultRow = memo(function ResultRow({
     onToggleSelection(item.full_path, target.checked);
   }, [item.full_path, onToggleSelection]);
 
+  const fileIcon = useMemo(() => getFileIcon(item.extension, item.is_dir), [item.extension, item.is_dir]);
+
   const rowClassName = isItemSelected
     ? "cursor-pointer bg-[color-mix(in_srgb,var(--surface)_80%,var(--accent))] transition-colors hover:bg-[color-mix(in_srgb,var(--surface)_76%,var(--accent))] focus:outline-none focus:ring-2 focus:ring-[var(--accent)] focus:ring-inset"
     : isFocused
@@ -77,7 +79,7 @@ export const ResultRow = memo(function ResultRow({
       </td>
       <td className={`border-b border-[var(--border)] px-2 py-1.5 whitespace-nowrap ${item.hidden ? "text-[var(--muted)] opacity-60" : ""}`}>
         <span aria-hidden="true" className="text-base">
-          {getFileIcon(item.extension, item.is_dir).icon}
+          {fileIcon.icon}
         </span>
       </td>
       <td className={`border-b border-[var(--border)] px-2 py-1.5 ${item.is_dir ? "font-medium text-[var(--text)]" : "text-[var(--text)]"}`}>
@@ -149,6 +151,8 @@ export const ResultCard = memo(function ResultCard({
     onToggleSelection(item.full_path, target.checked);
   }, [item.full_path, onToggleSelection]);
 
+  const fileIcon = useMemo(() => getFileIcon(item.extension, item.is_dir), [item.extension, item.is_dir]);
+
   const cardClassName = isItemSelected
     ? "cursor-pointer rounded-md border-2 border-[var(--accent)] bg-[color-mix(in_srgb,var(--surface)_88%,var(--accent))] p-2 transition-colors"
     : isFocused
@@ -171,7 +175,7 @@ export const ResultCard = memo(function ResultCard({
           className="mt-0.5 h-3.5 w-3.5 shrink-0 cursor-pointer accent-[var(--accent)]"
         />
         <span aria-hidden="true" className="text-sm leading-none">
-          {getFileIcon(item.extension, item.is_dir).icon}
+          {fileIcon.icon}
         </span>
         <span className="min-w-0 break-words">
           {item.name || t("app.labels.noName", "Без имени")}

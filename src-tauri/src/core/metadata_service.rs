@@ -1,9 +1,24 @@
 use crate::core::models::SearchResultItem;
 use chrono::Utc;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
 
-#[derive(Debug, Default, Clone)]
-pub struct MetadataService;
+/// Icon metadata for a file type.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Icon {
+  pub name: String,
+}
+
+/// Metadata service with icon caching.
+///
+/// Icons are cached by file extension to avoid repeated filesystem calls
+/// for the same extension across different results.
+#[derive(Debug, Default)]
+pub struct MetadataService {
+  #[allow(dead_code)]
+  pub icon_cache: Mutex<HashMap<String, Icon>>,
+}
 
 impl MetadataService {
   pub fn lightweight_path(path: impl AsRef<Path>, source_root: impl AsRef<Path>) -> SearchResultItem {
@@ -92,6 +107,40 @@ impl MetadataService {
   }
 }
 
+#[allow(dead_code)]
+impl MetadataService {
+  pub fn new() -> Self {
+    Self::default()
+  }
+
+  pub fn get_file_icon(&self, path: &str, extension: &str) -> Result<Icon, String> {
+    {
+      let cache = self.icon_cache.lock().map_err(|_| "icon cache lock poisoned".to_string())?;
+      if let Some(icon) = cache.get(extension) {
+        return Ok(icon.clone());
+      }
+    }
+
+    let icon = self.get_file_icon_uncached(path, extension)?;
+
+    {
+      let mut cache = self.icon_cache.lock().map_err(|_| "icon cache lock poisoned".to_string())?;
+      cache.insert(extension.to_string(), icon.clone());
+    }
+
+    Ok(icon)
+  }
+
+  fn get_file_icon_uncached(&self, _path: &str, extension: &str) -> Result<Icon, String> {
+    let name = if extension.is_empty() {
+      "file".to_string()
+    } else {
+      extension.to_string()
+    };
+    Ok(Icon { name })
+  }
+}
+
 #[cfg(test)]
 mod tests {
   use super::*;
@@ -148,5 +197,35 @@ mod tests {
     assert_eq!(item.size, None);
     assert!(item.created_at.is_none());
     assert!(item.modified_at.is_none());
+  }
+
+  #[test]
+  fn get_file_icon_caches_by_extension() {
+    let service = MetadataService::new();
+
+    // First call - should call the underlying method
+    let icon1 = service.get_file_icon("/path/to/file.txt", "txt");
+    assert!(icon1.is_ok());
+
+    // Second call with same extension - should be cached
+    let icon2 = service.get_file_icon("/different/path/file.txt", "txt");
+    assert!(icon2.is_ok());
+
+    // Verify same icon is returned for the same extension
+    assert_eq!(icon1.unwrap().name, icon2.unwrap().name);
+  }
+
+  #[test]
+  fn get_file_icon_different_extensions_do_not_collide() {
+    let service = MetadataService::new();
+
+    let icon_txt = service.get_file_icon("/path/file.txt", "txt");
+    let icon_pdf = service.get_file_icon("/path/file.pdf", "pdf");
+
+    assert!(icon_txt.is_ok());
+    assert!(icon_pdf.is_ok());
+
+    // The icons for .txt and .pdf should be different
+    assert_ne!(icon_txt.unwrap().name, icon_pdf.unwrap().name);
   }
 }

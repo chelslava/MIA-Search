@@ -8,7 +8,7 @@ use crate::{
     content_search::{ContentSearchService, ContentSearchResponse},
   },
   commands::history::record_query_if_enabled,
-  platform::path_security::has_path_traversal,
+  platform::path_security::{has_path_traversal, has_unicode_spoof},
   AppState,
 };
 use serde::{Deserialize, Serialize};
@@ -64,6 +64,14 @@ enum SearchTerminalEvent {
   Error(SearchErrorEvent),
 }
 
+#[allow(dead_code)]
+fn normalize_path_for_match(value: &str) -> String {
+  let normalized = value
+    .replace('\\', "/")
+    .to_lowercase();
+  normalized.trim_end_matches('/').to_string()
+}
+
 fn validate_request(request: &SearchRequest) -> Result<(), String> {
   if request.query.len() > MAX_QUERY_LENGTH {
     return Err(format!(
@@ -109,7 +117,62 @@ fn validate_request(request: &SearchRequest) -> Result<(), String> {
       ));
     }
   }
+  // Validate roots for unicode spoofing
+  for (i, root) in request.roots.iter().enumerate() {
+    if has_unicode_spoof(root) {
+      return Err(format!(
+        "[VALIDATION_ROOT_SPOOF] roots[{}] contains Unicode spoofing characters: {}",
+        i, root
+      ));
+    }
+  }
+  // Validate exclude_paths for unicode spoofing
+  for (i, path) in request.exclude_paths.iter().enumerate() {
+    if has_unicode_spoof(path) {
+      return Err(format!(
+        "[VALIDATION_EXCLUDE_PATH_SPOOF] exclude_paths[{}] contains Unicode spoofing characters: {}",
+        i, path
+      ));
+    }
+  }
+  validate_exclude_paths(request)?;
   Ok(())
+}
+
+fn validate_exclude_paths(request: &SearchRequest) -> Result<(), String> {
+  if request.roots.is_empty() {
+    return Ok(()); // No roots to validate against
+  }
+
+  for (i, exclude_path) in request.exclude_paths.iter().enumerate() {
+    let normalized_exclude = exclude_path.trim().to_lowercase();
+
+    for root in &request.roots {
+      let normalized_root = root.trim().to_lowercase();
+
+      // Exclude path should not match root exactly
+      if normalized_exclude == normalized_root {
+        return Err(format!(
+          "[VALIDATION_EXCLUDE_PATH_INVALID] exclude_paths[{}] matches search root exactly: {}",
+          i, exclude_path
+        ));
+      }
+
+      // Check if exclude path is overly broad
+      if is_path_too_broad(&normalized_exclude) {
+        return Err(format!(
+          "[VALIDATION_EXCLUDE_PATH_BROAD] exclude_paths[{}] is too broad: {}",
+          i, exclude_path
+        ));
+      }
+    }
+  }
+  Ok(())
+}
+
+fn is_path_too_broad(path: &str) -> bool {
+  let trimmed = path.trim_matches(|c: char| c == '/' || c == '\\' || c == ' ');
+  trimmed.is_empty() || trimmed == "." || trimmed == ".."
 }
 
 /// Starts a new search operation.
@@ -619,6 +682,42 @@ mod tests {
     };
     let err = validate_request(&request).unwrap_err();
     assert!(err.contains("path traversal"));
+  }
+
+  #[test]
+  fn validate_request_rejects_exclude_path_matching_root() {
+    let request = SearchRequest {
+      roots: vec!["C:/data".to_string()],
+      exclude_paths: vec!["C:/data".to_string()],
+      ..SearchRequest::default()
+    };
+    assert!(validate_request(&request).is_err());
+  }
+
+  #[test]
+  fn validate_request_rejects_overly_broad_exclude_path() {
+    let request = SearchRequest {
+      roots: vec!["C:/data".to_string()],
+      exclude_paths: vec!["/".to_string()],
+      ..SearchRequest::default()
+    };
+    assert!(validate_request(&request).is_err());
+  }
+
+  #[test]
+  fn validate_request_accepts_valid_exclude_path() {
+    let request = SearchRequest {
+      roots: vec!["C:/data".to_string()],
+      exclude_paths: vec!["C:/data/temp".to_string()],
+      ..SearchRequest::default()
+    };
+    assert!(validate_request(&request).is_ok());
+  }
+
+  #[test]
+  fn normalize_path_for_match_strips_trailing_slash() {
+    assert_eq!(normalize_path_for_match("C:/data/"), "c:/data");
+    assert_eq!(normalize_path_for_match("C:\\data\\"), "c:/data");
   }
 }
 

@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::path::Path;
+
+use crate::core::query_matcher::compile_regex_with_timeout;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ContentMatch {
@@ -90,7 +91,7 @@ impl ContentSearchService {
         query: &str,
         case_sensitive: bool,
         whole_word: bool,
-        _regex: bool,
+        regex: bool,
     ) -> Result<ContentSearchResult, String> {
         let path_ref = Path::new(path);
         
@@ -111,6 +112,10 @@ impl ContentSearchService {
 
         let content = std::fs::read_to_string(path_ref)
             .map_err(|e| format!("Cannot read file: {}", e))?;
+
+        if regex {
+            return Self::search_file_regex(path, &content, query, case_sensitive, whole_word);
+        }
 
         let search_query = if case_sensitive {
             query.to_string()
@@ -133,9 +138,9 @@ impl ContentSearchService {
                 let abs_pos = start + pos;
                 
                 if whole_word {
-                    let before_ok = abs_pos == 0 || !search_line.chars().nth(abs_pos - 1).map_or(false, |c| c.is_alphanumeric());
+                    let before_ok = abs_pos == 0 || !search_line.chars().nth(abs_pos - 1).is_some_and(|c| c.is_alphanumeric());
                     let after_pos = abs_pos + search_query.len();
-                    let after_ok = after_pos >= search_line.len() || !search_line.chars().nth(after_pos).map_or(false, |c| c.is_alphanumeric());
+                    let after_ok = after_pos >= search_line.len() || !search_line.chars().nth(after_pos).is_some_and(|c| c.is_alphanumeric());
                     
                     if !before_ok || !after_ok {
                         start = abs_pos + 1;
@@ -159,6 +164,65 @@ impl ContentSearchService {
                 start = abs_pos + 1;
             }
 
+            if match_count >= Self::MAX_MATCHES_PER_FILE {
+                break;
+            }
+        }
+
+        let total_matches = matches.len();
+        Ok(ContentSearchResult {
+            path: path.to_string(),
+            matches,
+            total_matches,
+        })
+    }
+
+    fn search_file_regex(
+        path: &str,
+        content: &str,
+        pattern: &str,
+        case_sensitive: bool,
+        whole_word: bool,
+    ) -> Result<ContentSearchResult, String> {
+        // Build regex with (?i) for case-insensitive
+        let regex_pattern = if case_sensitive {
+            pattern.to_string()
+        } else {
+            format!("(?i){}", pattern)
+        };
+
+        let re = compile_regex_with_timeout(&regex_pattern)?;
+
+        let mut matches = Vec::new();
+        let mut match_count = 0;
+
+        for (line_idx, line) in content.lines().enumerate() {
+            for m in re.find_iter(line) {
+                let abs_pos = m.start();
+
+                if whole_word {
+                    // Check word boundaries
+                    let before_ok = abs_pos == 0 || !line.chars().nth(abs_pos - 1).is_some_and(|c| c.is_alphanumeric());
+                    let after_pos = m.end();
+                    let after_ok = after_pos >= line.len() || !line.chars().nth(after_pos).is_some_and(|c| c.is_alphanumeric());
+                    if !before_ok || !after_ok {
+                        continue;
+                    }
+                }
+
+                matches.push(ContentMatch {
+                    path: path.to_string(),
+                    line_number: line_idx + 1,
+                    line_content: line.chars().take(Self::MAX_LINE_LENGTH).collect(),
+                    match_start: abs_pos,
+                    match_end: m.end(),
+                });
+
+                match_count += 1;
+                if match_count >= Self::MAX_MATCHES_PER_FILE {
+                    break;
+                }
+            }
             if match_count >= Self::MAX_MATCHES_PER_FILE {
                 break;
             }
@@ -321,5 +385,97 @@ mod tests {
         assert_eq!(result.total_files, 2);
         assert_eq!(result.total_matches, 2);
         assert_eq!(result.searched_paths, 2);
+    }
+
+    #[test]
+    fn search_regex_finds_pattern() {
+        let dir = tempdir().unwrap();
+        let file = dir.path().join("test.txt");
+        std::fs::write(&file, "Hello World\nRust is great\nHello again").unwrap();
+
+        let result = ContentSearchService::search_in_content(
+            &[file.to_string_lossy().to_string()],
+            "Rust.*great",
+            true,   // case_sensitive
+            false,  // whole_word
+            true,   // regex
+        );
+
+        assert_eq!(result.total_files, 1);
+        assert_eq!(result.total_matches, 1);
+    }
+
+    #[test]
+    fn search_regex_case_insensitive() {
+        let dir = tempdir().unwrap();
+        let file = dir.path().join("test.txt");
+        std::fs::write(&file, "hello\nHELLO\nHello").unwrap();
+
+        let result = ContentSearchService::search_in_content(
+            &[file.to_string_lossy().to_string()],
+            "hello",
+            false,   // case_insensitive
+            false,   // whole_word
+            true,    // regex
+        );
+
+        assert_eq!(result.total_matches, 3);
+    }
+
+    #[test]
+    fn search_regex_handles_invalid_pattern() {
+        let dir = tempdir().unwrap();
+        let file = dir.path().join("test.txt");
+        std::fs::write(&file, "Hello World").unwrap();
+
+        let result = ContentSearchService::search_in_content(
+            &[file.to_string_lossy().to_string()],
+            "[invalid",
+            true,   // case_sensitive
+            false,  // whole_word
+            true,   // regex
+        );
+
+        // Should not panic, should return empty results with error
+        assert_eq!(result.total_files, 0);
+        assert!(!result.errors.is_empty());
+    }
+
+    #[test]
+    fn search_regex_whole_word() {
+        let dir = tempdir().unwrap();
+        let file = dir.path().join("test.txt");
+        std::fs::write(&file, "cat catalog category").unwrap();
+
+        let result = ContentSearchService::search_in_content(
+            &[file.to_string_lossy().to_string()],
+            r"\bcat\b",
+            true,   // case_sensitive
+            true,   // whole_word (with regex \b boundaries as well)
+            true,   // regex
+        );
+
+        assert_eq!(result.total_matches, 1);
+    }
+
+    #[test]
+    fn search_regex_same_as_plain_when_not_using_regex_features() {
+        let dir = tempdir().unwrap();
+        let file = dir.path().join("test.txt");
+        std::fs::write(&file, "Hello World\nRust is great\nHello again").unwrap();
+
+        let plain = ContentSearchService::search_in_content(
+            &[file.to_string_lossy().to_string()],
+            "Hello",
+            false, false, false,
+        );
+
+        let regex = ContentSearchService::search_in_content(
+            &[file.to_string_lossy().to_string()],
+            "Hello",
+            false, false, true,
+        );
+
+        assert_eq!(plain.total_matches, regex.total_matches);
     }
 }

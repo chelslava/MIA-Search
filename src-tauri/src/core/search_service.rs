@@ -1081,6 +1081,42 @@ mod tests {
     }
 
     #[test]
+    fn search_session_multiple_cancel_is_safe() {
+        let mut session = SearchSession::default();
+        // Cancel when nothing is active — should be a no-op.
+        session.cancel();
+        // Cancel again — must not panic.
+        session.cancel();
+        // Session should remain idle.
+        let snapshot = session.snapshot();
+        assert!(snapshot.active_search_id.is_none());
+        assert!(matches!(snapshot.status, CommandStatus::Idle));
+    }
+
+    #[test]
+    fn search_session_cancel_stops_search() {
+        let mut session = SearchSession::default();
+        let request = SearchRequest::default();
+        let started = session.start(request);
+
+        // Verify the cancel flag starts as false.
+        assert!(!started.cancel_flag.load(Ordering::Acquire));
+        assert!(session.snapshot().active_search_id.is_some());
+
+        // Cancel the search.
+        let cancelled_id = session.cancel();
+        assert_eq!(cancelled_id, Some(started.search_id));
+
+        // Verify the cancel flag was set to true.
+        assert!(started.cancel_flag.load(Ordering::Acquire));
+
+        // Verify session is idle after cancel.
+        let snapshot = session.snapshot();
+        assert!(snapshot.active_search_id.is_none());
+        assert!(matches!(snapshot.status, CommandStatus::Idle));
+    }
+
+    #[test]
     fn dedup_path_key_normalizes_windows_paths() {
         #[cfg(windows)]
         {
