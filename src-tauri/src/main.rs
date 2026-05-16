@@ -42,6 +42,7 @@ pub struct AppState {
   pub index_rebuild_entries: Arc<AtomicUsize>,
   pub shutting_down: Arc<AtomicBool>,
   pub search_thread_handles: Arc<Mutex<Vec<JoinHandle<()>>>>,
+  pub index_rebuild_thread_handle: Arc<Mutex<Option<JoinHandle<()>>>>,
 }
 
 impl AppState {
@@ -58,6 +59,7 @@ impl AppState {
       index_rebuild_entries: Arc::new(AtomicUsize::new(0)),
       shutting_down: Arc::new(AtomicBool::new(false)),
       search_thread_handles: Arc::new(Mutex::new(Vec::new())),
+      index_rebuild_thread_handle: Arc::new(Mutex::new(None)),
     }
   }
 
@@ -72,6 +74,7 @@ fn main() {
   let search_session = app_state.search_session.clone();
   let rebuild_cancel = app_state.index_rebuild_cancel.clone();
   let search_thread_handles = app_state.search_thread_handles.clone();
+  let index_rebuild_thread_handle = app_state.index_rebuild_thread_handle.clone();
   tauri::Builder::default()
     .manage(app_state)
     .on_window_event(move |_window, event| {
@@ -91,6 +94,12 @@ fn main() {
             let _ = handle.join();
           }
           log::info!("Search threads joined");
+        }
+        if let Ok(mut handle) = index_rebuild_thread_handle.lock() {
+          if let Some(h) = handle.take() {
+            let _ = h.join();
+            log::info!("Index rebuild thread joined");
+          }
         }
         std::thread::sleep(std::time::Duration::from_millis(100));
         log::info!("Grace period elapsed, proceeding with shutdown");
