@@ -1,6 +1,7 @@
 pub mod actions;
 pub mod errors;
 pub mod favorites;
+pub mod health;
 pub mod history;
 pub mod index;
 pub mod profiles;

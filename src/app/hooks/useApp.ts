@@ -15,6 +15,7 @@ import {
   favoritesAdd,
   favoritesRemove,
   fsPickFolder,
+  healthCheck,
   indexRebuildCancel,
   onSearchBatch,
   onSearchCancelled,
@@ -534,9 +535,31 @@ export function useApp() {
     }
   }, [pushToast, tr]);
 
+  const handleHealthCheck = useCallback(async (): Promise<void> => {
+    if (!tauriRuntimeAvailable) {
+      pushToast(tr("app.status.tauriUnavailable", "Tauri runtime не обнаружен"), "error");
+      return;
+    }
+
+    try {
+      const health = await healthCheck();
+      pushToast(
+        tr("app.toast.healthCheck", "Health: {{status}} · index {{index}} · storage {{storage}}", {
+          status: health.status,
+          index: health.index_status,
+          storage: health.storage_status,
+        }),
+        health.status === "ok" ? "success" : "error"
+      );
+    } catch {
+      pushToast(tr("app.toast.healthCheckFailed", "Не удалось выполнить health check"), "error");
+    }
+  }, [pushToast, tr]);
+
   const commandActions = useMemo(() => [
     { id: "cmd-new", label: tr("app.commands.newSearch", "> Новый поиск"), run: () => void handleSearch() },
     { id: "cmd-rebuild-index", label: tr("app.commands.rebuildIndex", "> Перестроить индекс"), run: () => void index.handleRebuildIndex(indexRoots) },
+    { id: "cmd-health-check", label: tr("app.commands.healthCheck", "> Health check"), run: () => void handleHealthCheck() },
     { id: "cmd-clear-history", label: tr("app.commands.clearHistory", "> Очистить историю"), run: requestClearHistory },
     { id: "cmd-theme", label: tr("app.commands.toggleTheme", "> Переключить тему"), run: () => themeState.setThemeId((prev) => (prev === "dark" ? "light" : "dark")) },
     { id: "cmd-focus", label: tr("app.commands.focusSearch", "/ Фокус в строку поиска"), run: () => searchInputRef.current?.focus() },
@@ -546,7 +569,7 @@ export function useApp() {
       label: `# ${profile.name}`,
       run: () => applyProfile(profile)
     }))
-  ], [handleSearch, index, indexRoots, requestClearHistory, themeState, pushToast, tr, persistence.profiles, applyProfile]);
+  ], [handleSearch, index, indexRoots, handleHealthCheck, requestClearHistory, themeState, pushToast, tr, persistence.profiles, applyProfile]);
 
   useEffect(() => {
     searchInputRef.current?.focus();
