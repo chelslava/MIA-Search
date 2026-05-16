@@ -89,7 +89,10 @@ pub fn index_rebuild(
     let roots_clone = roots.clone();
     let cancel_clone = cancel.clone();
 
-    std::thread::spawn(move || {
+    // Clone for storing the thread handle.
+    let thread_handle_storage = state.index_rebuild_thread_handle.clone();
+
+    let handle = std::thread::spawn(move || {
         // Emit initial progress.
         let _ = app.emit(
             "index:progress",
@@ -141,6 +144,11 @@ pub fn index_rebuild(
             }
         }
     });
+
+    // Store thread handle so the window close handler can join it on shutdown.
+    if let Ok(mut stored) = thread_handle_storage.lock() {
+        *stored = Some(handle);
+    }
 
     Ok(IndexRebuildResponse {
         status: "accepted".to_string(),

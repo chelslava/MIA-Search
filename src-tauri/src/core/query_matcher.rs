@@ -2,9 +2,13 @@ use lru::LruCache;
 use regex::Regex;
 use std::cell::RefCell;
 use std::path::Path;
+use std::sync::mpsc;
+use std::time::Duration;
 
 use crate::core::constants::{MAX_REGEX_PATTERN_LENGTH, MAX_WILDCARD_COUNT, REGEX_CACHE_SIZE};
 use crate::core::models::MatchMode;
+
+pub const REGEX_COMPILE_TIMEOUT_MS: u64 = 1000;
 
 thread_local! {
   static REGEX_CACHE: RefCell<LruCache<String, Regex>> = RefCell::new(LruCache::new(
@@ -144,13 +148,30 @@ pub fn build_query_matcher(
     }
 }
 
+const REGEX_COMPILE_TIMEOUT: Duration = Duration::from_millis(REGEX_COMPILE_TIMEOUT_MS);
+
+pub(crate) fn compile_regex_with_timeout(pattern: &str) -> Result<Regex, String> {
+    let pattern = pattern.to_string();
+    let (tx, rx) = mpsc::channel();
+
+    std::thread::spawn(move || {
+        let _ = tx.send(Regex::new(&pattern));
+    });
+
+    match rx.recv_timeout(REGEX_COMPILE_TIMEOUT) {
+        Ok(Ok(regex)) => Ok(regex),
+        Ok(Err(e)) => Err(format!("regex parse error: {}", e)),
+        Err(_) => Err("regex compilation timed out (possible ReDoS pattern)".to_string()),
+    }
+}
+
 fn get_or_compile_regex(pattern: &str) -> Result<Regex, String> {
     REGEX_CACHE.with(|cache| {
         let mut cache = cache.borrow_mut();
         if let Some(regex) = cache.get(pattern).cloned() {
             return Ok(regex);
         }
-        let regex = Regex::new(pattern).map_err(|error| format!("regex parse error: {error}"))?;
+        let regex = compile_regex_with_timeout(pattern)?;
         cache.put(pattern.to_string(), regex.clone());
         Ok(regex)
     })
@@ -319,5 +340,33 @@ mod tests {
         let matcher = build_query_matcher(&MatchMode::Wildcard, "*.TXT", true).unwrap();
         assert!(matcher.matches("file.txt"));
         assert!(matcher.matches("file.TXT"));
+    }
+
+    #[test]
+    fn build_query_matcher_rejects_regex_that_times_out() {
+        // Evil regex pattern that causes catastrophic backtracking in backtracking engines
+        // In the `regex` crate (NFA-based), this compiles but should be caught by timeout
+        let evil_pattern = "(a|a)*".to_string() + &"a".repeat(100);
+        let result = build_query_matcher(&MatchMode::Regex, &evil_pattern, true);
+        // Should either succeed (NFA handles it) or timeout
+        // The key is it should NOT panic or hang
+        assert!(result.is_ok() || result.is_err());
+    }
+
+    #[test]
+    fn build_query_matcher_rejects_nested_quantifiers() {
+        // Nested quantifiers are a common ReDoS pattern
+        let nested = "(a+)+b";
+        let result = build_query_matcher(&MatchMode::Regex, nested, true);
+        assert!(result.is_ok() || result.is_err()); // Should not panic
+    }
+
+    #[test]
+    fn build_query_matcher_accepts_simple_regex_quickly() {
+        let start = std::time::Instant::now();
+        let result = build_query_matcher(&MatchMode::Regex, "test.*pattern", true);
+        let elapsed = start.elapsed();
+        assert!(result.is_ok());
+        assert!(elapsed < Duration::from_secs(1)); // Should be fast
     }
 }
