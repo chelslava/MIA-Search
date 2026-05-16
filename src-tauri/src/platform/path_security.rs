@@ -27,6 +27,33 @@ pub fn is_symlink(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
+/// Checks if a path mixes ASCII with confusable non-ASCII characters
+/// that could be used for Unicode spoofing attacks.
+///
+/// Checks each path component (directory/file name) individually to avoid
+/// flagging legitimate paths like `C:/пользователь/документы` where structural
+/// ASCII elements (drive letter, separators) coexist with pure non-ASCII names.
+pub fn has_unicode_spoof(path: &str) -> bool {
+    Path::new(path).components().any(|component| {
+        if let Component::Normal(name) = component {
+            let name = name.to_string_lossy();
+            let has_ascii_letter = name.chars().any(|c| c.is_ascii_alphabetic());
+            let has_confusable_non_ascii = name.chars().any(|c| {
+                matches!(c,
+                    // Cyrillic letters that look like Latin
+                    'а' | 'А' | 'е' | 'Е' | 'о' | 'О' | 'р' | 'Р' | 'с' | 'С'
+                    | 'у' | 'У' | 'х' | 'Х' | 'і' | 'І'
+                    // Greek letters that look like Latin
+                    | 'ο' | 'Ο'
+                )
+            });
+            has_ascii_letter && has_confusable_non_ascii
+        } else {
+            false
+        }
+    })
+}
+
 pub fn validate_path_for_read(path: &str) -> Result<PathBuf, String> {
     if !is_local_path(path) {
         return Err(format!("Refusing to read non-local path: {}", path));
@@ -36,6 +63,12 @@ pub fn validate_path_for_read(path: &str) -> Result<PathBuf, String> {
     }
     if has_path_traversal(path) {
         return Err(format!("Path contains traversal sequences: {}", path));
+    }
+    if has_unicode_spoof(path) {
+        return Err(format!(
+            "Path contains Unicode spoofing characters: {}",
+            path
+        ));
     }
 
     let path_ref = Path::new(path);
@@ -57,6 +90,12 @@ pub fn validate_path_for_read(path: &str) -> Result<PathBuf, String> {
     if has_path_traversal(&canonical_str) {
         return Err(format!(
             "Resolved path contains traversal sequences: {}",
+            canonical_str
+        ));
+    }
+    if has_unicode_spoof(&canonical_str) {
+        return Err(format!(
+            "Resolved path contains Unicode spoofing characters: {}",
             canonical_str
         ));
     }
@@ -161,5 +200,34 @@ mod tests {
     fn validate_path_rejects_nonexistent_path() {
         let result = validate_path_for_read("/nonexistent/path/that/does/not/exist");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn has_unicode_spoof_accepts_ascii_only_paths() {
+        assert!(!has_unicode_spoof("C:/safe/path.txt"));
+        assert!(!has_unicode_spoof("/home/user/docs/report.pdf"));
+    }
+
+    #[test]
+    fn has_unicode_spoof_rejects_mixed_script_paths() {
+        assert!(has_unicode_spoof("C:/g\u{03BF}\u{03BF}gle.exe"));
+        assert!(has_unicode_spoof("/home/user/d\u{0430}ta.csv"));
+    }
+
+    #[test]
+    fn has_unicode_spoof_accepts_single_script_non_ascii() {
+        assert!(!has_unicode_spoof("C:/пользователь/документы"));
+        assert!(!has_unicode_spoof("/home/Οδυσσέας/docs"));
+    }
+
+    #[test]
+    fn has_unicode_spoof_accepts_emoji_in_ascii_paths() {
+        assert!(!has_unicode_spoof("/home/user/\u{1F602}.txt"));
+        assert!(!has_unicode_spoof("C:/project/\u{2728}.md"));
+    }
+
+    #[test]
+    fn has_unicode_spoof_rejects_mixed_in_single_component() {
+        assert!(has_unicode_spoof("C:/Users/payp\u{0430}l.exe"));
     }
 }
