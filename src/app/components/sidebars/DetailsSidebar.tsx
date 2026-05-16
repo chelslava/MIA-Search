@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState } from "preact/hooks";
 import type { SearchResultItem, FilePreviewResponse } from "../../../shared/search-types";
 import { previewFile } from "../../../shared/tauri-client";
 import { formatBytes, formatDate } from "../../formatters";

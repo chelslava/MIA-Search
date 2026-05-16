@@ -1,7 +1,8 @@
-import { Component, ErrorInfo, ReactNode } from "react";
+import * as preact from "preact";
+import type { ComponentChildren } from "preact";
 
 interface Props {
-  children: ReactNode;
+  children: ComponentChildren;
 }
 
 interface State {
@@ -9,7 +10,7 @@ interface State {
   error: Error | null;
 }
 
-export class ErrorBoundary extends Component<Props, State> {
+export class ErrorBoundary extends preact.Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false, error: null };
@@ -19,15 +20,11 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error };
   }
 
-  componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    console.error("ErrorBoundary caught an error:", error, errorInfo);
-  }
-
   handleReload = (): void => {
     window.location.reload();
   };
 
-  render(): ReactNode {
+  render(): ComponentChildren {
     if (this.state.hasError) {
       return (
         <div

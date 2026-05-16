@@ -1,10 +1,10 @@
-import type { ReactNode } from "react";
+import type { ComponentChildren } from "preact";
 
 interface EmptyStateProps {
   icon: string;
   title: string;
   description?: string;
-  action?: ReactNode;
+  action?: ComponentChildren;
   className?: string;
 }
 

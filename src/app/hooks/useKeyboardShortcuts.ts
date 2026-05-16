@@ -1,4 +1,4 @@
-import { useEffect, useCallback, useRef } from "react";
+import { useEffect, useCallback, useRef } from "preact/hooks";
 import type { SearchResultItem, HistorySnapshot } from "../../shared/search-types";
 
 type KeyboardShortcutsOptions = {

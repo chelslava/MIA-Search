@@ -1,5 +1,5 @@
-import type { MouseEvent, RefObject } from "react";
-import { useMemo } from "react";
+import type { RefObject } from "preact";
+import { useMemo } from "preact/hooks";
 import type { SearchResultItem, SortMode } from "../../../shared/search-types";
 import type { DisplayMode, FilterChip } from "../../types";
 import { Button } from "../../../components/ui/button";
@@ -12,7 +12,7 @@ import { ROW_HEIGHT } from "../../utils/search-utils";
 export type BatchAction = "copy" | "move" | "delete";
 
 type ResultsWorkspaceProps = {
-  containerRef?: RefObject<HTMLElement | null>;
+  containerRef?: any;
   displayMode: DisplayMode;
   setDisplayMode: (mode: DisplayMode) => void;
   sortMode: SortMode;
@@ -22,7 +22,7 @@ type ResultsWorkspaceProps = {
   results: SearchResultItem[];
   selectedPath: string | null;
   onSelectPath: (path: string) => void;
-  onResultContextMenu: (event: MouseEvent<HTMLTableRowElement>, item: SearchResultItem) => void;
+  onResultContextMenu: (event: MouseEvent, item: SearchResultItem) => void;
   scrollTop: number;
   setScrollTop: (value: number) => void;
   listHeight: number;
@@ -197,7 +197,7 @@ export function ResultsWorkspace({
         <div className="flex flex-wrap items-center gap-1">
             <Select
               value={sortMode}
-              onChange={(event) => setSortMode(event.target.value as SortMode)}
+              onChange={(value) => setSortMode(value as SortMode)}
               className="min-w-[14rem]"
             >
               <option value="Relevance">{t("app.labels.sortRelevance", "По релевантности")}</option>
@@ -320,8 +320,8 @@ export function ResultsWorkspace({
                     ref={(el) => {
                       if (el) el.indeterminate = selectedPaths.size > 0 && selectedPaths.size < results.length;
                     }}
-                    onChange={(e) => {
-                      if (e.target.checked) onSelectAll();
+                    onChange={(e: any) => {
+                      if ((e.target as HTMLInputElement)?.checked) onSelectAll();
                       else onClearSelection();
                     }}
                     className="h-3.5 w-3.5 cursor-pointer accent-[var(--accent)]"

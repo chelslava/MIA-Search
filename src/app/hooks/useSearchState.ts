@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef, useState } from "preact/hooks";
 import type { SearchResultItem, SortMode } from "../../shared/search-types";
 
 export type SearchState = {

@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo } from "preact/hooks";
 import type { SearchRequest } from "../../shared/search-types";
 import { buildSearchRequest, getDateValidationErrors, type DateValidationError, type BuildSearchRequestInput } from "../search-request";
 

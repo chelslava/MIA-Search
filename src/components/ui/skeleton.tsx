@@ -1,9 +1,9 @@
-import type { ReactNode } from "react";
+import type { ComponentChildren } from "preact";
 
 interface SkeletonProps {
   className?: string;
   count?: number;
-  children?: ReactNode;
+  children?: ComponentChildren;
 }
 
 export function Skeleton({ className = "", count = 1 }: SkeletonProps) {

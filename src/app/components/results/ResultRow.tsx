@@ -1,5 +1,5 @@
-import { memo, useCallback } from "react";
-import type { MouseEvent } from "react";
+import { useCallback } from "preact/hooks";
+import { memo } from "preact/compat";
 import type { SearchResultItem } from "../../../shared/search-types";
 import { getFileIcon } from "../../utils/fileIcons";
 
@@ -11,7 +11,7 @@ interface ResultRowProps {
   selectedPaths: Set<string>;
   onSelectPath: (path: string) => void;
   onToggleSelection: (path: string, selected: boolean) => void;
-  onResultContextMenu: (event: MouseEvent<HTMLTableRowElement>, item: SearchResultItem) => void;
+  onResultContextMenu: (event: MouseEvent, item: SearchResultItem) => void;
   formatBytes: (size: number | null) => string;
   formatDate: (date: string | null) => string;
   t: (key: string, defaultValue: string, values?: Record<string, unknown>) => string;
@@ -35,7 +35,7 @@ export const ResultRow = memo(function ResultRow({
   const isItemSelected = selectedPaths.has(item.full_path);
   const isFocused = selectedPath === item.full_path;
 
-  const handleClick = useCallback((e: React.MouseEvent) => {
+  const handleClick = useCallback((e: MouseEvent) => {
     if (e.ctrlKey || e.metaKey) {
       onToggleSelection(item.full_path, !isItemSelected);
     } else {
@@ -43,9 +43,10 @@ export const ResultRow = memo(function ResultRow({
     }
   }, [item.full_path, isItemSelected, onSelectPath, onToggleSelection]);
 
-  const handleCheckboxChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCheckboxChange = useCallback((e: Event) => {
     e.stopPropagation();
-    onToggleSelection(item.full_path, e.target.checked);
+    const target = e.target as HTMLInputElement;
+    onToggleSelection(item.full_path, target.checked);
   }, [item.full_path, onToggleSelection]);
 
   const rowClassName = isItemSelected
@@ -62,7 +63,7 @@ export const ResultRow = memo(function ResultRow({
       aria-selected={isFocused}
       className={rowClassName}
       onClick={handleClick}
-      onContextMenu={(event: MouseEvent<HTMLTableRowElement>) => onResultContextMenu(event, item)}
+      onContextMenu={(e: MouseEvent) => { e.preventDefault(); onResultContextMenu(e, item); }}
       title={`${tOpenFile}: Enter, ${tOpenParentFolder}: Shift+Enter`}
     >
       <td className="border-b border-[var(--border)] px-1 py-1.5 whitespace-nowrap">
@@ -134,7 +135,7 @@ export const ResultCard = memo(function ResultCard({
   const isItemSelected = selectedPaths.has(item.full_path);
   const isFocused = selectedPath === item.full_path;
 
-  const handleClick = useCallback((e: React.MouseEvent) => {
+  const handleClick = useCallback((e: MouseEvent) => {
     if (e.ctrlKey || e.metaKey) {
       onToggleSelection(item.full_path, !isItemSelected);
     } else {
@@ -142,9 +143,10 @@ export const ResultCard = memo(function ResultCard({
     }
   }, [item.full_path, isItemSelected, onSelectPath, onToggleSelection]);
 
-  const handleCheckboxChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCheckboxChange = useCallback((e: Event) => {
     e.stopPropagation();
-    onToggleSelection(item.full_path, e.target.checked);
+    const target = e.target as HTMLInputElement;
+    onToggleSelection(item.full_path, target.checked);
   }, [item.full_path, onToggleSelection]);
 
   const cardClassName = isItemSelected

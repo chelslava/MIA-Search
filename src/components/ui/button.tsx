@@ -1,14 +1,23 @@
-import type { ButtonHTMLAttributes, ForwardedRef } from "react";
-import { forwardRef } from "react";
-import { cn } from "../../lib/utils";
+import type { ComponentChildren } from "preact";
 
 type ButtonVariant = "default" | "secondary" | "outline" | "ghost" | "icon";
 type ButtonSize = "default" | "sm" | "lg" | "icon";
 
-export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+interface ButtonProps {
   variant?: ButtonVariant;
   size?: ButtonSize;
-};
+  className?: string;
+  type?: "button" | "submit" | "reset";
+  disabled?: boolean;
+  onClick?: () => void;
+  children?: ComponentChildren;
+  title?: string;
+  "aria-label"?: string;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
+  onFocus?: () => void;
+  onBlur?: () => void;
+}
 
 const variantClasses: Record<ButtonVariant, string> = {
   default:
@@ -30,21 +39,13 @@ const sizeClasses: Record<ButtonSize, string> = {
   icon: "h-8 w-8 p-0"
 };
 
-export const Button = forwardRef(function Button(
-  { className, variant = "default", size = "default", type = "button", ...props }: ButtonProps,
-  ref: ForwardedRef<HTMLButtonElement>
-) {
+export function Button(props: ButtonProps) {
+  const { className, variant = "default", size = "default", type = "button", ...rest } = props;
   return (
     <button
-      ref={ref}
       type={type}
-      className={cn(
-        "inline-flex items-center justify-center gap-1.5 rounded-md border font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent disabled:pointer-events-none disabled:opacity-50",
-        variantClasses[variant],
-        sizeClasses[size],
-        className
-      )}
-      {...props}
+      className={`inline-flex items-center justify-center gap-1.5 rounded-md border font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-offset-transparent disabled:pointer-events-none disabled:opacity-50 ${variantClasses[variant]} ${sizeClasses[size]} ${className || ""}`}
+      {...rest}
     />
   );
-});
+}

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback } from "preact/hooks";
 import type { ToastItem } from "../../widgets/ToastHost";
 
 export function useToast() {

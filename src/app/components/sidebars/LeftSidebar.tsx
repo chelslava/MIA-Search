@@ -1,6 +1,6 @@
 import type { FsTreeNode, HistorySnapshot, SearchProfile } from "../../../shared/search-types";
 import type { ContextMenuState, RootItem } from "../../types";
-import { useState } from "react";
+import { useState } from "preact/hooks";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Switch } from "../../../components/ui/switch";
@@ -155,7 +155,9 @@ export function LeftSidebar({
       onDragOver={(event) => event.preventDefault()}
       onDrop={(event) => {
         event.preventDefault();
-        const text = event.dataTransfer.getData("text/plain") || event.dataTransfer.getData("text/uri-list");
+        const dt = event.dataTransfer;
+        if (!dt) return;
+        const text = dt.getData("text/plain") || dt.getData("text/uri-list");
         if (text) onDropRootPath(text.replace("file://", "").trim());
       }}
     >
@@ -235,7 +237,7 @@ export function LeftSidebar({
           <div className="flex flex-col gap-1 sm:flex-row">
             <Input
               value={newProfileName}
-              onChange={(event) => onNewProfileNameChange(event.target.value)}
+              onChange={(value) => onNewProfileNameChange(value)}
               placeholder={tr("app.profiles.name.placeholder", "Имя профиля")}
             />
             <Button type="button" variant="secondary" size="sm" onClick={onSaveProfile} className="h-6 shrink-0 px-1.5 text-[11px]">

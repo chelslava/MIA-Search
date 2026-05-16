@@ -1,23 +1,31 @@
-import type { SelectHTMLAttributes, ForwardedRef } from "react";
-import { forwardRef } from "react";
-import { cn } from "../../lib/utils";
+import type { ComponentChildren } from "preact";
 
-export type SelectProps = SelectHTMLAttributes<HTMLSelectElement>;
+interface SelectProps {
+  className?: string;
+  value?: string | number;
+  disabled?: boolean;
+  onChange?: (value: string) => void;
+  children?: ComponentChildren;
+}
 
-export const Select = forwardRef(function Select(
-  { className, children, ...props }: SelectProps,
-  ref: ForwardedRef<HTMLSelectElement>
-) {
+export function Select(props: SelectProps) {
+  const { className, value, disabled, onChange, children } = props;
+  
+  const handleChange = (e: Event) => {
+    const target = e.target as HTMLSelectElement;
+    if (target && typeof target.value === "string") {
+      onChange?.(target.value);
+    }
+  };
+  
   return (
     <select
-      ref={ref}
-      className={cn(
-        "flex h-8 min-w-0 rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-2 py-1 text-xs text-[var(--text)] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-1 focus-visible:ring-offset-transparent disabled:cursor-not-allowed disabled:opacity-50",
-        className
-      )}
-      {...props}
+      className={`flex h-8 min-w-0 rounded-md border border-[var(--border)] bg-[var(--surface-alt)] px-2 py-1 text-xs text-[var(--text)] transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-1 focus-visible:ring-offset-transparent disabled:cursor-not-allowed disabled:opacity-50 ${className || ""}`}
+      value={value}
+      disabled={disabled}
+      onChange={handleChange}
     >
       {children}
     </select>
   );
-});
+}

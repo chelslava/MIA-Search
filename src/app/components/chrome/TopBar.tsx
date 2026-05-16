@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState } from "preact/hooks";
 import type { TopBarProps } from "./props";
 import type { EntryKind } from "../../../shared/search-types";
 import { Button } from "../../../components/ui/button";
@@ -116,9 +116,9 @@ export function TopBar({
         </Button>
         <div className="relative min-w-0">
           <Input
-            ref={searchInputRef}
+            inputRef={searchInputRef as any}
             value={query}
-            onChange={(event) => onQueryChange(event.target.value)}
+            onChange={(value) => onQueryChange(value)}
             placeholder={tr("app.search.placeholder", "Поиск файлов и папок...")}
             title={tr("app.tooltips.searchInputHint", "Ctrl+F - фокус, Enter - искать, F5 - обновить")}
             className="search-input pr-11"
@@ -169,7 +169,7 @@ export function TopBar({
         </Button>
         <Select
           value={themeId}
-          onChange={(event) => onThemeChange(event.target.value)}
+          onChange={(value) => onThemeChange(value)}
           className="theme-select min-w-[11rem]"
           aria-label={tr("app.tooltips.theme", "Тема")}
         >
@@ -237,7 +237,7 @@ export function TopBar({
         </div>
         <Input
           value={extensionFilter}
-          onChange={(event) => onExtensionFilterChange(event.target.value)}
+          onChange={(value) => onExtensionFilterChange(value)}
           placeholder={tr("app.filters.extensions.placeholder", "rs, txt, md")}
           title={tr("app.search.extensionFilter", "Фильтр расширений")}
           className="h-6 px-1.5 text-[11px]"
@@ -246,7 +246,7 @@ export function TopBar({
           <input
             type="checkbox"
             checked={includeHidden}
-            onChange={(event) => onIncludeHiddenChange(event.target.checked)}
+            onChange={(e: any) => onIncludeHiddenChange((e.target as HTMLInputElement)?.checked ?? false)}
             className="h-3.5 w-3.5 accent-[var(--accent)]"
           />
           <span>{tr("app.filters.modes.hidden", "Включать скрытые")}</span>
