@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo } from "preact/hooks";
 import type { RootItem } from "../types";
 import { DEFAULT_ROOT_PATH } from "../utils/search-utils";
 import { fsPickFolder, tauriRuntimeAvailable } from "../../shared/tauri-client";

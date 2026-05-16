@@ -42,7 +42,7 @@ export function SettingsPanel({
             <span>{tr("app.settings.language", "Язык")}</span>
             <Select
               value={language}
-              onChange={(event) => onLanguageChange(event.target.value as SettingsPanelProps["language"])}
+              onChange={(value) => onLanguageChange(value as SettingsPanelProps["language"])}
               className="w-full"
             >
               <option value="ru">{tr("app.settings.language.ru", "Русский")}</option>
@@ -80,7 +80,7 @@ export function SettingsPanel({
               min={100}
               max={2000}
               value={debounceMs}
-              onChange={(event) => onDebounceMsChange(Math.max(100, Number(event.target.value) || 300))}
+              onChange={(e: any) => onDebounceMsChange(Math.max(100, Number((e.target as HTMLInputElement)?.value) || 300))}
               className="w-full"
             />
           </label>
@@ -91,8 +91,8 @@ export function SettingsPanel({
               min={1}
               max={168}
               value={indexTtlHours}
-              onChange={(event) =>
-                onIndexTtlHoursChange(Math.max(1, Math.min(168, Number(event.target.value) || 6)))
+              onChange={(e: any) =>
+                onIndexTtlHoursChange(Math.max(1, Math.min(168, Number((e.target as HTMLInputElement)?.value) || 6)))
               }
               className="w-full"
             />
@@ -104,9 +104,9 @@ export function SettingsPanel({
               min={1}
               max={120}
               value={indexCheckIntervalMinutes}
-              onChange={(event) =>
+              onChange={(e: any) =>
                 onIndexCheckIntervalMinutesChange(
-                  Math.max(1, Math.min(120, Number(event.target.value) || 15))
+                  Math.max(1, Math.min(120, Number((e.target as HTMLInputElement)?.value) || 15))
                 )
               }
               className="w-full"
@@ -122,7 +122,7 @@ export function SettingsPanel({
             <Input
               placeholder={tr("app.settings.themeName.placeholder", "Имя темы")}
               value={newThemeName}
-              onChange={(event) => onNewThemeNameChange(event.target.value)}
+              onChange={(value) => onNewThemeNameChange(value)}
             />
           </label>
           <div className="grid gap-1.5 sm:grid-cols-3">
@@ -131,7 +131,7 @@ export function SettingsPanel({
               <Input
                 type="color"
                 value={newThemeBg}
-                onChange={(event) => onNewThemeBgChange(event.target.value)}
+                onChange={(value) => onNewThemeBgChange(value)}
                 aria-label={tr("app.settings.themeBg", "Фон")}
                 className="h-7 w-11 cursor-pointer p-1"
               />
@@ -141,7 +141,7 @@ export function SettingsPanel({
               <Input
                 type="color"
                 value={newThemeText}
-                onChange={(event) => onNewThemeTextChange(event.target.value)}
+                onChange={(value) => onNewThemeTextChange(value)}
                 aria-label={tr("app.settings.themeText", "Текст")}
                 className="h-7 w-11 cursor-pointer p-1"
               />
@@ -151,7 +151,7 @@ export function SettingsPanel({
               <Input
                 type="color"
                 value={newThemeAccent}
-                onChange={(event) => onNewThemeAccentChange(event.target.value)}
+                onChange={(value) => onNewThemeAccentChange(value)}
                 aria-label={tr("app.settings.themeAccent", "Акцент")}
                 className="h-7 w-11 cursor-pointer p-1"
               />

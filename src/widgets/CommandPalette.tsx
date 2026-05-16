@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import { useTranslation } from "react-i18next";
 
 export type CommandPaletteAction = {
@@ -15,7 +15,7 @@ export type CommandPaletteProps = {
 
 export function CommandPalette({ open, onClose, actions }: CommandPaletteProps) {
   const [query, setQuery] = useState("");
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [inputEl, setInputEl] = useState<HTMLInputElement | null>(null);
   const { t } = useTranslation();
 
   const filteredActions = useMemo(() => {
@@ -34,8 +34,8 @@ export function CommandPalette({ open, onClose, actions }: CommandPaletteProps) 
     }
 
     const timer = window.setTimeout(() => {
-      inputRef.current?.focus();
-      inputRef.current?.select();
+      inputEl?.focus();
+      inputEl?.select();
     }, 0);
 
     const handleKeyDown = (event: globalThis.KeyboardEvent) => {
@@ -63,7 +63,7 @@ export function CommandPalette({ open, onClose, actions }: CommandPaletteProps) 
     setQuery("");
   }
 
-  function handleInputKeyDown(event: ReactKeyboardEvent<HTMLInputElement>) {
+  function handleInputKeyDown(event: KeyboardEvent) {
     if (event.key !== "Enter") {
       return;
     }
@@ -85,14 +85,14 @@ export function CommandPalette({ open, onClose, actions }: CommandPaletteProps) 
           </label>
           <input
             id="command-palette-input"
-            ref={inputRef}
+            ref={(el) => setInputEl(el)}
             className="command-palette__input"
             value={query}
-            onChange={(event) => setQuery(event.target.value)}
+            onChange={(e: any) => setQuery((e.target as HTMLInputElement)?.value || "")}
             onKeyDown={handleInputKeyDown}
             placeholder={t("commandPalette.placeholder")}
             autoComplete="off"
-            spellCheck={false}
+            spellcheck={false}
           />
         </div>
 

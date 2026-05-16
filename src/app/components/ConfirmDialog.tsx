@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import type { ComponentChildren } from "preact";
+import { useEffect, useRef } from "preact/hooks";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -18,7 +19,7 @@ export function ConfirmDialog({
   cancelLabel = "Cancel",
   onConfirm,
   onCancel
-}: ConfirmDialogProps): React.ReactNode {
+}: ConfirmDialogProps) {
   const confirmRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
@@ -36,7 +37,7 @@ export function ConfirmDialog({
     >
       <div
         className="w-full max-w-sm rounded-lg border border-[var(--border)] bg-[var(--surface)] p-4 shadow-lg"
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e: Event) => e.stopPropagation()}
       >
         <h2 className="mb-2 text-lg font-semibold text-[var(--text)]">{title}</h2>
         <p className="mb-4 text-sm text-[var(--muted)]">{message}</p>

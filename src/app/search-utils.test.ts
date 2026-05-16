@@ -9,7 +9,10 @@ import {
   isIndexStale,
   parseSearchErrorMessage,
   renderSearchErrorStatus,
+  renderSearchErrorFromCode,
   insertIntoSortedArray,
+  mergeMetadataIntoResults,
+  computeAdaptiveDebounce,
 } from "./utils/search-utils";
 import type { SearchResultItem } from "../shared/search-types";
 
@@ -85,6 +88,150 @@ describe("filterPlainResults", () => {
     const filtered = filterPlainResults(items, "apple", false);
     expect(filtered).toHaveLength(1);
     expect(filtered[0].name).toBe("apple.txt");
+  });
+
+  it("filters by full path", () => {
+    const filtered = filterPlainResults(items, "/path/", true);
+    expect(filtered).toHaveLength(3);
+  });
+
+  it("returns empty array for no matches", () => {
+    const filtered = filterPlainResults(items, "xyz123", true);
+    expect(filtered).toHaveLength(0);
+  });
+});
+
+describe("compareSearchItems", () => {
+  it("sorts by type extension alphabetically", () => {
+    const a = makeItem("file.js");
+    const b = makeItem("file.txt");
+    expect(compareSearchItems(a, b, "Type")).toBeLessThan(0);
+  });
+
+  it("handles null extension in Type mode", () => {
+    const a = makeItem("noext");
+    const b = makeItem("file.txt");
+    expect(compareSearchItems(a, b, "Type")).toBeLessThan(0);
+  });
+
+  it("falls back to name for equal relevance scores", () => {
+    const a = makeItem("zebra", 0, undefined, 0.5);
+    const b = makeItem("apple", 0, undefined, 0.5);
+    expect(compareSearchItems(a, b, "Relevance")).toBeGreaterThan(0);
+  });
+});
+
+describe("mergeMetadataIntoResults", () => {
+  it("returns original array when no patches", () => {
+    const items = [makeItem("a.txt"), makeItem("b.txt")];
+    const result = mergeMetadataIntoResults(items, []);
+    expect(result).toBe(items);
+  });
+
+  it("returns original array when no patches match", () => {
+    const items = [makeItem("a.txt"), makeItem("b.txt")];
+    const patches = [{ full_path: "/other/path.txt", size: 999 }];
+    const result = mergeMetadataIntoResults(items, patches);
+    expect(result).toBe(items);
+  });
+
+  it("merges matching patches into results", () => {
+    const items = [makeItem("a.txt", 100), makeItem("b.txt", 200)];
+    const patches = [{ full_path: "/path/a.txt", size: 500, modified_at: "2026-01-01T00:00:00Z" }];
+    const result = mergeMetadataIntoResults(items, patches);
+    expect(result).toHaveLength(2);
+    expect(result[0].size).toBe(500);
+    expect(result[0].modified_at).toBe("2026-01-01T00:00:00Z");
+    expect(result[1].size).toBe(200);
+  });
+
+  it("does not modify original items", () => {
+    const items = [makeItem("a.txt", 100)];
+    const patches = [{ full_path: "/path/a.txt", size: 500 }];
+    const result = mergeMetadataIntoResults(items, patches);
+    expect(items[0].size).toBe(100);
+    expect(result[0].size).toBe(500);
+  });
+});
+
+describe("computeAdaptiveDebounce", () => {
+  it("clamps debounce for heavy modes (Regex)", () => {
+    const request = {
+      options: { match_mode: "Regex", max_depth: null, size_filter: null, created_filter: null, modified_filter: null },
+      query: "test",
+      roots: ["/home"],
+      extensions: []
+    };
+    const result = computeAdaptiveDebounce(request, 300);
+    expect(result).toBeGreaterThanOrEqual(200);
+    expect(result).toBeLessThanOrEqual(300);
+  });
+
+  it("clamps debounce for many roots", () => {
+    const request = {
+      options: { match_mode: "Plain", max_depth: null, size_filter: null, created_filter: null, modified_filter: null },
+      query: "test",
+      roots: ["/a", "/b", "/c"],
+      extensions: []
+    };
+    const result = computeAdaptiveDebounce(request, 300);
+    expect(result).toBeGreaterThanOrEqual(200);
+    expect(result).toBeLessThanOrEqual(300);
+  });
+
+  it("clamps debounce for short simple queries", () => {
+    const request = {
+      options: { match_mode: "Plain", max_depth: null, size_filter: null, created_filter: null, modified_filter: null },
+      query: "abc",
+      roots: ["/home"],
+      extensions: []
+    };
+    const result = computeAdaptiveDebounce(request, 200);
+    expect(result).toBeGreaterThanOrEqual(80);
+    expect(result).toBeLessThanOrEqual(120);
+  });
+
+  it("uses normal range for complex queries", () => {
+    const request = {
+      options: { match_mode: "Plain", max_depth: null, size_filter: null, created_filter: null, modified_filter: null },
+      query: "longer query here",
+      roots: ["/home"],
+      extensions: []
+    };
+    const result = computeAdaptiveDebounce(request, 200);
+    expect(result).toBeGreaterThanOrEqual(120);
+    expect(result).toBeLessThanOrEqual(220);
+  });
+});
+
+describe("renderSearchErrorFromCode", () => {
+  const tr = (key: string, defaultValue: string, values?: Record<string, unknown>) => {
+    if (values) {
+      return defaultValue.replace(/\{\{(\w+)\}\}/g, (_, k) => String(values[k] ?? ""));
+    }
+    return defaultValue;
+  };
+
+  it("renders SEARCH_INVALID_QUERY", () => {
+    const result = renderSearchErrorFromCode("SEARCH_INVALID_QUERY", "bad regex", tr);
+    expect(result).toContain("Ошибка запроса");
+    expect(result).toContain("bad regex");
+  });
+
+  it("renders SEARCH_STATE_ERROR", () => {
+    const result = renderSearchErrorFromCode("SEARCH_STATE_ERROR", "corrupt state", tr);
+    expect(result).toContain("состояния поиска");
+  });
+
+  it("renders SEARCH_EXECUTION_ERROR", () => {
+    const result = renderSearchErrorFromCode("SEARCH_EXECUTION_ERROR", "io error", tr);
+    expect(result).toContain("выполнения поиска");
+  });
+
+  it("renders generic error for unknown code", () => {
+    const result = renderSearchErrorFromCode("UNKNOWN_CODE", "some error", tr);
+    expect(result).toContain("Ошибка:");
+    expect(result).toContain("some error");
   });
 });
 

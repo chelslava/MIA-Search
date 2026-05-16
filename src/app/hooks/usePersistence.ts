@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect } from "preact/hooks";
 import type { FsTreeNode, HistorySnapshot, SearchProfile } from "../../shared/search-types";
 import {
   favoritesAdd,

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef } from "preact/hooks";
 import type { SearchResultItem, SortMode } from "../../shared/search-types";
 import { sortResultsForMode, ROW_HEIGHT } from "../utils/search-utils";
 

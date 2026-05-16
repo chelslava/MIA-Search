@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo } from "preact/hooks";
 import { useTranslation } from "react-i18next";
 import { CommandPalette } from "../widgets/CommandPalette";
 import { ToastHost } from "../widgets/ToastHost";

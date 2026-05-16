@@ -1,6 +1,6 @@
 import type { EntryKind, SearchBackend } from "../../../shared/search-types";
 import type { FiltersPanelProps } from "./props";
-import { useId } from "react";
+import { useId } from "preact/hooks";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Select } from "../../../components/ui/select";
@@ -111,7 +111,7 @@ export function FiltersPanel({
           <legend className="px-1 text-xs font-medium text-[var(--text)]">{tr("app.filters.extensions.legend", "Расширения")}</legend>
           <Input
             value={extensionsRaw}
-            onChange={(event) => onExtensionsRawChange(event.target.value)}
+            onChange={(value) => onExtensionsRawChange(value)}
             placeholder={tr("app.filters.extensions.placeholder", "rs, txt, md")}
           />
           <small className="text-xs text-[var(--muted)]">{tr("app.filters.extensions.hint", "Разделяйте значения запятыми")}</small>
@@ -123,7 +123,7 @@ export function FiltersPanel({
           </legend>
           <Input
             value={excludePathsRaw}
-            onChange={(event) => onExcludePathsRawChange(event.target.value)}
+            onChange={(value) => onExcludePathsRawChange(value)}
             placeholder={tr("app.filters.exclude.placeholder", "node_modules, .git, target")}
           />
           <small className="text-xs text-[var(--muted)]">
@@ -149,7 +149,7 @@ export function FiltersPanel({
             max={10}
             value={maxDepth}
             disabled={maxDepthUnlimited}
-            onChange={(event) => onMaxDepthChange(Number(event.target.value))}
+            onChange={(e: any) => onMaxDepthChange(Number((e.target as HTMLInputElement)?.value ?? 0))}
             className="h-2 w-full cursor-pointer appearance-none rounded-full bg-[var(--surface)] accent-[var(--accent)] disabled:cursor-not-allowed disabled:opacity-50"
           />
           <Input
@@ -158,7 +158,7 @@ export function FiltersPanel({
             max={10}
             value={maxDepth}
             disabled={maxDepthUnlimited}
-            onChange={(event) => onMaxDepthChange(Math.min(10, Math.max(0, Number(event.target.value) || 0)))}
+            onChange={(e: any) => onMaxDepthChange(Math.min(10, Math.max(0, Number((e.target as HTMLInputElement)?.value) || 0)))}
           />
         </fieldset>
 
@@ -178,7 +178,7 @@ export function FiltersPanel({
             <Select
               value={sizeComparison}
               disabled={!sizeFilterEnabled}
-              onChange={(event) => onSizeComparisonChange(event.target.value as FiltersPanelProps["sizeComparison"])}
+              onChange={(value) => onSizeComparisonChange(value as FiltersPanelProps["sizeComparison"])}
             >
               <option value="Greater">{tr("app.filters.size.comparison.greater", "больше")}</option>
               <option value="Smaller">{tr("app.filters.size.comparison.smaller", "меньше")}</option>
@@ -190,12 +190,12 @@ export function FiltersPanel({
               max={999}
               value={sizeValue}
               disabled={!sizeFilterEnabled}
-              onChange={(event) => onSizeValueChange(Math.min(999, Math.max(0, Number(event.target.value) || 0)))}
+              onChange={(e: any) => onSizeValueChange(Math.min(999, Math.max(0, Number((e.target as HTMLInputElement)?.value) || 0)))}
             />
             <Select
               value={sizeUnit}
               disabled={!sizeFilterEnabled}
-              onChange={(event) => onSizeUnitChange(event.target.value as FiltersPanelProps["sizeUnit"])}
+              onChange={(value) => onSizeUnitChange(value as FiltersPanelProps["sizeUnit"])}
             >
               <option value="B">B</option>
               <option value="KB">KB</option>
@@ -223,7 +223,7 @@ export function FiltersPanel({
               type="datetime-local"
               disabled={!modifiedFilterEnabled}
               value={modifiedAfter}
-              onChange={(event) => onModifiedAfterChange(event.target.value)}
+              onChange={(value) => onModifiedAfterChange(value)}
               title={tr("app.filters.date.formatHint", "Формат: ГГГГ-ММ-ДД ЧЧ:ММ")}
               placeholder={tr("app.filters.date.placeholder", "ГГГГ-ММ-ДД")}
             />
@@ -231,7 +231,7 @@ export function FiltersPanel({
               type="datetime-local"
               disabled={!modifiedFilterEnabled}
               value={modifiedBefore}
-              onChange={(event) => onModifiedBeforeChange(event.target.value)}
+              onChange={(value) => onModifiedBeforeChange(value)}
               title={tr("app.filters.date.formatHint", "Формат: ГГГГ-ММ-ДД ЧЧ:ММ")}
               placeholder={tr("app.filters.date.placeholder", "ГГГГ-ММ-ДД")}
             />
@@ -255,7 +255,7 @@ export function FiltersPanel({
               type="datetime-local"
               disabled={!createdFilterEnabled}
               value={createdAfter}
-              onChange={(event) => onCreatedAfterChange(event.target.value)}
+              onChange={(value) => onCreatedAfterChange(value)}
               title={tr("app.filters.date.formatHint", "Формат: ГГГГ-ММ-ДД ЧЧ:ММ")}
               placeholder={tr("app.filters.date.placeholder", "ГГГГ-ММ-ДД")}
             />
@@ -263,7 +263,7 @@ export function FiltersPanel({
               type="datetime-local"
               disabled={!createdFilterEnabled}
               value={createdBefore}
-              onChange={(event) => onCreatedBeforeChange(event.target.value)}
+              onChange={(value) => onCreatedBeforeChange(value)}
               title={tr("app.filters.date.formatHint", "Формат: ГГГГ-ММ-ДД ЧЧ:ММ")}
               placeholder={tr("app.filters.date.placeholder", "ГГГГ-ММ-ДД")}
             />
@@ -358,7 +358,7 @@ export function FiltersPanel({
             min={1}
             disabled={limitMode !== "custom"}
             value={customLimit}
-            onChange={(event) => onCustomLimitChange(Math.max(1, Number(event.target.value) || 1))}
+              onChange={(value) => onCustomLimitChange(Math.max(1, Number(value) || 1))}
           />
         </fieldset>
 
@@ -369,7 +369,7 @@ export function FiltersPanel({
           <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
             <Select
               value={searchBackend}
-              onChange={(event) => onSearchBackendChange(event.target.value as SearchBackend)}
+              onChange={(value) => onSearchBackendChange(value as SearchBackend)}
             >
               <option value="Index">{tr("app.filters.backend.index", "Index")}</option>
               <option value="Scan">{tr("app.filters.backend.scan", "Scan")}</option>

@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from "react";
+import { useState, useCallback, useMemo, useEffect } from "preact/hooks";
 import type { EntryKind, MatchMode, SearchBackend, SizeComparison, SortMode } from "../../shared/search-types";
 
 type FilterState = {
