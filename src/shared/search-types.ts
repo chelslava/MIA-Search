@@ -180,6 +180,23 @@ export interface IndexStatusResponse {
   rebuild_entries_count: number;
 }
 
+export interface HealthCheckResponse {
+  status: "ok" | "degraded";
+  search_session_status: string;
+  active_search_id: number | null;
+  index_status: "empty" | "ready" | "in_progress" | "version_mismatch";
+  index_entries: number;
+  index_roots: number;
+  index_version_mismatch: boolean;
+  index_rebuild_in_progress: boolean;
+  index_rebuild_entries_count: number;
+  settings_status: string;
+  cache_status: string;
+  storage_status: string;
+  storage_path: string;
+  storage_message: string | null;
+}
+
 export interface IndexRebuildResponse {
   status: string;
   roots: number;

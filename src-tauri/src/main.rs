@@ -5,7 +5,7 @@ mod core;
 mod platform;
 mod storage;
 
-use commands::{actions, favorites, history, index, profiles, search, settings};
+use commands::{actions, favorites, health, history, index, profiles, search, settings};
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicBool, AtomicUsize};
 use std::sync::Arc;
@@ -124,6 +124,7 @@ fn main() {
       actions::batch_delete,
       actions::export_search_results,
       actions::export_to_clipboard,
+      health::health_check,
       index::index_rebuild,
       index::index_rebuild_cancel,
       index::index_status

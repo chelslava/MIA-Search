@@ -2,6 +2,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 import type {
   FsTreeNode,
+  HealthCheckResponse,
   HistorySnapshot,
   IndexProgressEvent,
   IndexDoneEvent,
@@ -201,6 +202,10 @@ export async function contentSearch(
   useRegex: boolean
 ): Promise<import("./search-types").ContentSearchResponse> {
   return invoke("content_search", { paths, query, caseSensitive, wholeWord, useRegex });
+}
+
+export async function healthCheck(): Promise<HealthCheckResponse> {
+  return invoke<HealthCheckResponse>("health_check");
 }
 
 export async function indexStatus(): Promise<IndexStatusResponse> {
