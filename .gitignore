@@ -25,3 +25,6 @@ src-tauri/target/
 .env.*
 
 # Lock files are committed for reproducible builds
+
+# Timestamp files from Vite
+*.timestamp-*.mjs
