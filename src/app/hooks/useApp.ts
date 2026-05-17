@@ -81,6 +81,9 @@ export function useApp() {
   
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const resultPaneRef = useRef<HTMLDivElement | null>(null);
+  const liveSearchTimerRef = useRef<number | null>(null);
+  const runSearchRef = useRef<((preparedRequest?: SearchRequest) => Promise<void>) | null>(null);
+  const incrementalSearchRef = useRef<(request: SearchRequest) => boolean>(() => false);
 
   const indexRoots = useMemo(
     () => roots.enabledRoots.length > 0 ? roots.enabledRoots : [roots.primaryRoot].filter(Boolean),
@@ -272,11 +275,20 @@ export function useApp() {
     return true;
   }, [searchState, searchRefs, uiState, tr, incrementalSearch]);
 
+  const clearLiveSearchTimer = useCallback(() => {
+    if (liveSearchTimerRef.current !== null) {
+      window.clearTimeout(liveSearchTimerRef.current);
+      liveSearchTimerRef.current = null;
+    }
+  }, []);
+
   const handleSearch = useCallback(async (preparedRequest?: SearchRequest): Promise<void> => {
     if (!tauriRuntimeAvailable) {
       searchState.setStatus(tr("app.status.tauriUnavailable", "Tauri runtime не обнаружен"));
       return;
     }
+
+    clearLiveSearchTimer();
 
     if (searchState.isSearching) {
       return;
@@ -333,7 +345,15 @@ export function useApp() {
       searchState.setStatus(tr("app.status.startError", "Ошибка запуска: {{error}}", { error: String(error) }));
       pushToast(tr("app.toast.searchStartFailed", "Не удалось запустить поиск"), "error");
     }
-  }, [searchState, searchRefs, uiState, validateCurrentDateFilters, buildCurrentRequest, pushToast, tr]);
+  }, [searchState, searchRefs, uiState, validateCurrentDateFilters, buildCurrentRequest, pushToast, tr, clearLiveSearchTimer]);
+
+  useEffect(() => {
+    runSearchRef.current = handleSearch;
+  }, [handleSearch]);
+
+  useEffect(() => {
+    incrementalSearchRef.current = tryIncrementalPlainSearch;
+  }, [tryIncrementalPlainSearch]);
 
   const handleCancel = useCallback(async (): Promise<void> => {
     if (!tauriRuntimeAvailable) return;
@@ -737,53 +757,19 @@ export function useApp() {
   }, [tr, scheduleResultsFlush, persistence, searchState, searchRefs]);
 
   useEffect(() => {
+    clearLiveSearchTimer();
     if (!settingsState.liveSearch) return;
     const request = buildCurrentRequest();
     if (!request.query.trim()) return;
-    const adaptiveDebounce = computeAdaptiveDebounce(request, settingsState.debounceMs);
-    const timer = window.setTimeout(() => {
-      if (tryIncrementalPlainSearch(request)) return;
-      void handleSearch(request);
-    }, adaptiveDebounce);
-    return () => window.clearTimeout(timer);
-  }, [settingsState.debounceMs, settingsState.liveSearch, query, filterState.searchBackend, buildCurrentRequest, handleSearch, tryIncrementalPlainSearch]);
 
-  useEffect(() => {
-    if (!settingsState.liveSearch) return;
-    const request = buildCurrentRequest();
-    if (!request.query.trim()) return;
-    const timer = window.setTimeout(() => {
-      void handleSearch(request);
-    }, settingsState.debounceMs);
-    return () => window.clearTimeout(timer);
-  }, [
-    filterState.createdAfter,
-    filterState.createdBefore,
-    filterState.createdFilterEnabled,
-    filterState.entryKind,
-    filterState.extensionsRaw,
-    filterState.excludePathsRaw,
-    filterState.ignoreCase,
-    filterState.includeHidden,
-    limit,
-    filterState.matchMode,
-    filterState.maxDepth,
-    filterState.maxDepthUnlimited,
-    filterState.modifiedAfter,
-    filterState.modifiedBefore,
-    filterState.modifiedFilterEnabled,
-    settingsState.regexEnabled,
-    roots.roots,
-    filterState.sizeComparison,
-    filterState.sizeFilterEnabled,
-    filterState.sizeUnit,
-    filterState.sizeValue,
-    filterState.strict,
-    settingsState.debounceMs,
-    settingsState.liveSearch,
-    buildCurrentRequest,
-    handleSearch
-  ]);
+    liveSearchTimerRef.current = window.setTimeout(() => {
+      liveSearchTimerRef.current = null;
+      if (incrementalSearchRef.current(request)) return;
+      void runSearchRef.current?.(request);
+    }, computeAdaptiveDebounce(request, settingsState.debounceMs));
+
+    return clearLiveSearchTimer;
+  }, [settingsState.debounceMs, settingsState.liveSearch, buildCurrentRequest, clearLiveSearchTimer]);
 
   useEffect(() => {
     if (!tauriRuntimeAvailable || searchState.isSearching || layoutState.displayMode === "cards" || visibleRows.items.length === 0) return;
