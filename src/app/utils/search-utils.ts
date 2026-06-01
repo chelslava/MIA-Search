@@ -145,14 +145,15 @@ export function sameSearchContextWithoutQuery(left: { roots: string[]; extension
 
 /**
  * Computes adaptive debounce delay based on search complexity.
- * Uses shorter delays for simple queries, longer for complex searches.
+ * Never schedules faster than the configured debounce value.
  */
 export function computeAdaptiveDebounce(request: { options: { match_mode: string; max_depth: number | null; size_filter: unknown; created_filter: unknown; modified_filter: unknown }; query: string; roots: string[]; extensions: string[] }, configuredDebounceMs: number): number {
+  const configured = clamp(Math.round(configuredDebounceMs), 100, 2000);
   const mode = request.options.match_mode;
   const heavyMode = mode === "Regex" || mode === "Wildcard";
   const manyRoots = request.roots.length >= 3;
   if (heavyMode || manyRoots) {
-    return clamp(configuredDebounceMs, 200, 300);
+    return Math.max(configured, 300);
   }
 
   const shortPlainQuery = mode === "Plain" && request.query.trim().length <= 5;
@@ -163,10 +164,10 @@ export function computeAdaptiveDebounce(request: { options: { match_mode: string
     request.options.created_filter === null &&
     request.options.modified_filter === null;
   if (shortPlainQuery && noHeavyFilters) {
-    return clamp(configuredDebounceMs, 80, 120);
+    return configured;
   }
 
-  return clamp(configuredDebounceMs, 120, 220);
+  return Math.max(configured, 150);
 }
 
 /**
