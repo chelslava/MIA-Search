@@ -12,69 +12,99 @@ type UseSearchRequestOptions = Omit<BuildSearchRequestInput, "enabledRoots" | "p
 export type { DateValidationError };
 
 export function useSearchRequest(options: UseSearchRequestOptions) {
+  const {
+    query,
+    enabledRoots,
+    primaryRoot,
+    extensionsRaw,
+    excludePathsRaw,
+    maxDepthUnlimited,
+    maxDepth,
+    limit,
+    strict,
+    ignoreCase,
+    includeHidden,
+    entryKind,
+    matchMode,
+    sizeFilterEnabled,
+    sizeComparison,
+    sizeValue,
+    sizeUnit,
+    modifiedFilterEnabled,
+    modifiedAfter,
+    modifiedBefore,
+    createdFilterEnabled,
+    createdAfter,
+    createdBefore,
+    sortMode,
+    searchBackend
+  } = options;
+
+  const requestInput = useMemo<BuildSearchRequestInput>(() => ({
+    query,
+    enabledRoots,
+    primaryRoot: primaryRoot ?? "",
+    extensionsRaw,
+    excludePathsRaw,
+    maxDepthUnlimited,
+    maxDepth,
+    limit,
+    strict,
+    ignoreCase,
+    includeHidden,
+    entryKind,
+    matchMode,
+    sizeFilterEnabled,
+    sizeComparison,
+    sizeValue,
+    sizeUnit,
+    modifiedFilterEnabled,
+    modifiedAfter,
+    modifiedBefore,
+    createdFilterEnabled,
+    createdAfter,
+    createdBefore,
+    sortMode,
+    searchBackend
+  }), [
+    query,
+    enabledRoots,
+    primaryRoot,
+    extensionsRaw,
+    excludePathsRaw,
+    maxDepthUnlimited,
+    maxDepth,
+    limit,
+    strict,
+    ignoreCase,
+    includeHidden,
+    entryKind,
+    matchMode,
+    sizeFilterEnabled,
+    sizeComparison,
+    sizeValue,
+    sizeUnit,
+    modifiedFilterEnabled,
+    modifiedAfter,
+    modifiedBefore,
+    createdFilterEnabled,
+    createdAfter,
+    createdBefore,
+    sortMode,
+    searchBackend
+  ]);
+
   const buildCurrentRequest = useCallback((): SearchRequest => {
-    return buildSearchRequest({
-      query: options.query,
-      enabledRoots: options.enabledRoots,
-      primaryRoot: options.primaryRoot ?? "",
-      extensionsRaw: options.extensionsRaw,
-      excludePathsRaw: options.excludePathsRaw,
-      maxDepthUnlimited: options.maxDepthUnlimited,
-      maxDepth: options.maxDepth,
-      limit: options.limit,
-      strict: options.strict,
-      ignoreCase: options.ignoreCase,
-      includeHidden: options.includeHidden,
-      entryKind: options.entryKind,
-      matchMode: options.matchMode,
-      sizeFilterEnabled: options.sizeFilterEnabled,
-      sizeComparison: options.sizeComparison,
-      sizeValue: options.sizeValue,
-      sizeUnit: options.sizeUnit,
-      modifiedFilterEnabled: options.modifiedFilterEnabled,
-      modifiedAfter: options.modifiedAfter,
-      modifiedBefore: options.modifiedBefore,
-      createdFilterEnabled: options.createdFilterEnabled,
-      createdAfter: options.createdAfter,
-      createdBefore: options.createdBefore,
-      sortMode: options.sortMode,
-      searchBackend: options.searchBackend
-    });
-  }, [options]);
+    return buildSearchRequest(requestInput);
+  }, [requestInput]);
 
   const validateDateFilters = useCallback((): DateValidationError[] => {
-    return getDateValidationErrors({
-      query: options.query,
-      enabledRoots: options.enabledRoots,
-      primaryRoot: options.primaryRoot ?? "",
-      extensionsRaw: options.extensionsRaw,
-      excludePathsRaw: options.excludePathsRaw,
-      maxDepthUnlimited: options.maxDepthUnlimited,
-      maxDepth: options.maxDepth,
-      limit: options.limit,
-      strict: options.strict,
-      ignoreCase: options.ignoreCase,
-      includeHidden: options.includeHidden,
-      entryKind: options.entryKind,
-      matchMode: options.matchMode,
-      sizeFilterEnabled: options.sizeFilterEnabled,
-      sizeComparison: options.sizeComparison,
-      sizeValue: options.sizeValue,
-      sizeUnit: options.sizeUnit,
-      modifiedFilterEnabled: options.modifiedFilterEnabled,
-      modifiedAfter: options.modifiedAfter,
-      modifiedBefore: options.modifiedBefore,
-      createdFilterEnabled: options.createdFilterEnabled,
-      createdAfter: options.createdAfter,
-      createdBefore: options.createdBefore,
-      sortMode: options.sortMode,
-      searchBackend: options.searchBackend
-    });
-  }, [options]);
+    return getDateValidationErrors(requestInput);
+  }, [requestInput]);
 
   const isEmptyQuery = useMemo(
-    () => !options.query.trim(),
-    [options.query]
+    () => !query.trim(),
+    [query]
   );
 
   return {
