@@ -179,7 +179,7 @@ describe("computeAdaptiveDebounce", () => {
     expect(result).toBeLessThanOrEqual(300);
   });
 
-  it("clamps debounce for short simple queries", () => {
+  it("does not shorten the configured debounce for short simple queries", () => {
     const request = {
       options: { match_mode: "Plain", max_depth: null, size_filter: null, created_filter: null, modified_filter: null },
       query: "abc",
@@ -187,8 +187,7 @@ describe("computeAdaptiveDebounce", () => {
       extensions: []
     };
     const result = computeAdaptiveDebounce(request, 200);
-    expect(result).toBeGreaterThanOrEqual(80);
-    expect(result).toBeLessThanOrEqual(120);
+    expect(result).toBe(200);
   });
 
   it("uses normal range for complex queries", () => {
@@ -201,6 +200,16 @@ describe("computeAdaptiveDebounce", () => {
     const result = computeAdaptiveDebounce(request, 200);
     expect(result).toBeGreaterThanOrEqual(120);
     expect(result).toBeLessThanOrEqual(220);
+  });
+
+  it("keeps long configured debounce values instead of clamping them down", () => {
+    const request = {
+      options: { match_mode: "Regex", max_depth: null, size_filter: null, created_filter: null, modified_filter: null },
+      query: "test",
+      roots: ["/home"],
+      extensions: []
+    };
+    expect(computeAdaptiveDebounce(request, 750)).toBe(750);
   });
 });
 
