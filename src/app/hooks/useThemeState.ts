@@ -14,6 +14,9 @@ type UseThemeStateResult = {
 
 export function useThemeState(tr: (key: string, defaultValue: string) => string): UseThemeStateResult {
   const [themeId, setThemeId] = useState<string>(() => localStorage.getItem("mia.theme") ?? "dark");
+  const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(
+    () => window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ?? true
+  );
   const [customThemes, setCustomThemes] = useState<ThemePreset[]>(() => {
     try {
       const raw = localStorage.getItem("mia.customThemes");
@@ -25,23 +28,39 @@ export function useThemeState(tr: (key: string, defaultValue: string) => string)
     }
   });
 
+  useEffect(() => {
+    const mediaQuery = window.matchMedia?.("(prefers-color-scheme: dark)");
+    if (!mediaQuery) return;
+
+    const handler = (e: MediaQueryListEvent) => {
+      setSystemPrefersDark(e.matches);
+    };
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener("change", handler);
+      return () => mediaQuery.removeEventListener("change", handler);
+    } else if ("addListener" in mediaQuery) {
+      (mediaQuery as any).addListener(handler);
+      return () => (mediaQuery as any).removeListener(handler);
+    }
+  }, []);
+
   const themeOptions = useMemo(() => {
     const systemTheme: ThemePreset = {
       id: "system",
       name: tr("app.themes.system", "Системная"),
-      colors: builtInThemes[0].colors,
+      colors: systemPrefersDark ? builtInThemes[0].colors : builtInThemes[1].colors,
       builtIn: true
     };
     return [systemTheme].concat(builtInThemes, customThemes);
-  }, [customThemes, tr]);
+  }, [customThemes, systemPrefersDark, tr]);
 
   const activeTheme = useMemo(() => {
     if (themeId === "system") {
-      const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ?? false;
-      return builtInThemes.find((theme) => theme.id === (prefersDark ? "dark" : "light")) ?? builtInThemes[0];
+      return builtInThemes.find((theme) => theme.id === (systemPrefersDark ? "dark" : "light")) ?? builtInThemes[0];
     }
     return themeOptions.find((theme) => theme.id === themeId) ?? builtInThemes[1];
-  }, [themeId, themeOptions]);
+  }, [themeId, themeOptions, systemPrefersDark]);
 
   const createCustomTheme = useCallback((name: string, bg: string, text: string, accent: string) => {
     const id = `custom-${Date.now()}`;
