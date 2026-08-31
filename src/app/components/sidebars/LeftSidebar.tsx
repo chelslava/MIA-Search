@@ -1,6 +1,6 @@
 import type { FsTreeNode, HistorySnapshot, SearchProfile } from "../../../shared/search-types";
 import type { ContextMenuState, RootItem } from "../../types";
-import { useState } from "preact/hooks";
+import { useState, useMemo } from "preact/hooks";
 import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Switch } from "../../../components/ui/switch";
@@ -135,6 +135,17 @@ export function LeftSidebar({
   onDropRootPath
 }: LeftSidebarProps) {
   const [confirmClearHistory, setConfirmClearHistory] = useState(false);
+
+  const frequentQueries = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const entry of history.query_entries) {
+      const q = entry.query.trim();
+      if (q) counts.set(q, (counts.get(q) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+  }, [history.query_entries]);
 
   return (
     <>
@@ -285,6 +296,31 @@ export function LeftSidebar({
             <Button type="button" variant="ghost" size="sm" className="h-6 w-full justify-start px-1 text-[11px] font-normal" onClick={() => setConfirmClearHistory(true)}>
               {tr("app.history.clear", "Очистить историю")}
             </Button>
+            {frequentQueries.length > 0 && (
+              <div className="space-y-0.5 rounded-sm border border-[var(--border)] bg-[var(--surface)] p-1">
+                <span className="block text-[10px] font-medium text-[var(--muted)]">
+                  {tr("app.history.frequent", "Частые запросы:")}
+                </span>
+                <div className="flex flex-wrap gap-1 pt-0.5">
+                  {frequentQueries.map(([queryText, count]) => (
+                    <Button
+                      key={queryText}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-5 px-1 text-[10px]"
+                      onClick={() => onSelectHistoryQuery(queryText)}
+                      title={`${queryText} (${count})`}
+                    >
+                      <span className="truncate max-w-[80px]">{queryText}</span>
+                      <span className="ml-1 rounded-full bg-[var(--surface-alt)] px-1 text-[9px] text-[var(--muted)]">
+                        {count}
+                      </span>
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
             {history.query_entries.length === 0 ? (
               <div className="py-2">
                 <EmptyHistory />
