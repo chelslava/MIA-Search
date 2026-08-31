@@ -72,6 +72,7 @@ impl AppState {
 }
 
 fn main() {
+    platform::logger::init_logging();
     let app_state = AppState::bootstrap();
     let shutdown_flag = app_state.shutting_down.clone();
     let search_session = app_state.search_session.clone();
