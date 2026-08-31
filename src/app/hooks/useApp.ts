@@ -72,7 +72,7 @@ export function useApp() {
   const settingsState = useSettingsState();
   const layoutState = useLayoutState();
   const roots = useRootsState();
-  const { toasts, pushToast, closeToast } = useToast();
+  const { toasts, toastHistory, pushToast, closeToast, clearToastHistory } = useToast();
   const uiState = useUIState();
 
   const [query, setQuery] = useState("");
@@ -583,13 +583,25 @@ export function useApp() {
     { id: "cmd-clear-history", label: tr("app.commands.clearHistory", "> Очистить историю"), run: requestClearHistory },
     { id: "cmd-theme", label: tr("app.commands.toggleTheme", "> Переключить тему"), run: () => themeState.setThemeId((prev) => (prev === "dark" ? "light" : "dark")) },
     { id: "cmd-focus", label: tr("app.commands.focusSearch", "/ Фокус в строку поиска"), run: () => searchInputRef.current?.focus() },
-    { id: "cmd-help", label: tr("app.commands.help", "? Горячие клавиши"), run: () => pushToast(tr("app.messages.hotkeys", "⌘K, ⌘F, Esc, F5, ↑/↓, Enter"), "info") },
+    { id: "cmd-help", label: tr("app.commands.help", "? Горячие клавиши"), run: () => pushToast(tr("app.messages.hotkeys", "⌘K, ⌘F, Esc, F5, F1, Ctrl+B, Ctrl+Shift+B, ↑/↓, Enter"), "info") },
+    {
+      id: "cmd-toasts",
+      label: tr("app.commands.toastHistory", "🔔 История уведомлений ({{count}})", { count: toastHistory.length }),
+      run: () => {
+        if (toastHistory.length === 0) {
+          pushToast(tr("app.messages.noToasts", "История уведомлений пуста"), "info");
+        } else {
+          const recent = toastHistory.slice(0, 3).map((t) => t.text).join(" | ");
+          pushToast(recent, "info");
+        }
+      }
+    },
     ...persistence.profiles.map((profile) => ({
       id: `profile-${profile.id}`,
       label: `# ${profile.name}`,
       run: () => applyProfile(profile)
     }))
-  ], [handleSearch, index, indexRoots, handleHealthCheck, requestClearHistory, themeState, pushToast, tr, persistence.profiles, applyProfile]);
+  ], [handleSearch, index, indexRoots, handleHealthCheck, requestClearHistory, themeState, pushToast, tr, toastHistory, persistence.profiles, applyProfile]);
 
   useEffect(() => {
     searchInputRef.current?.focus();
