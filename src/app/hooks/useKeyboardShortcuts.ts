@@ -17,6 +17,7 @@ type KeyboardShortcutsOptions = {
   onOpenCommandPalette: () => void;
   onFocusSearch: () => void;
   onCloseModals: () => void;
+  onShowHelp?: () => void;
   history?: HistorySnapshot;
   onSelectHistoryQuery?: (query: string) => void;
 };
@@ -37,6 +38,7 @@ export function useKeyboardShortcuts({
   onOpenCommandPalette,
   onFocusSearch,
   onCloseModals,
+  onShowHelp,
   history,
   onSelectHistoryQuery
 }: KeyboardShortcutsOptions): void {
@@ -47,6 +49,11 @@ export function useKeyboardShortcuts({
     const accel = event.ctrlKey || event.metaKey;
     const alt = event.altKey;
 
+    if (key === "f1") {
+      event.preventDefault();
+      onShowHelp?.();
+      return;
+    }
     if (accel && key === "k") {
       event.preventDefault();
       onOpenCommandPalette();

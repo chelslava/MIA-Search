@@ -110,6 +110,7 @@ export function App() {
       layoutState.setFiltersOpen(false);
       layoutState.setSettingsOpen(false);
     },
+    onShowHelp: () => pushToast(tr("app.messages.hotkeys", "⌘K, ⌘F, Esc, F5, F1, ↑/↓, Enter"), "info"),
     history: persistence.history,
     onSelectHistoryQuery: (q) => setQuery(q),
   });
