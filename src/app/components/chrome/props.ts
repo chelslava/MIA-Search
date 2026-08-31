@@ -125,6 +125,8 @@ export type SettingsPanelProps = {
   newThemeAccent: string;
   onNewThemeAccentChange: (value: string) => void;
   onCreateCustomTheme: () => void;
+  onExportSettings?: () => void;
+  onImportSettings?: () => void;
   tr: TranslateFn;
 };
 

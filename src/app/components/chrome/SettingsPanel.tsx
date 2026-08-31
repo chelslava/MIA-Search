@@ -26,6 +26,8 @@ export function SettingsPanel({
   newThemeAccent,
   onNewThemeAccentChange,
   onCreateCustomTheme,
+  onExportSettings,
+  onImportSettings,
   tr
 }: SettingsPanelProps) {
   return (
@@ -112,6 +114,18 @@ export function SettingsPanel({
               className="w-full"
             />
           </label>
+          <div className="flex gap-1.5 pt-1">
+            {onExportSettings ? (
+              <Button type="button" variant="outline" size="sm" onClick={onExportSettings} className="h-7 text-[11px]">
+                {tr("app.settings.export", "Экспорт настроек")}
+              </Button>
+            ) : null}
+            {onImportSettings ? (
+              <Button type="button" variant="outline" size="sm" onClick={onImportSettings} className="h-7 text-[11px]">
+                {tr("app.settings.import", "Импорт настроек")}
+              </Button>
+            ) : null}
+          </div>
         </div>
         <div className="space-y-1.5">
           <h4 className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">

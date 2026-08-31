@@ -248,16 +248,60 @@ export function App() {
                 colors: {
                   bg: uiState.newThemeBg,
                   surface: tintHex(uiState.newThemeBg, 0.08),
-                  surfaceAlt: tintHex(uiState.newThemeBg, 0.16),
-                  border: darkenHex(uiState.newThemeBg, 0.18),
+                  surfaceAlt: tintHex(uiState.newThemeBg, 0.14),
+                  border: tintHex(uiState.newThemeBg, 0.22),
                   text: uiState.newThemeText,
-                  muted: darkenHex(uiState.newThemeText, 0.25),
+                  muted: tintHex(uiState.newThemeText, -0.35),
                   accent: uiState.newThemeAccent,
-                  accentSoft: tintHex(uiState.newThemeAccent, 0.65)
+                  accentSoft: tintHex(uiState.newThemeAccent, -0.45)
                 }
               }));
-              themeState.setThemeId(id);
               uiState.setNewThemeName("");
+            }}
+            onExportSettings={() => {
+              const exportData = {
+                settings: {
+                  liveSearch: settingsState.liveSearch,
+                  regexEnabled: settingsState.regexEnabled,
+                  debounceMs: settingsState.debounceMs,
+                  indexTtlHours: settingsState.indexTtlHours,
+                  indexCheckIntervalMinutes: settingsState.indexCheckIntervalMinutes,
+                },
+                language: appLanguage,
+                themeId: themeState.themeId,
+                customThemes: themeState.customThemes,
+                profiles: persistence.profiles,
+              };
+              const json = JSON.stringify(exportData, null, 2);
+              void navigator.clipboard.writeText(json).then(() => {
+                pushToast(tr("app.toast.settingsExported", "Настройки экспортированы в буфер обмена"), "success");
+              });
+            }}
+            onImportSettings={() => {
+              const text = prompt(tr("app.settings.importPrompt", "Вставьте JSON настроек:"));
+              if (!text) return;
+              try {
+                const parsed = JSON.parse(text);
+                if (parsed.settings) {
+                  if (typeof parsed.settings.liveSearch === "boolean") settingsState.setLiveSearch(parsed.settings.liveSearch);
+                  if (typeof parsed.settings.regexEnabled === "boolean") settingsState.setRegexEnabled(parsed.settings.regexEnabled);
+                  if (typeof parsed.settings.debounceMs === "number") settingsState.setDebounceMs(parsed.settings.debounceMs);
+                  if (typeof parsed.settings.indexTtlHours === "number") settingsState.setIndexTtlHours(parsed.settings.indexTtlHours);
+                  if (typeof parsed.settings.indexCheckIntervalMinutes === "number") settingsState.setIndexCheckIntervalMinutes(parsed.settings.indexCheckIntervalMinutes);
+                }
+                if (parsed.language && (parsed.language === "ru" || parsed.language === "en")) {
+                  void i18n.changeLanguage(parsed.language);
+                }
+                if (parsed.themeId) {
+                  themeState.setThemeId(parsed.themeId);
+                }
+                if (Array.isArray(parsed.customThemes)) {
+                  themeState.setCustomThemes(parsed.customThemes);
+                }
+                pushToast(tr("app.toast.settingsImported", "Настройки успешно импортированы"), "success");
+              } catch {
+                pushToast(tr("app.toast.settingsImportFailed", "Ошибка при импорте настроек"), "error");
+              }
             }}
             tr={tr}
           />
