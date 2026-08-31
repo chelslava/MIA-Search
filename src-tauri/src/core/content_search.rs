@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
 
@@ -51,24 +52,33 @@ impl ContentSearchService {
                 errors: vec![],
             };
         }
-        let mut results = Vec::new();
-        let mut total_matches = 0;
-        let mut errors = Vec::new();
         let query = if case_sensitive {
             query.to_string()
         } else {
             query.to_lowercase()
         };
 
-        for path in paths {
-            match Self::search_file(path, &query, case_sensitive, whole_word, regex) {
+        let outcomes: Vec<Result<ContentSearchResult, (String, String)>> = paths
+            .par_iter()
+            .map(|path| {
+                Self::search_file(path, &query, case_sensitive, whole_word, regex)
+                    .map_err(|e| (path.clone(), e))
+            })
+            .collect();
+
+        let mut results = Vec::new();
+        let mut total_matches = 0;
+        let mut errors = Vec::new();
+
+        for outcome in outcomes {
+            match outcome {
                 Ok(result) => {
                     if result.total_matches > 0 {
                         total_matches += result.total_matches;
                         results.push(result);
                     }
                 }
-                Err(e) => {
+                Err((path, e)) => {
                     if !e.contains("not a file") && !e.contains("permission denied") {
                         errors.push(format!("{}: {}", path, e));
                     }
