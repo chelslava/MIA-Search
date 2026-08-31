@@ -35,6 +35,16 @@ export function StatusBar({ resultsCount, status, statusText, checkedPaths, acti
       <span className="rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] px-1.5 py-0.5 whitespace-nowrap text-[var(--text)]">
         {tr("app.statusbar.errors", "Ошибки: {{count}}", { count: statusText.errors })}
       </span>
+      {typeof performance !== "undefined" && (performance as any)?.memory ? (
+        <span
+          className="rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] px-1.5 py-0.5 whitespace-nowrap text-[var(--text)]"
+          title={tr("app.statusbar.memoryTooltip", "Использование памяти heap")}
+        >
+          {tr("app.statusbar.memory", "RAM: {{value}}", {
+            value: `${Math.round((performance as any).memory.usedJSHeapSize / (1024 * 1024))} MB`,
+          })}
+        </span>
+      ) : null}
       <span className="rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] px-1.5 py-0.5 whitespace-nowrap text-[var(--text)]">
         {tr("app.statusbar.searchId", "ID: {{id}}", { id: activeSearchId ?? "-" })}
       </span>
