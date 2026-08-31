@@ -10,7 +10,7 @@ use crate::{
         models::{SearchBackend, SearchRequest, SearchResultItem},
         search_service::SearchService,
     },
-    platform::path_security::{has_path_traversal, has_unicode_spoof},
+    platform::path_security::{has_path_traversal, has_unicode_spoof, is_local_path, is_safe_path},
     AppState,
 };
 use serde::{Deserialize, Serialize};
@@ -110,29 +110,50 @@ fn validate_request(request: &SearchRequest) -> Result<(), String> {
                 MAX_EXCLUDE_PATH_LENGTH
             ));
         }
+        if !is_safe_path(path) {
+            return Err(format!(
+                "[VALIDATION_EXCLUDE_PATH_UNSAFE] exclude_paths[{}] contains unsafe characters: {}",
+                i, path
+            ));
+        }
         if has_path_traversal(path) {
             return Err(format!(
                 "[VALIDATION_EXCLUDE_PATH_TRAVERSAL] exclude_paths[{}] contains path traversal: {}",
                 i, path
             ));
         }
+        if has_unicode_spoof(path) {
+            return Err(format!(
+                "[VALIDATION_EXCLUDE_PATH_SPOOF] exclude_paths[{}] contains Unicode spoofing characters: {}",
+                i, path
+            ));
+        }
     }
-    // Validate roots for unicode spoofing
+    // Validate roots
     for (i, root) in request.roots.iter().enumerate() {
+        if !is_local_path(root) {
+            return Err(format!(
+                "[VALIDATION_ROOT_NON_LOCAL] roots[{}] is not a local path: {}",
+                i, root
+            ));
+        }
+        if !is_safe_path(root) {
+            return Err(format!(
+                "[VALIDATION_ROOT_UNSAFE] roots[{}] contains unsafe characters: {}",
+                i, root
+            ));
+        }
+        if has_path_traversal(root) {
+            return Err(format!(
+                "[VALIDATION_ROOT_TRAVERSAL] roots[{}] contains path traversal: {}",
+                i, root
+            ));
+        }
         if has_unicode_spoof(root) {
             return Err(format!(
                 "[VALIDATION_ROOT_SPOOF] roots[{}] contains Unicode spoofing characters: {}",
                 i, root
             ));
-        }
-    }
-    // Validate exclude_paths for unicode spoofing
-    for (i, path) in request.exclude_paths.iter().enumerate() {
-        if has_unicode_spoof(path) {
-            return Err(format!(
-        "[VALIDATION_EXCLUDE_PATH_SPOOF] exclude_paths[{}] contains Unicode spoofing characters: {}",
-        i, path
-      ));
         }
     }
     validate_exclude_paths(request)?;
@@ -714,6 +735,36 @@ mod tests {
         };
         let err = validate_request(&request).unwrap_err();
         assert!(err.contains("path traversal"));
+    }
+
+    #[test]
+    fn validate_request_rejects_exclude_path_unsafe() {
+        let request = SearchRequest {
+            exclude_paths: vec!["node_modules;rm -rf".to_string()],
+            ..SearchRequest::default()
+        };
+        let err = validate_request(&request).unwrap_err();
+        assert!(err.contains("unsafe characters"));
+    }
+
+    #[test]
+    fn validate_request_rejects_root_traversal() {
+        let request = SearchRequest {
+            roots: vec!["C:/data/../windows".to_string()],
+            ..SearchRequest::default()
+        };
+        let err = validate_request(&request).unwrap_err();
+        assert!(err.contains("path traversal"));
+    }
+
+    #[test]
+    fn validate_request_rejects_root_non_local() {
+        let request = SearchRequest {
+            roots: vec!["https://evil.com".to_string()],
+            ..SearchRequest::default()
+        };
+        let err = validate_request(&request).unwrap_err();
+        assert!(err.contains("not a local path"));
     }
 
     #[test]
