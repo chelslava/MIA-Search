@@ -110,6 +110,7 @@ export function ResultsWorkspace({
     onExportClipboard,
     onContentSearch,
 }: ResultsWorkspaceProps) {
+  const [groupBy, setGroupBy] = useState<"none" | "directory" | "extension">("none");
   const [exportPreview, setExportPreview] = useState<{
     format: "csv" | "json" | "clipboard";
     previewText: string;
@@ -257,13 +258,23 @@ export function ResultsWorkspace({
             <Select
               value={sortMode}
               onChange={(value) => setSortMode(value as SortMode)}
-              className="min-w-[14rem]"
+              className="min-w-[12rem]"
             >
               <option value="Relevance">{t("app.labels.sortRelevance", "По релевантности")}</option>
               <option value="Name">{t("app.labels.sortName", "По имени")}</option>
               <option value="Size">{t("app.labels.sortSize", "По размеру")}</option>
               <option value="Modified">{t("app.labels.sortModified", "По дате изменения")}</option>
               <option value="Type">{t("app.labels.sortType", "По типу")}</option>
+            </Select>
+            <Select
+              value={groupBy}
+              onChange={(value) => setGroupBy(value as "none" | "directory" | "extension")}
+              className="min-w-[10rem]"
+              aria-label={t("app.grouping.ariaLabel", "Группировка")}
+            >
+              <option value="none">{t("app.grouping.none", "Без групп")}</option>
+              <option value="directory">{t("app.grouping.directory", "По папкам")}</option>
+              <option value="extension">{t("app.grouping.extension", "По типу")}</option>
             </Select>
           </div>
           <div className="flex gap-1">
@@ -425,30 +436,56 @@ export function ResultsWorkspace({
                 </tr>
               ) : null}
 
-              {visibleRows.items.map((item) => (
-                <tr
-                  key={item.full_path}
-                  data-path={item.full_path}
-                >
-                  <td colSpan={7} style={{ padding: 0 }}>
-                    <div style={{ height: ROW_HEIGHT }}>
-                      <ResultRow
-                        item={item}
-                        selectedPath={selectedPath}
-                        selectedPaths={selectedPaths}
-                        onSelectPath={onSelectPath}
-                        onToggleSelection={onToggleSelection}
-                        onResultContextMenu={onResultContextMenu}
-                        formatBytes={formatBytes}
-                        formatDate={formatDate}
-                        t={t}
-                        tOpenFile={t("app.tooltips.openFile", "Открыть")}
-                        tOpenParentFolder={t("app.tooltips.openParentFolder", "Родительская папка")}
-                      />
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {visibleRows.items.map((item, idx, arr) => {
+                let showGroupHeader = false;
+                let groupTitle = "";
+                if (groupBy === "directory") {
+                  const currentGroup = item.parent_path;
+                  const prevGroup = idx > 0 ? arr[idx - 1].parent_path : null;
+                  if (currentGroup !== prevGroup) {
+                    showGroupHeader = true;
+                    groupTitle = currentGroup || "/";
+                  }
+                } else if (groupBy === "extension") {
+                  const currentGroup = item.is_dir ? t("app.grouping.dirs", "Папки") : (item.extension ? `.${item.extension}` : t("app.grouping.noExt", "Без расширения"));
+                  const prevGroup = idx > 0 ? (arr[idx - 1].is_dir ? t("app.grouping.dirs", "Папки") : (arr[idx - 1].extension ? `.${arr[idx - 1].extension}` : t("app.grouping.noExt", "Без расширения"))) : null;
+                  if (currentGroup !== prevGroup) {
+                    showGroupHeader = true;
+                    groupTitle = currentGroup;
+                  }
+                }
+
+                return (
+                  <tr
+                    key={item.full_path}
+                    data-path={item.full_path}
+                  >
+                    <td colSpan={7} style={{ padding: 0 }}>
+                      {showGroupHeader && (
+                        <div className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-semibold text-[var(--accent)] bg-[var(--surface-alt)] border-b border-[var(--border)]">
+                          <span>{groupBy === "directory" ? "📁" : "🏷️"}</span>
+                          <span className="truncate">{groupTitle}</span>
+                        </div>
+                      )}
+                      <div style={{ height: ROW_HEIGHT }}>
+                        <ResultRow
+                          item={item}
+                          selectedPath={selectedPath}
+                          selectedPaths={selectedPaths}
+                          onSelectPath={onSelectPath}
+                          onToggleSelection={onToggleSelection}
+                          onResultContextMenu={onResultContextMenu}
+                          formatBytes={formatBytes}
+                          formatDate={formatDate}
+                          t={t}
+                          tOpenFile={t("app.tooltips.openFile", "Открыть")}
+                          tOpenParentFolder={t("app.tooltips.openParentFolder", "Родительская папка")}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
 
               {visibleRows.bottomSpacer > 0 ? (
                 <tr>
