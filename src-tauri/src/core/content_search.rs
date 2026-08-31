@@ -94,24 +94,24 @@ impl ContentSearchService {
         regex: bool,
     ) -> Result<ContentSearchResult, String> {
         let path_ref = Path::new(path);
-        
+
         if !path_ref.exists() {
             return Err("File not found".to_string());
         }
-        
+
         if !path_ref.is_file() {
             return Err("Not a file".to_string());
         }
 
-        let metadata = std::fs::metadata(path_ref)
-            .map_err(|e| format!("Cannot read metadata: {}", e))?;
-        
+        let metadata =
+            std::fs::metadata(path_ref).map_err(|e| format!("Cannot read metadata: {}", e))?;
+
         if metadata.len() > Self::MAX_CONTENT_BYTES as u64 {
             return Err("File too large".to_string());
         }
 
-        let content = std::fs::read_to_string(path_ref)
-            .map_err(|e| format!("Cannot read file: {}", e))?;
+        let content =
+            std::fs::read_to_string(path_ref).map_err(|e| format!("Cannot read file: {}", e))?;
 
         if regex {
             return Self::search_file_regex(path, &content, query, case_sensitive, whole_word);
@@ -136,12 +136,20 @@ impl ContentSearchService {
             let mut start = 0;
             while let Some(pos) = search_line[start..].find(&search_query) {
                 let abs_pos = start + pos;
-                
+
                 if whole_word {
-                    let before_ok = abs_pos == 0 || !search_line.chars().nth(abs_pos - 1).is_some_and(|c| c.is_alphanumeric());
+                    let before_ok = abs_pos == 0
+                        || !search_line
+                            .chars()
+                            .nth(abs_pos - 1)
+                            .is_some_and(|c| c.is_alphanumeric());
                     let after_pos = abs_pos + search_query.len();
-                    let after_ok = after_pos >= search_line.len() || !search_line.chars().nth(after_pos).is_some_and(|c| c.is_alphanumeric());
-                    
+                    let after_ok = after_pos >= search_line.len()
+                        || !search_line
+                            .chars()
+                            .nth(after_pos)
+                            .is_some_and(|c| c.is_alphanumeric());
+
                     if !before_ok || !after_ok {
                         start = abs_pos + 1;
                         continue;
@@ -202,9 +210,17 @@ impl ContentSearchService {
 
                 if whole_word {
                     // Check word boundaries
-                    let before_ok = abs_pos == 0 || !line.chars().nth(abs_pos - 1).is_some_and(|c| c.is_alphanumeric());
+                    let before_ok = abs_pos == 0
+                        || !line
+                            .chars()
+                            .nth(abs_pos - 1)
+                            .is_some_and(|c| c.is_alphanumeric());
                     let after_pos = m.end();
-                    let after_ok = after_pos >= line.len() || !line.chars().nth(after_pos).is_some_and(|c| c.is_alphanumeric());
+                    let after_ok = after_pos >= line.len()
+                        || !line
+                            .chars()
+                            .nth(after_pos)
+                            .is_some_and(|c| c.is_alphanumeric());
                     if !before_ok || !after_ok {
                         continue;
                     }
@@ -346,13 +362,15 @@ mod tests {
             false,
         );
         assert_eq!(result.total_files, 0);
-        assert!(result.errors.contains(&"/nonexistent/file.txt: File not found".to_string()));
+        assert!(result
+            .errors
+            .contains(&"/nonexistent/file.txt: File not found".to_string()));
     }
 
     #[test]
     fn search_handles_directory() {
         let dir = tempdir().unwrap();
-        
+
         let result = ContentSearchService::search_in_content(
             &[dir.path().to_string_lossy().to_string()],
             "test",
@@ -396,9 +414,9 @@ mod tests {
         let result = ContentSearchService::search_in_content(
             &[file.to_string_lossy().to_string()],
             "Rust.*great",
-            true,   // case_sensitive
-            false,  // whole_word
-            true,   // regex
+            true,  // case_sensitive
+            false, // whole_word
+            true,  // regex
         );
 
         assert_eq!(result.total_files, 1);
@@ -414,9 +432,9 @@ mod tests {
         let result = ContentSearchService::search_in_content(
             &[file.to_string_lossy().to_string()],
             "hello",
-            false,   // case_insensitive
-            false,   // whole_word
-            true,    // regex
+            false, // case_insensitive
+            false, // whole_word
+            true,  // regex
         );
 
         assert_eq!(result.total_matches, 3);
@@ -431,9 +449,9 @@ mod tests {
         let result = ContentSearchService::search_in_content(
             &[file.to_string_lossy().to_string()],
             "[invalid",
-            true,   // case_sensitive
-            false,  // whole_word
-            true,   // regex
+            true,  // case_sensitive
+            false, // whole_word
+            true,  // regex
         );
 
         // Should not panic, should return empty results with error
@@ -450,9 +468,9 @@ mod tests {
         let result = ContentSearchService::search_in_content(
             &[file.to_string_lossy().to_string()],
             r"\bcat\b",
-            true,   // case_sensitive
-            true,   // whole_word (with regex \b boundaries as well)
-            true,   // regex
+            true, // case_sensitive
+            true, // whole_word (with regex \b boundaries as well)
+            true, // regex
         );
 
         assert_eq!(result.total_matches, 1);
@@ -467,13 +485,17 @@ mod tests {
         let plain = ContentSearchService::search_in_content(
             &[file.to_string_lossy().to_string()],
             "Hello",
-            false, false, false,
+            false,
+            false,
+            false,
         );
 
         let regex = ContentSearchService::search_in_content(
             &[file.to_string_lossy().to_string()],
             "Hello",
-            false, false, true,
+            false,
+            false,
+            true,
         );
 
         assert_eq!(plain.total_matches, regex.total_matches);

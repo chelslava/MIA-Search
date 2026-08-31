@@ -4,7 +4,10 @@ use crate::{
 };
 use rfd::FileDialog;
 use serde::{Deserialize, Serialize};
-use std::{fs, path::{Path, PathBuf}};
+use std::{
+    fs,
+    path::{Path, PathBuf},
+};
 use tauri::State;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -257,7 +260,7 @@ mod tests {
         let dir = tempdir().unwrap();
         let file_path = dir.path().join("test.txt");
         fs::write(&file_path, "Hello, World!").unwrap();
-        
+
         let result = preview_file(file_path.to_string_lossy().to_string());
         assert!(result.error.is_none());
         assert_eq!(result.content, Some("Hello, World!".to_string()));
@@ -294,7 +297,7 @@ pub struct FilePreviewResponse {
 #[tauri::command]
 pub fn preview_file(path: String) -> FilePreviewResponse {
     let path_ref = Path::new(&path);
-    
+
     if !path_ref.exists() {
         return FilePreviewResponse {
             path,
@@ -329,7 +332,7 @@ pub fn preview_file(path: String) -> FilePreviewResponse {
     };
 
     let size = metadata.len() as usize;
-    
+
     if size > PREVIEW_MAX_SIZE {
         return FilePreviewResponse {
             path: path.clone(),
@@ -406,13 +409,14 @@ pub fn batch_copy(source_paths: Vec<String>, destination_dir: String) -> BatchOp
     let dest_dir = PathBuf::from(&destination_dir);
     let mut results = Vec::with_capacity(source_paths.len());
     let mut successful = 0;
-    
+
     for source in &source_paths {
         let source_path = Path::new(source);
-        let file_name = source_path.file_name()
+        let file_name = source_path
+            .file_name()
             .and_then(|n| n.to_str())
             .ok_or_else(|| "Invalid file name".to_string());
-        
+
         let result = match file_name {
             Ok(name) => {
                 let dest_path = dest_dir.join(name);
@@ -443,7 +447,7 @@ pub fn batch_copy(source_paths: Vec<String>, destination_dir: String) -> BatchOp
         };
         results.push(result);
     }
-    
+
     BatchOperationResponse {
         operation: "copy".to_string(),
         total: source_paths.len(),
@@ -458,13 +462,14 @@ pub fn batch_move(source_paths: Vec<String>, destination_dir: String) -> BatchOp
     let dest_dir = PathBuf::from(&destination_dir);
     let mut results = Vec::with_capacity(source_paths.len());
     let mut successful = 0;
-    
+
     for source in &source_paths {
         let source_path = Path::new(source);
-        let file_name = source_path.file_name()
+        let file_name = source_path
+            .file_name()
             .and_then(|n| n.to_str())
             .ok_or_else(|| "Invalid file name".to_string());
-        
+
         let result = match file_name {
             Ok(name) => {
                 let dest_path = dest_dir.join(name);
@@ -495,7 +500,7 @@ pub fn batch_move(source_paths: Vec<String>, destination_dir: String) -> BatchOp
         };
         results.push(result);
     }
-    
+
     BatchOperationResponse {
         operation: "move".to_string(),
         total: source_paths.len(),
@@ -509,7 +514,7 @@ pub fn batch_move(source_paths: Vec<String>, destination_dir: String) -> BatchOp
 pub fn batch_delete(paths: Vec<String>) -> BatchOperationResponse {
     let mut results = Vec::with_capacity(paths.len());
     let mut successful = 0;
-    
+
     for path_str in &paths {
         let path = Path::new(path_str);
         match delete_file(path) {
@@ -532,7 +537,7 @@ pub fn batch_delete(paths: Vec<String>) -> BatchOperationResponse {
             }
         }
     }
-    
+
     BatchOperationResponse {
         operation: "delete".to_string(),
         total: paths.len(),
@@ -557,17 +562,21 @@ mod batch_tests {
     fn batch_copy_copies_single_file() {
         let dir = tempdir().unwrap();
         let source = create_temp_file(&dir, "source.txt", "test content");
-        
+
         let subdir = dir.path().join("subdir");
         fs::create_dir_all(&subdir).unwrap();
-        
+
         let result = batch_copy(
-            vec![source.to_string_lossy().to_string()], 
-            subdir.to_string_lossy().to_string()
+            vec![source.to_string_lossy().to_string()],
+            subdir.to_string_lossy().to_string(),
         );
-        
+
         assert_eq!(result.total, 1);
-        assert!(result.results[0].success, "Copy failed: {:?}", result.results[0].error);
+        assert!(
+            result.results[0].success,
+            "Copy failed: {:?}",
+            result.results[0].error
+        );
         let expected = subdir.join("source.txt");
         assert!(expected.exists());
         let dest_content = fs::read_to_string(&expected).unwrap();
@@ -576,7 +585,10 @@ mod batch_tests {
 
     #[test]
     fn batch_copy_reports_errors() {
-        let result = batch_copy(vec!["/nonexistent/file.txt".to_string()], "/tmp".to_string());
+        let result = batch_copy(
+            vec!["/nonexistent/file.txt".to_string()],
+            "/tmp".to_string(),
+        );
         assert_eq!(result.total, 1);
         assert_eq!(result.failed, 1);
         assert!(!result.results[0].success);
@@ -589,13 +601,17 @@ mod batch_tests {
         let source = create_temp_file(&dir, "source.txt", "test content");
         let subdir = dir.path().join("subdir");
         fs::create_dir_all(&subdir).unwrap();
-        
+
         let result = batch_move(
-            vec![source.to_string_lossy().to_string()], 
-            subdir.to_string_lossy().to_string()
+            vec![source.to_string_lossy().to_string()],
+            subdir.to_string_lossy().to_string(),
         );
         assert_eq!(result.total, 1);
-        assert!(result.results[0].success, "Move failed: {:?}", result.results[0].error);
+        assert!(
+            result.results[0].success,
+            "Move failed: {:?}",
+            result.results[0].error
+        );
         assert!(!source.exists(), "Source should be moved");
         let dest_path = source.parent().unwrap().join("subdir/source.txt");
         assert!(dest_path.exists());
@@ -606,8 +622,11 @@ mod batch_tests {
         let dir = tempdir().unwrap();
         let file1 = create_temp_file(&dir, "file1.txt", "content1");
         let file2 = create_temp_file(&dir, "file2.txt", "content2");
-        
-        let result = batch_delete(vec![file1.to_string_lossy().to_string(), file2.to_string_lossy().to_string()]);
+
+        let result = batch_delete(vec![
+            file1.to_string_lossy().to_string(),
+            file2.to_string_lossy().to_string(),
+        ]);
         assert_eq!(result.total, 2);
         assert_eq!(result.successful, 2);
         assert!(!file1.exists());
@@ -627,13 +646,16 @@ mod batch_tests {
         let dir = tempdir().unwrap();
         let file1 = create_temp_file(&dir, "file1.txt", "content1");
         let file2 = create_temp_file(&dir, "file2.txt", "content2");
-        
+
         let subdir = dir.path().join("dest");
         fs::create_dir_all(&subdir).unwrap();
-        
+
         let result = batch_copy(
-            vec![file1.to_string_lossy().to_string(), file2.to_string_lossy().to_string()],
-            subdir.to_string_lossy().to_string()
+            vec![
+                file1.to_string_lossy().to_string(),
+                file2.to_string_lossy().to_string(),
+            ],
+            subdir.to_string_lossy().to_string(),
         );
         assert_eq!(result.total, 2);
         assert_eq!(result.successful, 2);
@@ -672,7 +694,7 @@ fn build_json_entry(path: &str, metadata: Option<&str>) -> serde_json::Value {
 pub fn export_search_results(
     results: Vec<String>,
     format: String,
-    _include_metadata: bool
+    _include_metadata: bool,
 ) -> ExportResponse {
     let format = format.to_lowercase();
     if format != "csv" && format != "json" {
@@ -690,17 +712,15 @@ pub fn export_search_results(
         }
         content
     } else {
-        let entries: Vec<serde_json::Value> = results
-            .iter()
-            .map(|p| build_json_entry(p, None))
-            .collect();
+        let entries: Vec<serde_json::Value> =
+            results.iter().map(|p| build_json_entry(p, None)).collect();
         serde_json::to_string_pretty(&entries).unwrap_or_else(|_| "[]".to_string())
     };
 
     let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S_%f");
     let ext = if format == "csv" { "csv" } else { "json" };
     let temp_path = std::env::temp_dir().join(format!("mia_search_export_{}.{}", timestamp, ext));
-    
+
     match fs::write(&temp_path, output) {
         Ok(_) => ExportResponse {
             path: Some(temp_path.to_string_lossy().to_string()),
@@ -719,7 +739,7 @@ pub fn export_search_results(
 pub fn export_to_clipboard(
     results: Vec<String>,
     format: String,
-    _include_metadata: bool
+    _include_metadata: bool,
 ) -> ExportResponse {
     let format = format.to_lowercase();
     if format != "csv" && format != "json" {
@@ -737,10 +757,8 @@ pub fn export_to_clipboard(
         }
         content
     } else {
-        let entries: Vec<serde_json::Value> = results
-            .iter()
-            .map(|p| build_json_entry(p, None))
-            .collect();
+        let entries: Vec<serde_json::Value> =
+            results.iter().map(|p| build_json_entry(p, None)).collect();
         serde_json::to_string_pretty(&entries).unwrap_or_else(|_| "[]".to_string())
     };
 
@@ -768,14 +786,25 @@ mod export_tests {
             "/path/to/file1.txt".to_string(),
             "/path/to/file2.txt".to_string(),
         ];
-        
+
         let result = export_search_results(results.clone(), "csv".to_string(), false);
-        assert!(result.error.is_none(), "Export should succeed: {:?}", result.error);
-        assert_eq!(result.count, results.len(), "Count should match results length");
+        assert!(
+            result.error.is_none(),
+            "Export should succeed: {:?}",
+            result.error
+        );
+        assert_eq!(
+            result.count,
+            results.len(),
+            "Count should match results length"
+        );
         assert!(result.path.is_some());
-        
+
         let content = fs::read_to_string(Path::new(result.path.as_ref().unwrap())).unwrap();
-        assert!(content.starts_with("path\n"), "CSV should start with header");
+        assert!(
+            content.starts_with("path\n"),
+            "CSV should start with header"
+        );
         assert!(content.contains("file1.txt"));
         assert!(content.contains("file2.txt"));
     }
@@ -786,12 +815,20 @@ mod export_tests {
             "/path/to/file1.txt".to_string(),
             "/path/to/file2.txt".to_string(),
         ];
-        
+
         let result = export_search_results(results.clone(), "json".to_string(), false);
-        assert!(result.error.is_none(), "Export should succeed: {:?}", result.error);
-        assert_eq!(result.count, results.len(), "Count should match results length");
+        assert!(
+            result.error.is_none(),
+            "Export should succeed: {:?}",
+            result.error
+        );
+        assert_eq!(
+            result.count,
+            results.len(),
+            "Count should match results length"
+        );
         assert!(result.path.is_some());
-        
+
         let content = fs::read_to_string(Path::new(result.path.as_ref().unwrap())).unwrap();
         let parsed: Vec<serde_json::Value> = serde_json::from_str(&content).unwrap();
         assert_eq!(parsed.len(), results.len());
@@ -812,7 +849,7 @@ mod export_tests {
         let csv_result = export_search_results(results.clone(), "csv".to_string(), false);
         assert_eq!(csv_result.count, 0);
         assert!(csv_result.error.is_none());
-        
+
         let json_result = export_search_results(results, "json".to_string(), false);
         assert_eq!(json_result.count, 0);
         assert!(json_result.error.is_none());
@@ -825,9 +862,13 @@ mod export_tests {
             "/path/with,commas/file.txt".to_string(),
             "/path/with\nnewlines/file.txt".to_string(),
         ];
-        
+
         let result = export_search_results(results, "csv".to_string(), false);
-        assert!(result.error.is_none(), "Should handle special chars: {:?}", result.error);
+        assert!(
+            result.error.is_none(),
+            "Should handle special chars: {:?}",
+            result.error
+        );
         let content = fs::read_to_string(Path::new(result.path.as_ref().unwrap())).unwrap();
         assert!(content.contains("\"\"quotes\"\"")); // Escaped quotes
     }

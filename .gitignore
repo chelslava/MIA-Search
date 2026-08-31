@@ -3,6 +3,7 @@ dist/
 build/
 .DS_Store
 .omx/
+.omc/
 
 # Rust
 target/

@@ -19,6 +19,7 @@ use std::thread;
 use std::time::SystemTime;
 
 /// Result of a synchronous search execution.
+#[allow(dead_code)]
 #[derive(Debug, Clone, Default)]
 pub struct SearchExecution {
     pub items: Vec<SearchResultItem>,
@@ -130,6 +131,7 @@ pub struct SearchService;
 
 impl SearchService {
     /// Executes a search synchronously, collecting all results into memory.
+    #[allow(dead_code)]
     pub fn execute(request: &SearchRequest) -> SearchExecution {
         let mut all_items = Vec::new();
         let mut limit_reached = false;
