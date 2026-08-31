@@ -7,12 +7,75 @@ pub fn is_safe_path(path: &str) -> bool {
     !path.chars().any(|c| dangerous_chars.contains(&c))
 }
 
+fn normalize_for_scheme_check(input: &str) -> String {
+    input
+        .chars()
+        .map(|c| {
+            // Convert fullwidth forms (0xFF01..=0xFF5E) to ASCII (0x21..=0x7E)
+            let c = if ('\u{FF01}'..='\u{FF5E}').contains(&c) {
+                char::from_u32((c as u32) - 0xFEE0).unwrap_or(c)
+            } else {
+                c
+            };
+            // Map confusable characters (Cyrillic, Greek, Turkish, special symbols) to ASCII
+            match c {
+                // Cyrillic homoglyphs
+                'а' | 'А' => 'a',
+                'в' | 'В' => 'b',
+                'с' | 'С' => 'c',
+                'е' | 'Е' => 'e',
+                'і' | 'І' | 'ї' | 'Ї' => 'i',
+                'ј' | 'Ј' => 'j',
+                'к' | 'К' => 'k',
+                'м' | 'М' => 'm',
+                'н' | 'Н' | 'һ' | 'Һ' => 'h',
+                'о' | 'О' => 'o',
+                'р' | 'Р' => 'p',
+                'ѕ' | 'Ѕ' => 's',
+                'т' | 'Т' => 't',
+                'у' | 'У' => 'y',
+                'х' | 'Х' => 'x',
+                'ғ' | 'Ғ' => 'f',
+                // Greek homoglyphs
+                'α' | 'Α' => 'a',
+                'β' | 'Β' => 'b',
+                'ε' | 'Ε' => 'e',
+                'η' | 'Η' => 'h',
+                'ι' | 'Ι' => 'i',
+                'κ' | 'Κ' => 'k',
+                'μ' | 'Μ' => 'm',
+                'ν' | 'Ν' => 'v',
+                'ο' | 'Ο' => 'o',
+                'ρ' | 'Ρ' => 'p',
+                'τ' | 'Τ' => 't',
+                'υ' | 'Υ' => 'u',
+                'χ' | 'Χ' => 'x',
+                'σ' | 'ς' | 'Σ' => 's',
+                // Turkish dotted / dotless I
+                'İ' | 'ı' => 'i',
+                // Slash / colon confusables
+                '／' | '⁄' | '∕' | '⧸' => '/',
+                '：' | 'ː' | '꞉' => ':',
+                // Default
+                other => other,
+            }
+        })
+        .flat_map(|c| c.to_lowercase())
+        .collect()
+}
+
 pub fn is_local_path(path: &str) -> bool {
-    let lower = path.to_lowercase();
+    let lower = normalize_for_scheme_check(path);
     !(lower.starts_with("http://")
         || lower.starts_with("https://")
         || lower.starts_with("ftp://")
-        || lower.starts_with("file://"))
+        || lower.starts_with("ftps://")
+        || lower.starts_with("file://")
+        || lower.starts_with("ws://")
+        || lower.starts_with("wss://")
+        || lower.starts_with("sftp://")
+        || lower.starts_with("smb://")
+        || lower.starts_with("//"))
 }
 
 pub fn has_path_traversal(path: &str) -> bool {
@@ -43,9 +106,13 @@ pub fn has_unicode_spoof(path: &str) -> bool {
                     c,
                     // Cyrillic letters that look like Latin
                     'а' | 'А' | 'е' | 'Е' | 'о' | 'О' | 'р' | 'Р' | 'с' | 'С'
-                    | 'у' | 'У' | 'х' | 'Х' | 'і' | 'І'
+                    | 'у' | 'У' | 'х' | 'Х' | 'і' | 'І' | 'ј' | 'Ј' | 'ѕ' | 'Ѕ'
+                    | 'т' | 'Т' | 'һ' | 'Һ' | 'ғ' | 'Ғ'
                     // Greek letters that look like Latin
-                    | 'ο' | 'Ο'
+                    | 'α' | 'Α' | 'ε' | 'Ε' | 'η' | 'Η' | 'ι' | 'Ι' | 'ο' | 'Ο'
+                    | 'ρ' | 'Ρ' | 'τ' | 'Τ' | 'υ' | 'Υ' | 'σ' | 'ς' | 'Σ'
+                    // Fullwidth Latin characters
+                    | '\u{FF21}'..='\u{FF3A}' | '\u{FF41}'..='\u{FF5A}'
                 )
             });
             has_ascii_letter && has_confusable_non_ascii
@@ -160,6 +227,21 @@ mod tests {
         assert!(!is_local_path("http://example.com/file"));
         assert!(!is_local_path("ftp://server/file"));
         assert!(!is_local_path("file:///etc/passwd"));
+        // Unicode spoofed URLs
+        assert!(!is_local_path("ｈｔｔｐ://evil.com/malware.exe"));
+        assert!(!is_local_path("ＨＴＴＰＳ://evil.com"));
+        assert!(!is_local_path("httр://evil.com")); // Cyrillic 'р'
+        assert!(!is_local_path("h\u{0442}\u{0442}p://evil.com")); // Cyrillic 'т'
+        assert!(!is_local_path(
+            "\u{041D}\u{0422}\u{0422}\u{0420}://evil.com"
+        )); // Cyrillic 'НТТР'
+        assert!(!is_local_path(
+            "\u{0397}\u{03A4}\u{03A4}\u{03A1}://evil.com"
+        )); // Greek 'ΗΤΤΡ'
+        assert!(!is_local_path("f\u{0130}le:///etc/passwd")); // Turkish dotted 'İ' in file
+        assert!(!is_local_path("filе:///etc/passwd")); // Cyrillic 'е'
+        assert!(!is_local_path("//evil.com/payload"));
+        assert!(!is_local_path("ws://evil.com/socket"));
     }
 
     #[test]

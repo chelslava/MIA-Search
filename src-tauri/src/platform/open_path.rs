@@ -1,4 +1,6 @@
-use super::path_security::{has_path_traversal, is_local_path, is_safe_path, is_symlink};
+use super::path_security::{
+    has_path_traversal, has_unicode_spoof, is_local_path, is_safe_path, is_symlink,
+};
 use std::path::Path;
 use std::process::Command;
 
@@ -11,6 +13,12 @@ pub fn open_path(path: &str) -> Result<(), String> {
     }
     if has_path_traversal(path) {
         return Err(format!("Path contains traversal sequences: {}", path));
+    }
+    if has_unicode_spoof(path) {
+        return Err(format!(
+            "Path contains Unicode spoofing characters: {}",
+            path
+        ));
     }
 
     let path_ref = Path::new(path);
@@ -102,5 +110,12 @@ mod tests {
     fn open_path_rejects_nonexistent_path() {
         let result = open_path("/nonexistent/path/that/does/not/exist");
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn open_path_rejects_unicode_spoofing() {
+        let result = open_path("C:/Users/payp\u{0430}l.exe");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Unicode spoofing characters"));
     }
 }
