@@ -102,11 +102,7 @@ pub fn index_rebuild(
             },
         );
 
-        let result = IndexService::rebuild(
-            &roots_clone,
-            cancel_clone,
-            Some(index_rebuild_entries),
-        );
+        let result = IndexService::rebuild(&roots_clone, cancel_clone, Some(index_rebuild_entries));
 
         // Clear the rebuild flag before emitting completion events.
         rebuild_in_progress.store(false, Ordering::Release);
@@ -286,5 +282,4 @@ mod tests {
         let status = status_from_snapshot(&snapshot, false, true, 0);
         assert!(status.version_mismatch);
     }
-
 }

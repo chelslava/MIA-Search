@@ -1,5 +1,5 @@
 use crate::core::models::{
-    DateComparison, DateField, DateFilter, EntryKind, SearchResultItem, SizeComparison, SizeFilter,
+    DateComparison, DateFilter, EntryKind, SearchResultItem, SizeComparison, SizeFilter,
 };
 use chrono::{DateTime, Utc};
 

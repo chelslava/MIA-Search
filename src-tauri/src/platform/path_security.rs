@@ -39,7 +39,8 @@ pub fn has_unicode_spoof(path: &str) -> bool {
             let name = name.to_string_lossy();
             let has_ascii_letter = name.chars().any(|c| c.is_ascii_alphabetic());
             let has_confusable_non_ascii = name.chars().any(|c| {
-                matches!(c,
+                matches!(
+                    c,
                     // Cyrillic letters that look like Latin
                     'а' | 'А' | 'е' | 'Е' | 'о' | 'О' | 'р' | 'Р' | 'с' | 'С'
                     | 'у' | 'У' | 'х' | 'Х' | 'і' | 'І'

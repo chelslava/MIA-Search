@@ -2,7 +2,7 @@ use crate::core::constants::{MAX_INDEX_ENTRIES, MAX_INDEX_SIZE_MB};
 use crate::core::entry_utils::estimate_entry_size;
 use crate::core::filters::{matches_date, matches_entry_kind, matches_size};
 use crate::core::metadata_service::MetadataService;
-use crate::core::models::{MatchMode, SearchRequest, SearchResultItem, SortMode};
+use crate::core::models::{SearchRequest, SearchResultItem, SortMode};
 use crate::core::query_matcher::build_query_matcher;
 use crate::core::ranking::sort_results;
 use crate::storage::index_store::IndexSnapshot;
@@ -263,8 +263,8 @@ fn score_relevance(name: &str, query: &str) -> Option<f64> {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::entry_utils::estimate_entry_size;
     use super::*;
+    use crate::core::entry_utils::estimate_entry_size;
 
     #[test]
     fn estimate_entry_size_includes_all_components() {
