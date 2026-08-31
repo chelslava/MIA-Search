@@ -1,5 +1,5 @@
 import type { RefObject } from "preact";
-import { useMemo } from "preact/hooks";
+import { useMemo, useState } from "preact/hooks";
 import type { SearchResultItem, SortMode } from "../../../shared/search-types";
 import type { DisplayMode, FilterChip } from "../../types";
 import { Button } from "../../../components/ui/button";
@@ -110,7 +110,28 @@ export function ResultsWorkspace({
     onExportClipboard,
     onContentSearch,
 }: ResultsWorkspaceProps) {
+  const [exportPreview, setExportPreview] = useState<{
+    format: "csv" | "json" | "clipboard";
+    previewText: string;
+    count: number;
+  } | null>(null);
+
   const visibleCards = useVisibleCards(results, scrollTop, listHeight);
+
+  const handleOpenExportCsv = () => {
+    const sample = ["path", ...results.slice(0, 5).map((r) => `"${r.full_path.replace(/"/g, '""')}"`)].join("\n");
+    setExportPreview({ format: "csv", previewText: sample, count: results.length });
+  };
+
+  const handleOpenExportJson = () => {
+    const sample = JSON.stringify(results.slice(0, 5).map((r) => ({ path: r.full_path })), null, 2);
+    setExportPreview({ format: "json", previewText: sample, count: results.length });
+  };
+
+  const handleOpenExportClipboard = () => {
+    const sample = ["path", ...results.slice(0, 5).map((r) => `"${r.full_path.replace(/"/g, '""')}"`)].join("\n");
+    setExportPreview({ format: "clipboard", previewText: sample, count: results.length });
+  };
 
   const renderSelectionBar = () => {
     if (selectedPaths.size === 0) return null;
@@ -167,6 +188,44 @@ export function ResultsWorkspace({
 
   return (
     <section ref={containerRef} className="flex h-full min-h-0 flex-col gap-2 rounded-md border border-[var(--border)] bg-[var(--surface)] p-2">
+      {exportPreview ? (
+        <div className="confirm-overlay" onClick={() => setExportPreview(null)}>
+          <div
+            className="confirm-dialog max-w-lg w-full"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="confirm-title text-sm font-semibold">
+              {t("app.export.previewTitle", "Предпросмотр экспорта ({{format}})", { format: exportPreview.format.toUpperCase() })}
+            </h2>
+            <p className="text-xs text-[var(--muted)] my-1">
+              {t("app.export.previewCount", "Всего элементов для экспорта: {{count}}", { count: exportPreview.count })}
+            </p>
+            <pre className="my-2 max-h-48 overflow-auto rounded bg-[var(--surface-alt)] p-2 text-[10px] font-mono whitespace-pre text-[var(--text)] border border-[var(--border)]">
+              {exportPreview.previewText}
+            </pre>
+            <div className="confirm-actions flex justify-end gap-2 mt-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setExportPreview(null)}>
+                {t("app.dialog.cancel", "Отмена")}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                onClick={() => {
+                  const format = exportPreview.format;
+                  setExportPreview(null);
+                  if (format === "csv") onExportCsv();
+                  else if (format === "json") onExportJson();
+                  else if (format === "clipboard") onExportClipboard();
+                }}
+              >
+                {t("app.export.confirm", "Экспортировать")}
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--border)] bg-[var(--surface-alt)] p-2">
         <div className="flex flex-wrap gap-1">
           <Button
@@ -210,13 +269,13 @@ export function ResultsWorkspace({
           <div className="flex gap-1">
             {results.length > 0 && (
               <>
-                <Button type="button" size="sm" variant="outline" onClick={onExportCsv}>
+                <Button type="button" size="sm" variant="outline" onClick={handleOpenExportCsv}>
                   {t("app.export.csv", "CSV")}
                 </Button>
-                <Button type="button" size="sm" variant="outline" onClick={onExportJson}>
+                <Button type="button" size="sm" variant="outline" onClick={handleOpenExportJson}>
                   {t("app.export.json", "JSON")}
                 </Button>
-                <Button type="button" size="sm" variant="outline" onClick={onExportClipboard}>
+                <Button type="button" size="sm" variant="outline" onClick={handleOpenExportClipboard}>
                   {t("app.export.clipboard", "Буфер")}
                 </Button>
                 <Button type="button" size="sm" variant="outline" onClick={() => {
