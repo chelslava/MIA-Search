@@ -18,6 +18,8 @@ type KeyboardShortcutsOptions = {
   onFocusSearch: () => void;
   onCloseModals: () => void;
   onShowHelp?: () => void;
+  onToggleLeftPanel?: () => void;
+  onToggleRightPanel?: () => void;
   history?: HistorySnapshot;
   onSelectHistoryQuery?: (query: string) => void;
 };
@@ -39,6 +41,8 @@ export function useKeyboardShortcuts({
   onFocusSearch,
   onCloseModals,
   onShowHelp,
+  onToggleLeftPanel,
+  onToggleRightPanel,
   history,
   onSelectHistoryQuery
 }: KeyboardShortcutsOptions): void {
@@ -52,6 +56,16 @@ export function useKeyboardShortcuts({
     if (key === "f1") {
       event.preventDefault();
       onShowHelp?.();
+      return;
+    }
+    if (accel && event.shiftKey && key === "b") {
+      event.preventDefault();
+      onToggleRightPanel?.();
+      return;
+    }
+    if (accel && key === "b") {
+      event.preventDefault();
+      onToggleLeftPanel?.();
       return;
     }
     if (accel && key === "k") {

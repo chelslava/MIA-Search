@@ -110,7 +110,9 @@ export function App() {
       layoutState.setFiltersOpen(false);
       layoutState.setSettingsOpen(false);
     },
-    onShowHelp: () => pushToast(tr("app.messages.hotkeys", "⌘K, ⌘F, Esc, F5, F1, ↑/↓, Enter"), "info"),
+    onShowHelp: () => pushToast(tr("app.messages.hotkeys", "⌘K, ⌘F, Esc, F5, F1, Ctrl+B, Ctrl+Shift+B, ↑/↓, Enter"), "info"),
+    onToggleLeftPanel: () => layoutState.setLeftVisible((prev) => !prev),
+    onToggleRightPanel: () => layoutState.setRightVisible((prev) => !prev),
     history: persistence.history,
     onSelectHistoryQuery: (q) => setQuery(q),
   });
