@@ -20,6 +20,7 @@ type KeyboardShortcutsOptions = {
   onShowHelp?: () => void;
   onToggleLeftPanel?: () => void;
   onToggleRightPanel?: () => void;
+  onUndoBatch?: () => void;
   history?: HistorySnapshot;
   onSelectHistoryQuery?: (query: string) => void;
 };
@@ -43,6 +44,7 @@ export function useKeyboardShortcuts({
   onShowHelp,
   onToggleLeftPanel,
   onToggleRightPanel,
+  onUndoBatch,
   history,
   onSelectHistoryQuery
 }: KeyboardShortcutsOptions): void {
@@ -53,6 +55,13 @@ export function useKeyboardShortcuts({
     const accel = event.ctrlKey || event.metaKey;
     const alt = event.altKey;
 
+    if (accel && key === "z" && !event.shiftKey) {
+      const activeTag = (event.target as HTMLElement | null)?.tagName.toLowerCase();
+      if (activeTag === "input" || activeTag === "textarea") return;
+      event.preventDefault();
+      onUndoBatch?.();
+      return;
+    }
     if (key === "f1") {
       event.preventDefault();
       onShowHelp?.();

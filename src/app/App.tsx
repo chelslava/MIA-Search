@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "preact/hooks";
+import { useEffect, useMemo, useState } from "preact/hooks";
 import { useTranslation } from "react-i18next";
 import { CommandPalette } from "../widgets/CommandPalette";
 import { ToastHost } from "../widgets/ToastHost";
@@ -17,6 +17,12 @@ import type { AppLanguage } from "./components/chrome/props";
 import { useApp, useKeyboardShortcuts } from "./hooks";
 import { RESPONSIVE_BREAKPOINT } from "./utils/search-utils";
 import "./styles.css";
+
+interface BatchUndoItem {
+  action: "copy" | "move";
+  items: Array<{ source: string; destination: string }>;
+  timestamp: number;
+}
 
 export function App() {
   const {
@@ -91,6 +97,43 @@ export function App() {
     }
   }, [layoutState]);
 
+  const [undoStack, setUndoStack] = useState<BatchUndoItem[]>([]);
+
+  const handleUndoBatch = async () => {
+    if (undoStack.length === 0) {
+      pushToast(tr("app.batch.nothingToUndo", "Нет операций для отмены"), "info");
+      return;
+    }
+    const last = undoStack[undoStack.length - 1];
+    const now = Date.now();
+    if (now - last.timestamp > 15 * 60 * 1000) {
+      pushToast(tr("app.batch.undoExpired", "Срок отмены операции истек"), "error");
+      setUndoStack((prev: BatchUndoItem[]) => prev.slice(0, -1));
+      return;
+    }
+
+    pushToast(tr("app.batch.undoing", "Отмена операции..."), "info");
+    const { batchMove, batchDelete } = await import("../shared/tauri-client");
+    if (last.action === "move") {
+      let undone = 0;
+      for (const item of last.items) {
+        const lastSlash = Math.max(item.source.lastIndexOf("/"), item.source.lastIndexOf("\\"));
+        const sourceDir = lastSlash > 0 ? item.source.substring(0, lastSlash) : "";
+        if (sourceDir) {
+          const res = await batchMove([item.destination], sourceDir);
+          if (res.successful > 0) undone++;
+        }
+      }
+      setUndoStack((prev: BatchUndoItem[]) => prev.slice(0, -1));
+      pushToast(tr("app.batch.undoSuccess", "Отменено перемещение {{count}} файлов", { count: undone }), "success");
+    } else if (last.action === "copy") {
+      const destPaths = last.items.map((it: { destination: string }) => it.destination);
+      const res = await batchDelete(destPaths);
+      setUndoStack((prev: BatchUndoItem[]) => prev.slice(0, -1));
+      pushToast(tr("app.batch.undoSuccess", "Отменено копирование {{count}} файлов", { count: res.successful }), "success");
+    }
+  };
+
   useKeyboardShortcuts({
     isSearching: searchState.isSearching,
     results: searchState.results,
@@ -110,9 +153,10 @@ export function App() {
       layoutState.setFiltersOpen(false);
       layoutState.setSettingsOpen(false);
     },
-    onShowHelp: () => pushToast(tr("app.messages.hotkeys", "⌘K, ⌘F, Esc, F5, F1, Ctrl+B, Ctrl+Shift+B, ↑/↓, Enter"), "info"),
+    onShowHelp: () => pushToast(tr("app.messages.hotkeys", "⌘K, ⌘F, Esc, F5, F1, Ctrl+Z, Ctrl+B, Ctrl+Shift+B, ↑/↓, Enter"), "info"),
     onToggleLeftPanel: () => layoutState.setLeftVisible((prev) => !prev),
     onToggleRightPanel: () => layoutState.setRightVisible((prev) => !prev),
+    onUndoBatch: () => void handleUndoBatch(),
     history: persistence.history,
     onSelectHistoryQuery: (q) => setQuery(q),
   });
@@ -405,10 +449,16 @@ export function App() {
                 if (destDir) {
                   const result = await batchCopy(paths, destDir);
                   clearSelection();
+                  if (result.successful > 0) {
+                    const succeededItems = result.results
+                      .filter((r) => r.success && r.destination)
+                      .map((r) => ({ source: r.source, destination: r.destination! }));
+                    setUndoStack((prev: BatchUndoItem[]) => [...prev, { action: "copy", items: succeededItems, timestamp: Date.now() }]);
+                  }
                   if (result.failed > 0) {
                     pushToast(tr("app.batch.copyPartial", "Скопировано: {{ok}}, ошибок: {{fail}}", { ok: result.successful, fail: result.failed }), "error");
                   } else {
-                    pushToast(tr("app.batch.copySuccess", "Скопировано: {{count}}", { count: result.successful }), "success");
+                    pushToast(tr("app.batch.copySuccess", "Скопировано: {{count}} (Ctrl+Z для отмены)", { count: result.successful }), "success");
                   }
                 }
               } else if (action === "move") {
@@ -418,10 +468,16 @@ export function App() {
                 if (destDir) {
                   const result = await batchMove(paths, destDir);
                   clearSelection();
+                  if (result.successful > 0) {
+                    const succeededItems = result.results
+                      .filter((r) => r.success && r.destination)
+                      .map((r) => ({ source: r.source, destination: r.destination! }));
+                    setUndoStack((prev: BatchUndoItem[]) => [...prev, { action: "move", items: succeededItems, timestamp: Date.now() }]);
+                  }
                   if (result.failed > 0) {
                     pushToast(tr("app.batch.movePartial", "Перемещено: {{ok}}, ошибок: {{fail}}", { ok: result.successful, fail: result.failed }), "error");
                   } else {
-                    pushToast(tr("app.batch.moveSuccess", "Перемещено: {{count}}", { count: result.successful }), "success");
+                    pushToast(tr("app.batch.moveSuccess", "Перемещено: {{count}} (Ctrl+Z для отмены)", { count: result.successful }), "success");
                   }
                 }
               }
