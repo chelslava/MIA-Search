@@ -627,7 +627,6 @@ mod tests {
 
     #[tokio::test]
     async fn enrich_paths_with_metadata_populates_entries() {
-        use tokio::test as async_test;
         let dir = tempdir().expect("tempdir");
         let file = dir.path().join("doc.txt");
         fs::write(&file, "hello").expect("write file");

@@ -60,6 +60,7 @@ pub fn matches_date(value: &Option<String>, filter: &Option<DateFilter>) -> bool
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::models::DateField;
 
     fn sample_item(size: Option<u64>) -> SearchResultItem {
         SearchResultItem {

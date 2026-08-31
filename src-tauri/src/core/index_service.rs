@@ -265,6 +265,7 @@ fn score_relevance(name: &str, query: &str) -> Option<f64> {
 mod tests {
     use super::*;
     use crate::core::entry_utils::estimate_entry_size;
+    use crate::core::models::MatchMode;
 
     #[test]
     fn estimate_entry_size_includes_all_components() {
