@@ -15,8 +15,12 @@ import { formatBytes, formatDate } from "./formatters";
 import { applyThemeColors, darkenHex, tintHex } from "./theme";
 import type { AppLanguage } from "./components/chrome/props";
 import { useApp, useKeyboardShortcuts } from "./hooks";
+import { errorReportExportDiagnostics } from "../shared/tauri-client";
+import { initErrorTracker } from "./utils/errorTracker";
 import { RESPONSIVE_BREAKPOINT } from "./utils/search-utils";
 import "./styles.css";
+
+initErrorTracker();
 
 interface BatchUndoItem {
   action: "copy" | "move";
@@ -274,6 +278,24 @@ export function App() {
             onIndexTtlHoursChange={settingsState.setIndexTtlHours}
             indexCheckIntervalMinutes={settingsState.indexCheckIntervalMinutes}
             onIndexCheckIntervalMinutesChange={settingsState.setIndexCheckIntervalMinutes}
+            enableErrorReporting={settingsState.enableErrorReporting}
+            onEnableErrorReportingChange={settingsState.setEnableErrorReporting}
+            onExportDiagnostics={async () => {
+              try {
+                const report = await errorReportExportDiagnostics();
+                const json = JSON.stringify(report, null, 2);
+                const blob = new Blob([json], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `mia_diagnostics_${new Date().toISOString().slice(0, 10)}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+                pushToast(tr("app.settings.diagnosticsExported", "Диагностический отчет сохранен"), "success");
+              } catch {
+                pushToast(tr("app.settings.diagnosticsFailed", "Ошибка при экспорте отчета"), "error");
+              }
+            }}
             newThemeName={uiState.newThemeName}
             onNewThemeNameChange={uiState.setNewThemeName}
             newThemeBg={uiState.newThemeBg}

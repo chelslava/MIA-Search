@@ -26,6 +26,9 @@ export function SettingsPanel({
   newThemeAccent,
   onNewThemeAccentChange,
   onCreateCustomTheme,
+  enableErrorReporting,
+  onEnableErrorReportingChange,
+  onExportDiagnostics,
   onExportSettings,
   onImportSettings,
   tr
@@ -114,7 +117,19 @@ export function SettingsPanel({
               className="w-full"
             />
           </label>
-          <div className="flex gap-1.5 pt-1">
+          <div className="flex items-center justify-between gap-1.5 rounded-sm border border-[var(--border)] bg-[var(--surface-alt)] px-1.5 py-1">
+            <div className="space-y-0.5">
+              <div className="text-[11px] font-medium text-[var(--text)]">
+                {tr("app.settings.errorReporting", "Анонимные отчеты об ошибках")}
+              </div>
+            </div>
+            <Switch
+              checked={enableErrorReporting}
+              onCheckedChange={onEnableErrorReportingChange}
+              aria-label={tr("app.settings.errorReporting", "Анонимные отчеты об ошибках")}
+            />
+          </div>
+          <div className="flex flex-wrap gap-1.5 pt-1">
             {onExportSettings ? (
               <Button type="button" variant="outline" size="sm" onClick={onExportSettings} className="h-7 text-[11px]">
                 {tr("app.settings.export", "Экспорт настроек")}
@@ -123,6 +138,11 @@ export function SettingsPanel({
             {onImportSettings ? (
               <Button type="button" variant="outline" size="sm" onClick={onImportSettings} className="h-7 text-[11px]">
                 {tr("app.settings.import", "Импорт настроек")}
+              </Button>
+            ) : null}
+            {onExportDiagnostics ? (
+              <Button type="button" variant="outline" size="sm" onClick={onExportDiagnostics} className="h-7 text-[11px]">
+                {tr("app.settings.exportDiagnostics", "Диагностический отчет")}
               </Button>
             ) : null}
           </div>

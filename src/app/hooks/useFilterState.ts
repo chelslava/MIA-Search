@@ -161,6 +161,9 @@ export function useSettingsState() {
     if (!Number.isFinite(raw) || raw <= 0) return 15;
     return Math.max(1, Math.min(120, Math.round(raw)));
   });
+  const [enableErrorReporting, setEnableErrorReporting] = useState<boolean>(() => {
+    return localStorage.getItem("mia.enableErrorReporting") === "true";
+  });
 
   useEffect(() => {
     localStorage.setItem("mia.regexEnabled", regexEnabled ? "true" : "false");
@@ -173,6 +176,10 @@ export function useSettingsState() {
   useEffect(() => {
     localStorage.setItem("mia.indexCheckIntervalMinutes", String(indexCheckIntervalMinutes));
   }, [indexCheckIntervalMinutes]);
+
+  useEffect(() => {
+    localStorage.setItem("mia.enableErrorReporting", enableErrorReporting ? "true" : "false");
+  }, [enableErrorReporting]);
 
   useEffect(() => {
     if (!regexEnabled) {
@@ -190,7 +197,9 @@ export function useSettingsState() {
     indexTtlHours,
     setIndexTtlHours,
     indexCheckIntervalMinutes,
-    setIndexCheckIntervalMinutes
+    setIndexCheckIntervalMinutes,
+    enableErrorReporting,
+    setEnableErrorReporting,
   };
 }
 

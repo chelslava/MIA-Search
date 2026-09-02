@@ -1,5 +1,6 @@
 pub mod actions;
 pub mod errors;
+pub mod errors_telemetry;
 pub mod favorites;
 pub mod health;
 pub mod history;

@@ -19,6 +19,16 @@ pub struct SettingsSnapshot {
     pub size_unit: String,
     pub double_click_action: String,
     pub default_roots: Vec<String>,
+    pub enable_error_reporting: bool,
+    pub anonymous_telemetry_id: String,
+}
+
+fn generate_anonymous_id() -> String {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::SystemTime::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_nanos();
+    format!("anon-{:016x}", now)
 }
 
 fn detect_system_language() -> String {
@@ -52,6 +62,8 @@ impl Default for SettingsSnapshot {
             size_unit: "MB".to_string(),
             double_click_action: "open".to_string(),
             default_roots: Vec::new(),
+            enable_error_reporting: false,
+            anonymous_telemetry_id: generate_anonymous_id(),
         }
     }
 }
@@ -63,9 +75,11 @@ pub struct SettingsStore {
 
 impl SettingsStore {
     pub fn load() -> Self {
-        Self {
-            value: persistence::load_json(SETTINGS_FILE),
+        let mut value: SettingsSnapshot = persistence::load_json(SETTINGS_FILE);
+        if value.anonymous_telemetry_id.is_empty() {
+            value.anonymous_telemetry_id = generate_anonymous_id();
         }
+        Self { value }
     }
 
     pub fn snapshot(&self) -> SettingsSnapshot {

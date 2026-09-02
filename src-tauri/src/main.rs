@@ -5,7 +5,9 @@ mod core;
 mod platform;
 mod storage;
 
-use commands::{actions, favorites, health, history, index, profiles, search, settings};
+use commands::{
+    actions, errors_telemetry, favorites, health, history, index, profiles, search, settings,
+};
 use std::sync::atomic::{AtomicBool, AtomicUsize};
 use std::sync::Arc;
 use std::sync::Mutex;
@@ -13,7 +15,7 @@ use std::thread::JoinHandle;
 
 use storage::{
     favorites_store::FavoritesStore, history_store::HistoryStore, index_store::IndexStore,
-    profiles_store::ProfilesStore, settings_store::SettingsStore,
+    persistence::data_dir, profiles_store::ProfilesStore, settings_store::SettingsStore,
 };
 
 #[macro_export]
@@ -73,6 +75,7 @@ impl AppState {
 
 fn main() {
     platform::logger::init_logging();
+    platform::crash_reporter::init_error_tracker(&data_dir());
     let app_state = AppState::bootstrap();
     let shutdown_flag = app_state.shutting_down.clone();
     let search_session = app_state.search_session.clone();
@@ -140,7 +143,12 @@ fn main() {
             health::health_check,
             index::index_rebuild,
             index::index_rebuild_cancel,
-            index::index_status
+            index::index_status,
+            errors_telemetry::error_report_get_recent,
+            errors_telemetry::error_report_record_frontend,
+            errors_telemetry::error_report_export_diagnostics,
+            errors_telemetry::error_report_get_crash_reports,
+            errors_telemetry::error_report_clear
         ])
         .run(tauri::generate_context!())
         .expect("failed to run tauri application");

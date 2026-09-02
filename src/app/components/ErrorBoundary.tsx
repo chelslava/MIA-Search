@@ -1,5 +1,6 @@
 import * as preact from "preact";
 import type { ComponentChildren } from "preact";
+import { recordFrontendError } from "../utils/errorTracker";
 
 interface Props {
   children: ComponentChildren;
@@ -18,6 +19,10 @@ export class ErrorBoundary extends preact.Component<Props, State> {
 
   static getDerivedStateFromError(error: Error): State {
     return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: any): void {
+    void recordFrontendError("ReactErrorBoundary", `${error.message}\n${errorInfo?.componentStack || ""}`);
   }
 
   handleReload = (): void => {

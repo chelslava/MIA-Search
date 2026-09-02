@@ -1,4 +1,5 @@
 pub mod clipboard;
+pub mod crash_reporter;
 pub mod logger;
 pub mod open_path;
 pub mod path_security;

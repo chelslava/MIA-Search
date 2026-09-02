@@ -20,7 +20,7 @@ import type {
   SearchStartResponse
 } from "./search-types";
 
-function hasTauriRuntime(): boolean {
+export function hasTauriRuntime(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
 
@@ -224,3 +224,29 @@ export async function searchEnrichMetadata(paths: string[]): Promise<SearchMetad
   if (paths.length === 0) return [];
   return invoke<SearchMetadataPatch[]>("search_enrich_metadata", { paths });
 }
+
+export async function errorReportGetRecent(): Promise<import("./search-types").ErrorRecord[]> {
+  return invoke<import("./search-types").ErrorRecord[]>("error_report_get_recent");
+}
+
+export async function errorReportRecordFrontend(
+  source: string,
+  level: string,
+  context: string,
+  message: string
+): Promise<void> {
+  return invoke("error_report_record_frontend", { source, level, context, message });
+}
+
+export async function errorReportExportDiagnostics(): Promise<import("./search-types").DiagnosticReport> {
+  return invoke<import("./search-types").DiagnosticReport>("error_report_export_diagnostics");
+}
+
+export async function errorReportGetCrashReports(): Promise<import("./search-types").CrashReport[]> {
+  return invoke<import("./search-types").CrashReport[]>("error_report_get_crash_reports");
+}
+
+export async function errorReportClear(): Promise<void> {
+  return invoke("error_report_clear");
+}
+

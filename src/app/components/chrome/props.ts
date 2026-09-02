@@ -124,6 +124,9 @@ export type SettingsPanelProps = {
   onNewThemeTextChange: (value: string) => void;
   newThemeAccent: string;
   onNewThemeAccentChange: (value: string) => void;
+  enableErrorReporting: boolean;
+  onEnableErrorReportingChange: (value: boolean) => void;
+  onExportDiagnostics?: () => void;
   onCreateCustomTheme: () => void;
   onExportSettings?: () => void;
   onImportSettings?: () => void;

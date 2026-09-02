@@ -210,3 +210,29 @@ export interface IndexRebuildCancelResponse {
   cancelled: boolean;
   timed_out: boolean;
 }
+
+export interface ErrorRecord {
+  timestamp: string;
+  source: string;
+  level: string;
+  context: string;
+  message: string;
+}
+
+export interface CrashReport {
+  timestamp: string;
+  panic_message: string;
+  location: string;
+  os_info: string;
+  app_version: string;
+}
+
+export interface DiagnosticReport {
+  generated_at: string;
+  app_version: string;
+  os_info: string;
+  telemetry_enabled: boolean;
+  anonymous_id: string;
+  recent_errors: ErrorRecord[];
+  crash_reports_count: number;
+}
