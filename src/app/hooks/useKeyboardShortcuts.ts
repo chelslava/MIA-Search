@@ -1,12 +1,12 @@
 import { useEffect, useCallback, useRef } from "preact/hooks";
-import type { SearchResultItem, HistorySnapshot } from "../../shared/search-types";
+import type { SearchResultItem, HistorySnapshot, SearchBackend } from "../../shared/search-types";
 
 type KeyboardShortcutsOptions = {
   isSearching: boolean;
   results: SearchResultItem[];
   selectedPath: string | null;
   selectedResult: SearchResultItem | null;
-  searchBackend: "Scan" | "Index";
+  searchBackend: SearchBackend;
   indexRoots: string[];
   isRebuildingIndex: boolean;
   onSearch: () => void;

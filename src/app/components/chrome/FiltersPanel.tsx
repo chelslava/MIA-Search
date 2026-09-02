@@ -358,7 +358,7 @@ export function FiltersPanel({
             min={1}
             disabled={limitMode !== "custom"}
             value={customLimit}
-              onChange={(value) => onCustomLimitChange(Math.max(1, Number(value) || 1))}
+            onChange={(value) => onCustomLimitChange(Math.max(1, Number(value) || 1))}
           />
         </fieldset>
 
@@ -371,8 +371,9 @@ export function FiltersPanel({
               value={searchBackend}
               onChange={(value) => onSearchBackendChange(value as SearchBackend)}
             >
-              <option value="Index">{tr("app.filters.backend.index", "Index")}</option>
               <option value="Scan">{tr("app.filters.backend.scan", "Scan")}</option>
+              <option value="Index">{tr("app.filters.backend.index", "Index")}</option>
+              <option value="System">{tr("app.filters.backend.system", "System Search (OS)")}</option>
             </Select>
             <Button
               type="button"

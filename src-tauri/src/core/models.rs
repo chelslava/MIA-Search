@@ -35,6 +35,7 @@ pub enum SearchBackend {
     #[default]
     Scan,
     Index,
+    System,
 }
 
 /// Comparison operator for size filtering.
@@ -354,5 +355,32 @@ mod tests {
         let parsed: SearchRequest = serde_json::from_str(raw).expect("legacy request should parse");
         assert!(parsed.exclude_paths.is_empty());
         assert_eq!(parsed.query, "report");
+    }
+
+    #[test]
+    fn search_backend_system_deserializes_properly() {
+        let raw = r#"{
+      "query": "config",
+      "roots": ["C:/data"],
+      "extensions": [],
+      "options": {
+        "max_depth": null,
+        "limit": 50,
+        "strict": false,
+        "ignore_case": true,
+        "include_hidden": false,
+        "entry_kind": "Any",
+        "match_mode": "Plain",
+        "size_filter": null,
+        "created_filter": null,
+        "modified_filter": null,
+        "sort_mode": "Relevance",
+        "search_backend": "System"
+      }
+    }"#;
+
+        let parsed: SearchRequest =
+            serde_json::from_str(raw).expect("system backend request should parse");
+        assert_eq!(parsed.options.search_backend, SearchBackend::System);
     }
 }

@@ -164,6 +164,10 @@ const en = {
         unlimited: "Unlimited"
       },
       backend: {
+        legend: "Search backend",
+        scan: "Direct scan",
+        index: "Internal index",
+        system: "System Search (OS)",
         rebuild: "Rebuild index",
         rebuilding: "Rebuilding...",
         cancel: "Cancel",

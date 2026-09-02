@@ -459,6 +459,9 @@ fn run_search_stream(
                 Ok(summary)
             }
         }
+        SearchBackend::System => {
+            SearchService::stream_system(request, &mut seen_paths, cancel_flag, emit_batch, |_| {})
+        }
     }
 }
 

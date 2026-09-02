@@ -164,6 +164,10 @@ const ru = {
         unlimited: "Без ограничений"
       },
       backend: {
+        legend: "Backend поиска",
+        scan: "Прямое сканирование",
+        index: "Внутренний индекс",
+        system: "Системный поиск (ОС)",
         rebuild: "Перестроить индекс",
         rebuilding: "Перестроение...",
         cancel: "Отмена",

@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "preact/hooks";
 import type { UnlistenFn } from "@tauri-apps/api/event";
-import type { IndexRebuildResponse, IndexStatusResponse } from "../../shared/search-types";
+import type { IndexRebuildResponse, IndexStatusResponse, SearchBackend } from "../../shared/search-types";
 import {
   indexRebuild,
   indexStatus,
@@ -24,7 +24,7 @@ export function useIndex(
   indexRoots: string[],
   indexTtlMs: number,
   indexCheckIntervalMs: number,
-  searchBackend: "Scan" | "Index",
+  searchBackend: SearchBackend,
   isSearching: boolean,
   tr: (key: string, defaultValue: string) => string
 ): UseIndexResult {

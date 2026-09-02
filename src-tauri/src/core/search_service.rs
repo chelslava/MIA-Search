@@ -342,6 +342,156 @@ impl SearchService {
             worker_panicked: panic_flag.load(Ordering::Acquire),
         })
     }
+
+    /// Executes a search using the OS-native search index (Windows Search / Spotlight)
+    /// and streams matching results via callback, falling back to standard Scan on failure.
+    pub fn stream_system<F, G>(
+        request: &SearchRequest,
+        seen_paths: &mut LruCache<String, ()>,
+        cancel_flag: Arc<AtomicBool>,
+        mut on_batch: F,
+        mut on_limit: G,
+    ) -> Result<SearchStreamSummary, String>
+    where
+        F: FnMut(Vec<SearchResultItem>),
+        G: FnMut(bool),
+    {
+        if request.options.limit == Some(0) {
+            on_limit(true);
+            return Ok(SearchStreamSummary {
+                total_results: 0,
+                limit_reached: true,
+                cancelled: false,
+                worker_panicked: false,
+            });
+        }
+
+        if !crate::platform::system_search::is_system_search_available() {
+            log::warn!(
+                "System search not available on current platform; falling back to Scan backend"
+            );
+            return Self::stream(request, seen_paths, cancel_flag, on_batch, on_limit);
+        }
+
+        let roots = normalized_roots(request);
+        let exclude_tokens = normalized_exclude_tokens(request);
+        let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        let roots_for_source = prepare_source_roots(&roots, &cwd);
+        let default_root = roots.first().cloned().unwrap_or_else(|| ".".to_string());
+        let query = request.query.trim().to_string();
+        let lower_query = query.to_lowercase();
+        let matcher = build_query_matcher(
+            &request.options.match_mode,
+            &query,
+            request.options.ignore_case,
+        )?;
+
+        let (tx, rx) = mpsc::channel::<String>();
+        let sys_request = request.clone();
+        let sys_cancel = cancel_flag.clone();
+
+        let sys_handle = thread::spawn(move || {
+            crate::platform::system_search::stream_system_search_paths(&sys_request, sys_cancel, tx)
+        });
+
+        let mut limit_reached = false;
+        let mut total_results = 0usize;
+        let mut batch = Vec::with_capacity(BATCH_SIZE);
+        let mut current_batch_limit = FIRST_BATCH_SIZE;
+
+        for path in rx {
+            if cancel_flag.load(Ordering::Acquire) {
+                break;
+            }
+
+            if !matcher.matches_path(&path) {
+                continue;
+            }
+            if path_matches_exclude_tokens(&path, &exclude_tokens) {
+                continue;
+            }
+
+            let dedup_key = dedup_path_key(&path);
+            if seen_paths.contains(&dedup_key) {
+                continue;
+            }
+            seen_paths.put(dedup_key, ());
+
+            let source_root = resolve_source_root(&roots_for_source, &path, &cwd)
+                .unwrap_or_else(|| default_root.clone());
+            let mut item = MetadataService::lightweight_path(&path, source_root);
+            if matches!(request.options.sort_mode, SortMode::Relevance) && !lower_query.is_empty() {
+                item.score = score_relevance(&item.name, &lower_query);
+            }
+
+            batch.push(item);
+            total_results = total_results.saturating_add(1);
+
+            if let Some(limit) = request.options.limit {
+                if total_results >= limit {
+                    limit_reached = true;
+                    cancel_flag.store(true, Ordering::Release);
+                    break;
+                }
+            }
+
+            if batch.len() >= current_batch_limit {
+                if cancel_flag.load(Ordering::Acquire) {
+                    break;
+                }
+                sort_stream_batch(&mut batch, &request.options.sort_mode, &query);
+                on_batch(std::mem::take(&mut batch));
+                current_batch_limit = BATCH_SIZE;
+            }
+        }
+
+        let sys_result = sys_handle
+            .join()
+            .unwrap_or_else(|_| Err("System search worker panicked".to_string()));
+
+        if let Err(err) = sys_result {
+            log::warn!(
+                "System search error ({}): falling back to standard scan",
+                err
+            );
+            if total_results == 0 && !cancel_flag.load(Ordering::Acquire) {
+                return Self::stream(request, seen_paths, cancel_flag, on_batch, on_limit);
+            }
+        }
+
+        if cancel_flag.load(Ordering::Acquire) && !limit_reached {
+            on_limit(limit_reached);
+            return Ok(SearchStreamSummary {
+                total_results,
+                limit_reached,
+                cancelled: true,
+                worker_panicked: false,
+            });
+        }
+
+        if !batch.is_empty() {
+            if cancel_flag.load(Ordering::Acquire) && !limit_reached {
+                on_limit(limit_reached);
+                return Ok(SearchStreamSummary {
+                    total_results,
+                    limit_reached,
+                    cancelled: true,
+                    worker_panicked: false,
+                });
+            }
+            sort_stream_batch(&mut batch, &request.options.sort_mode, &query);
+            on_batch(batch);
+        }
+
+        on_limit(limit_reached);
+
+        Ok(SearchStreamSummary {
+            total_results,
+            limit_reached,
+            cancelled: false,
+            worker_panicked: false,
+        })
+    }
 }
 
 fn sort_stream_batch(items: &mut [SearchResultItem], mode: &SortMode, query: &str) {
@@ -595,6 +745,7 @@ fn resolve_source_root(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::core::models::SearchOptions;
     use std::collections::HashSet;
     use std::fs;
     use std::num::NonZeroUsize;
@@ -1131,5 +1282,63 @@ mod tests {
             let result = dedup_path_key("/users/test/file.txt");
             assert_eq!(result, "/users/test/file.txt");
         }
+    }
+
+    #[test]
+    fn stream_system_limit_zero_returns_early() {
+        let request = SearchRequest {
+            query: "test".to_string(),
+            roots: vec![".".to_string()],
+            options: SearchOptions {
+                limit: Some(0),
+                search_backend: crate::core::models::SearchBackend::System,
+                ..SearchOptions::default()
+            },
+            ..SearchRequest::default()
+        };
+
+        let mut seen_paths = LruCache::new(NonZeroUsize::new(1000).unwrap());
+        let mut limit_notified = false;
+        let summary = SearchService::stream_system(
+            &request,
+            &mut seen_paths,
+            Arc::new(AtomicBool::new(false)),
+            |_batch| {},
+            |reached| {
+                limit_notified = reached;
+            },
+        )
+        .expect("stream_system limit 0 should succeed");
+
+        assert_eq!(summary.total_results, 0);
+        assert!(summary.limit_reached);
+        assert!(limit_notified);
+    }
+
+    #[test]
+    fn stream_system_handles_cancelled_search() {
+        let request = SearchRequest {
+            query: "test".to_string(),
+            roots: vec![".".to_string()],
+            options: SearchOptions {
+                limit: Some(10),
+                search_backend: crate::core::models::SearchBackend::System,
+                ..SearchOptions::default()
+            },
+            ..SearchRequest::default()
+        };
+
+        let mut seen_paths = LruCache::new(NonZeroUsize::new(1000).unwrap());
+        let cancel_flag = Arc::new(AtomicBool::new(true)); // Pre-cancelled
+        let summary = SearchService::stream_system(
+            &request,
+            &mut seen_paths,
+            cancel_flag,
+            |_batch| {},
+            |_limit| {},
+        )
+        .expect("cancelled stream_system should return ok");
+
+        assert!(summary.cancelled);
     }
 }

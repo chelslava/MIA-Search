@@ -2,7 +2,7 @@ export type EntryKind = "Any" | "File" | "Directory";
 
 export type SortMode = "Relevance" | "Name" | "Size" | "Modified" | "Type";
 export type MatchMode = "Plain" | "Wildcard" | "Regex";
-export type SearchBackend = "Scan" | "Index";
+export type SearchBackend = "Scan" | "Index" | "System";
 
 export type SizeComparison = "Smaller" | "Equal" | "Greater";
 
